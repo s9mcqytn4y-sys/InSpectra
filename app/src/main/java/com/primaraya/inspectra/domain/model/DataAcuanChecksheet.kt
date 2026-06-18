@@ -1,5 +1,9 @@
 package com.primaraya.inspectra.domain.model
 
+import com.primaraya.inspectra.core.util.SafeTsv
+import com.primaraya.inspectra.core.util.SafeTsv.blankToNull
+import com.primaraya.inspectra.core.util.SafeTsv.toNullableDouble
+
 object DataAcuanChecksheet {
 
     private const val MASTER_PART_TSV = """
@@ -258,57 +262,48 @@ baris_excel	UNIQ	PART NO.	PART NAME	KOMODITAS	MATERIAL USED	SUPPLIER	MATERIAL DE
 111	CL2	7997A-X7V04	CLAF 2	PRESS	CLAF 2									
 """
 
+    private var cachedPartAcuan: List<PartAcuan>? = null
     fun daftarPartAcuan(): List<PartAcuan> {
-        return MASTER_PART_TSV
-            .trim()
-            .lineSequence()
-            .drop(1)
-            .filter { it.isNotBlank() }
-            .map { line ->
-                val c = line.split('\t')
+        if (cachedPartAcuan != null) return cachedPartAcuan!!
+        cachedPartAcuan = SafeTsv.parseRows(MASTER_PART_TSV, expectedColumns = 8)
+            .map { c ->
                 PartAcuan(
-                    no = c[0].toInt(),
+                    no = c[0].toIntOrNull() ?: 0,
                     nomorPart = c[1].blankToNull(),
                     uniqNo = c[2],
                     namaPart = c[3],
                     model = c[4].blankToNull(),
                     customer = c[5].blankToNull(),
                     komoditas = c[6].toTipeProses(),
-                    lokasiGambar = c.getOrNull(7).blankToNull()
+                    lokasiGambar = c[7].blankToNull()
                 )
             }
-            .toList()
+        return cachedPartAcuan!!
     }
 
+    private var cachedMaterialAcuan: List<MaterialAcuan>? = null
     fun daftarMaterialAcuan(): List<MaterialAcuan> {
-        return MATERIAL_ACUAN_TSV
-            .trim()
-            .lineSequence()
-            .drop(1)
-            .filter { it.isNotBlank() }
-            .map { line ->
-                val c = line.split('\t')
+        if (cachedMaterialAcuan != null) return cachedMaterialAcuan!!
+        cachedMaterialAcuan = SafeTsv.parseRows(MATERIAL_ACUAN_TSV, expectedColumns = 5)
+            .map { c ->
                 MaterialAcuan(
-                    no = c[0].toInt(),
+                    no = c[0].toIntOrNull() ?: 0,
                     namaSupplier = c[1],
                     namaMaterial = c[2],
                     spec = c[3].blankToNull(),
                     satuan = c[4].blankToNull()
                 )
             }
-            .toList()
+        return cachedMaterialAcuan!!
     }
 
+    private var cachedRelasiPartMaterial: List<MaterialPartAcuan>? = null
     fun daftarRelasiPartMaterial(): List<MaterialPartAcuan> {
-        return RELASI_PART_MATERIAL_TSV
-            .trim()
-            .lineSequence()
-            .drop(1)
-            .filter { it.isNotBlank() }
-            .map { line ->
-                val c = line.split('\t')
+        if (cachedRelasiPartMaterial != null) return cachedRelasiPartMaterial!!
+        cachedRelasiPartMaterial = SafeTsv.parseRows(RELASI_PART_MATERIAL_TSV, expectedColumns = 15)
+            .map { c ->
                 MaterialPartAcuan(
-                    barisExcel = c[0].toInt(),
+                    barisExcel = c[0].toIntOrNull() ?: 0,
                     uniqNo = c[1],
                     nomorPart = c[2].blankToNull(),
                     namaPart = c[3],
@@ -316,16 +311,16 @@ baris_excel	UNIQ	PART NO.	PART NAME	KOMODITAS	MATERIAL USED	SUPPLIER	MATERIAL DE
                     materialDigunakan = c[5],
                     namaSupplier = c[6].blankToNull(),
                     potensiDefectMaterial = c[7].splitDefect(),
-                    lebar = c[8].toDoubleOrNull(),
-                    panjang = c[9].toDoubleOrNull(),
-                    tebalMm = c[10].toDoubleOrNull(),
-                    beratGsmGr = c[11].toDoubleOrNull(),
-                    qty = c[12].toDoubleOrNull(),
+                    lebar = c[8].toNullableDouble(),
+                    panjang = c[9].toNullableDouble(),
+                    tebalMm = c[10].toNullableDouble(),
+                    beratGsmGr = c[11].toNullableDouble(),
+                    qty = c[12].toNullableDouble(),
                     satuan = c[13].blankToNull(),
                     specAsli = c[14].blankToNull()
                 )
             }
-            .toList()
+        return cachedRelasiPartMaterial!!
     }
 
     fun daftarDefectProses(): List<String> {
@@ -421,9 +416,6 @@ baris_excel	UNIQ	PART NO.	PART NAME	KOMODITAS	MATERIAL USED	SUPPLIER	MATERIAL DE
         }.sortedBy { it.uniqNo }
     }
 
-    private fun String?.blankToNull(): String? {
-        return this?.trim()?.takeIf { it.isNotEmpty() }
-    }
 
     private fun String.toTipeProses(): TipeProses {
         return when (trim().uppercase()) {

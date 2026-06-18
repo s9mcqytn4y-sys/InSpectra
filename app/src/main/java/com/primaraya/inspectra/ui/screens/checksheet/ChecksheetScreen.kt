@@ -1,5 +1,6 @@
 package com.primaraya.inspectra.ui.screens.checksheet
 
+import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -38,9 +40,26 @@ fun ChecksheetScreen(
         viewModel.muatChecksheet(tipeProses)
     }
 
-    val daftarPart by viewModel.uiState.collectAsState()
-    val pesanValidasi by viewModel.pesanValidasi.collectAsState()
-    val payloadJson by viewModel.payloadJson.collectAsState()
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is ChecksheetEvent.ShowToast -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
+                }
+                is ChecksheetEvent.SubmitSuccess -> {
+                    viewModel.muatChecksheet(tipeProses) // Reset data
+                }
+            }
+        }
+    }
+
+    val uiState by viewModel.uiState.collectAsState()
+    val daftarPart = uiState.daftarPart
+    val pesanValidasi = uiState.pesanValidasi
+    val payloadJson = uiState.payloadJson
 
     val totalDiperiksa by remember(daftarPart) {
         derivedStateOf { daftarPart.sumOf { it.jumlahDiperiksa } }
@@ -69,6 +88,7 @@ fun ChecksheetScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -78,7 +98,7 @@ fun ChecksheetScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Validasi lokal berdasarkan data acuan partlist",
+                            text = "Supabase Connected",
                             fontSize = 11.sp,
                             color = Color(0xFFCBD5E1)
                         )
@@ -106,7 +126,7 @@ fun ChecksheetScreen(
                 ) {
                     Icon(Icons.Default.Send, contentDescription = "Payload")
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Buat Payload Validasi", fontWeight = FontWeight.Bold)
+                    Text("Buat Payload", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -140,7 +160,7 @@ fun ChecksheetScreen(
                             Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFDC2626))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = pesanValidasi!!,
+                                text = pesanValidasi,
                                 color = Color(0xFFDC2626),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold
@@ -151,8 +171,9 @@ fun ChecksheetScreen(
 
                 if (payloadJson != null) {
                     PanelPayloadValidasi(
-                        json = payloadJson.orEmpty(),
-                        onTutup = { viewModel.hapusPayload() }
+                        json = payloadJson,
+                        onTutup = { viewModel.hapusPayload() },
+                        onSubmit = { viewModel.submitKeSupabase() }
                     )
                 } else {
                     LazyColumn(
@@ -162,7 +183,7 @@ fun ChecksheetScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         contentPadding = PaddingValues(bottom = 96.dp)
                     ) {
-                        if (daftarPart.isEmpty()) {
+                        if (daftarPart.isEmpty() && !uiState.isLoading) {
                             item {
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
@@ -173,11 +194,6 @@ fun ChecksheetScreen(
                                             text = "Belum ada data acuan untuk proses ini",
                                             fontWeight = FontWeight.Bold,
                                             color = Color(0xFF1A365D)
-                                        )
-                                        Text(
-                                            text = "Data fase ini mengikuti isi PARTLIST terlampir. Tidak ada proses import Excel.",
-                                            color = Color(0xFF64748B),
-                                            fontSize = 13.sp
                                         )
                                     }
                                 }
@@ -198,6 +214,17 @@ fun ChecksheetScreen(
                             )
                         }
                     }
+                }
+            }
+            
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.3f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Color.White)
                 }
             }
         }
@@ -270,7 +297,6 @@ fun KartuPartChecksheet(
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header: Info Part
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -300,7 +326,6 @@ fun KartuPartChecksheet(
             if (part.terbuka) {
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                // Section: Input Kuantitas
                 OutlinedTextField(
                     value = if (part.jumlahDiperiksa == 0) "" else part.jumlahDiperiksa.toString(),
                     onValueChange = { onJumlahDiperiksaUbah(it.toIntOrNull() ?: 0) },
@@ -320,7 +345,6 @@ fun KartuPartChecksheet(
                     )
                 }
 
-                // Section: Material Reference
                 if (part.daftarMaterial.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Material Digunakan:", fontWeight = FontWeight.Bold, color = Color(0xFF1A365D), style = MaterialTheme.typography.bodyMedium)
@@ -339,7 +363,6 @@ fun KartuPartChecksheet(
                     }
                 }
 
-                // Section: Defect List
                 if (part.daftarDefect.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Jenis Temuan NG:", fontWeight = FontWeight.Bold, color = Color(0xFF1A365D), style = MaterialTheme.typography.bodyMedium)
@@ -441,7 +464,7 @@ fun BarisInputDefect(
 }
 
 @Composable
-fun PanelPayloadValidasi(json: String, onTutup: () -> Unit) {
+fun PanelPayloadValidasi(json: String, onTutup: () -> Unit, onSubmit: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxSize()
@@ -459,7 +482,7 @@ fun PanelPayloadValidasi(json: String, onTutup: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Payload Validasi JSON",
+                    text = "Payload JSON",
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleMedium
@@ -469,18 +492,17 @@ fun PanelPayloadValidasi(json: String, onTutup: () -> Unit) {
                 }
             }
             
-            Card(
+            Button(
+                onClick = onSubmit,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2))
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                shape = RoundedCornerShape(8.dp)
             ) {
-                Text(
-                    text = "Data ini belum dikirim ke server. Payload hanya untuk validasi lokal fase 1.",
-                    color = Color(0xFFDC2626),
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(12.dp)
-                )
+                Icon(Icons.Default.CloudUpload, contentDescription = null, tint = Color.White)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Kirim ke Supabase", color = Color.White, fontWeight = FontWeight.Bold)
             }
 
             LazyColumn(
