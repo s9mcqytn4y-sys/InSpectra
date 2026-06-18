@@ -1,7 +1,10 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization) // Wajib untuk Supabase Data Mapping
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
@@ -19,11 +22,22 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // Membaca token dari local.properties
+        val localProperties = Properties().apply {
+            val file = rootProject.file("local.properties")
+            if (file.exists()) {
+                file.inputStream().use { load(it) }
+            }
+        }
+        buildConfigField("String", "SUPABASE_URL", localProperties.getProperty("SUPABASE_URL") ?: "\"\"")
+        buildConfigField("String", "SUPABASE_KEY", localProperties.getProperty("SUPABASE_KEY") ?: "\"\"")
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -31,17 +45,15 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14" 
+        buildConfig = true
     }
     packaging {
         resources {
@@ -54,6 +66,7 @@ dependencies {
     // AndroidX & Core Lifecycle
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
 
     // Jetpack Compose & Material 3 Platform
@@ -62,6 +75,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3) // Material 3 UI Kit
+    implementation(libs.androidx.compose.material.icons.extended)
 
     // Supabase Ecosystem
     implementation(libs.supabase.postgrest) // Database CRUD
@@ -70,4 +84,7 @@ dependencies {
 
     // Kotlin Serialization
     implementation(libs.kotlinx.serialization.json)
+
+    // Image Loader untuk Jetpack Compose
+    implementation("io.coil-kt:coil-compose:2.6.0")
 }
