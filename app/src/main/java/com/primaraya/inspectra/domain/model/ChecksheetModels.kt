@@ -1,55 +1,126 @@
 package com.primaraya.inspectra.domain.model
 
 import kotlinx.serialization.Serializable
+import kotlin.math.roundToInt
 
-/**
- * Representasi tipe lini proses komoditas harian.
- */
-enum class ProcessType { PRESS, SEWING }
-
-/**
- * Input kuantitas untuk tiap jenis defect yang ditemukan di lantai produksi.
- */
 @Serializable
-data class DefectInput(
-    val defectId: String,
-    val defectName: String,
-    var ngQty: Int = 0
-)
-
-/**
- * Representasi mutlak komponen master data part di checksheet.
- */
-data class PartChecksheetSummary(
-    val uniqNo: String,
-    val partNumber: String,
-    val partName: String,
-    val commodity: ProcessType,
-    val imageUrl: String?,
-    var totalSampling: Int = 0,
-    val defects: List<DefectInput> = emptyList(),
-    val isExpanded: Boolean = false
-) {
-    val totalNg: Int get() = defects.sumOf { it.ngQty }
-    val totalOk: Int get() = if (totalSampling >= totalNg) totalSampling - totalNg else 0
-    val ngRatio: Double get() = if (totalSampling > 0) (totalNg.toDouble() / totalSampling) * 100 else 0.0
+enum class TipeProses {
+    PRESS,
+    SEWING,
+    CUTTING,
+    MATERIAL,
+    PASS_THROUGH,
+    CONSUMABLE
 }
 
-/**
- * Payload data class terstandardisasi untuk verifikasi log sebelum sinkronisasi Supabase.
- */
 @Serializable
-data class ChecksheetSubmitPayload(
-    val processType: String,
-    val timestamp: Long,
-    val parts: List<PartInspectedPayload>
+enum class KategoriDefect {
+    MATERIAL,
+    PROSES
+}
+
+@Serializable
+data class PartAcuan(
+    val no: Int,
+    val nomorPart: String?,
+    val uniqNo: String,
+    val namaPart: String,
+    val model: String?,
+    val customer: String?,
+    val komoditas: TipeProses,
+    val lokasiGambar: String? = null
 )
 
 @Serializable
-data class PartInspectedPayload(
+data class MaterialAcuan(
+    val no: Int,
+    val namaSupplier: String,
+    val namaMaterial: String,
+    val spec: String?,
+    val satuan: String?
+)
+
+@Serializable
+data class MaterialPartAcuan(
+    val barisExcel: Int,
     val uniqNo: String,
-    val totalSampling: Int,
+    val nomorPart: String?,
+    val namaPart: String,
+    val komoditas: TipeProses,
+    val materialDigunakan: String,
+    val namaSupplier: String?,
+    val potensiDefectMaterial: List<String>,
+    val lebar: Double? = null,
+    val panjang: Double? = null,
+    val tebalMm: Double? = null,
+    val beratGsmGr: Double? = null,
+    val qty: Double? = null,
+    val satuan: String? = null,
+    val specAsli: String? = null
+)
+
+@Serializable
+data class InputDefect(
+    val idDefect: String,
+    val namaDefect: String,
+    val kategori: KategoriDefect,
+    val jumlahNg: Int = 0
+)
+
+@Serializable
+data class RingkasanPartChecksheet(
+    val uniqNo: String,
+    val nomorPart: String?,
+    val namaPart: String,
+    val komoditas: TipeProses,
+    val daftarMaterial: List<MaterialPartAcuan>,
+    val daftarDefect: List<InputDefect>,
+    val lokasiGambar: String? = null,
+    val jumlahDiperiksa: Int = 0,
+    val terbuka: Boolean = false
+) {
+    val jumlahNg: Int
+        get() = daftarDefect.sumOf { it.jumlahNg }
+
+    val jumlahOk: Int
+        get() = jumlahDiperiksa - jumlahNg
+
+    val kuantitasTidakValid: Boolean
+        get() = jumlahDiperiksa < 0 || jumlahNg > jumlahDiperiksa
+
+    val rasioNg: Float
+        get() = if (jumlahDiperiksa > 0) {
+            (jumlahNg.toFloat() / jumlahDiperiksa.toFloat()) * 100f
+        } else {
+            0f
+        }
+
+    val rasioNgSatuDesimal: Float
+        get() = (rasioNg * 10f).roundToInt() / 10f
+}
+
+@Serializable
+data class PayloadChecksheet(
+    val versiPayload: String = "fase-1-validasi-lokal",
+    val tipeProses: String,
+    val dibuatPadaMillis: Long,
+    val totalDiperiksa: Int,
     val totalOk: Int,
     val totalNg: Int,
-    val defects: List<DefectInput>
+    val rasioNgGlobal: Float,
+    val daftarPart: List<PayloadPartDiperiksa>
+)
+
+@Serializable
+data class PayloadPartDiperiksa(
+    val uniqNo: String,
+    val nomorPart: String?,
+    val namaPart: String,
+    val komoditas: String,
+    val jumlahDiperiksa: Int,
+    val jumlahOk: Int,
+    val jumlahNg: Int,
+    val rasioNg: Float,
+    val daftarMaterial: List<MaterialPartAcuan>,
+    val daftarDefectNg: List<InputDefect>
 )
