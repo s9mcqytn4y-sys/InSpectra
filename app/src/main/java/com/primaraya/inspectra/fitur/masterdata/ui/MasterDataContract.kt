@@ -62,10 +62,12 @@ object MasterDataContract {
         data class HapusDefect(val data: MasterDefectDto) : Intent
 
         // Relations - Defect
+        data class BukaPilihDefect(val uniqNo: String) : Intent
         data class TambahDefectKePart(val uniqNo: String, val idDefect: String) : Intent
         data class HapusDefectDariPart(val uniqNo: String, val relationId: String) : Intent
 
         // Relations - Material
+        data class BukaPilihMaterial(val uniqNo: String) : Intent
         data class TambahMaterialKePart(val uniqNo: String, val materialId: String, val label: String) : Intent
         data class HapusMaterialDariPart(val uniqNo: String, val relationId: String) : Intent
 

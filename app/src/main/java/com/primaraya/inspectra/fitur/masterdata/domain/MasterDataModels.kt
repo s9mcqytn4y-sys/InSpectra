@@ -56,6 +56,22 @@ data class MasterMaterialDto(
 )
 
 @Serializable
+data class MasterMaterialSpecDto(
+    val id: String? = null,
+    val material_id: String,
+    val spec_asli: String? = null,
+    val satuan: String? = null,
+    val lebar_value: Double? = null,
+    val panjang_value: Double? = null,
+    val tebal_value: Double? = null,
+    val berat_value: Double? = null,
+    val qty_value: Double? = null,
+    val warna: String? = null,
+    val grade: String? = null,
+    val aktif: Boolean = true
+)
+
+@Serializable
 data class MasterDefectDto(
     val id_defect: String,
     val nama_defect: String,

@@ -118,9 +118,9 @@ fun MasterDataScreen(
                                 onDelete = { d -> viewModel.onIntent(MasterDataContract.Intent.HapusPart(d)) },
                                 onToggleDetail = { uniqNo -> viewModel.onIntent(MasterDataContract.Intent.TogglePartDetail(uniqNo)) },
                                 onRemoveDefect = { uniqNo, relId -> viewModel.onIntent(MasterDataContract.Intent.HapusDefectDariPart(uniqNo, relId)) },
-                                onAddDefect = { uniqNo -> /* fix next turn */ },
+                                onAddDefect = { uniqNo -> viewModel.onIntent(MasterDataContract.Intent.BukaPilihDefect(uniqNo)) },
                                 onRemoveMaterial = { uniqNo, relId -> viewModel.onIntent(MasterDataContract.Intent.HapusMaterialDariPart(uniqNo, relId)) },
-                                onAddMaterial = { uniqNo -> /* fix next turn */ }
+                                onAddMaterial = { uniqNo -> viewModel.onIntent(MasterDataContract.Intent.BukaPilihMaterial(uniqNo)) }
                             ) 
                         }
                     )
@@ -270,7 +270,6 @@ fun PartList(
                             HorizontalDivider()
                             Spacer(Modifier.height(12.dp))
                             
-                            // Relations Section
                             Row(Modifier.fillMaxWidth()) {
                                 Column(Modifier.weight(1f)) {
                                     Text("Defect Template", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
@@ -443,7 +442,7 @@ fun PilihMaterialDialog(
         title = { Text("Pilih Material") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = label, onValueChange = { label = it }, label = { Text("Label (misal: Inner)") })
+                OutlinedTextField(value = label, onValueChange = { label = it }, label = { Text("Label (misal: Inner Layer)") }, modifier = Modifier.fillMaxWidth())
                 HorizontalDivider()
                 LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
                     items(availableMaterials) { mat ->

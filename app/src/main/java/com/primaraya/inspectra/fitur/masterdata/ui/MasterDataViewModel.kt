@@ -64,10 +64,12 @@ class MasterDataViewModel(
             is MasterDataContract.Intent.HapusDefect -> confirmHapus("Hapus Defect", "Hapus defect ${intent.data.nama_defect}?") { hapusDefect(intent.data) }
 
             // Relations - Defect
+            is MasterDataContract.Intent.BukaPilihDefect -> _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.PilihDefectUntukPart(intent.uniqNo)) }
             is MasterDataContract.Intent.TambahDefectKePart -> tambahDefectKePart(intent.uniqNo, intent.idDefect)
             is MasterDataContract.Intent.HapusDefectDariPart -> hapusDefectDariPart(intent.uniqNo, intent.relationId)
 
             // Relations - Material
+            is MasterDataContract.Intent.BukaPilihMaterial -> _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.PilihMaterialUntukPart(intent.uniqNo)) }
             is MasterDataContract.Intent.TambahMaterialKePart -> tambahMaterialKePart(intent.uniqNo, intent.materialId, intent.label)
             is MasterDataContract.Intent.HapusMaterialDariPart -> hapusMaterialDariPart(intent.uniqNo, intent.relationId)
 
