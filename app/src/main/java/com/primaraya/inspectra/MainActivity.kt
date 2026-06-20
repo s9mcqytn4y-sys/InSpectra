@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.primaraya.inspectra.core.ui.component.AppResponsiveContent
 import com.primaraya.inspectra.core.ui.theme.InSpectraTheme
 import com.primaraya.inspectra.fitur.checksheet.domain.TipeProses
 import com.primaraya.inspectra.fitur.checksheet.ui.ChecksheetScreen
@@ -85,32 +86,50 @@ fun MainDashboard(
     onChecksheetClick: () -> Unit,
     onMasterDataClick: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        Text(
-            text = "InSpectra Workspace",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Black,
-            color = Color(0xFF1A365D)
-        )
+    AppResponsiveContent { isTablet, contentModifier ->
+        Column(
+            modifier = contentModifier.padding(top = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            Text(
+                text = "InSpectra Workspace",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Black,
+                color = Color(0xFF16365F)
+            )
 
-        DashboardModuleCard(
-            title = "E-Checksheet",
-            subtitle = "Inspeksi harian Press, Sewing, dan Cutting",
-            icon = Icons.AutoMirrored.Filled.Assignment,
-            onClick = onChecksheetClick
-        )
-
-        DashboardModuleCard(
-            title = "Master Data",
-            subtitle = "Kelola part, material, supplier, spec, dan defect",
-            icon = Icons.Default.Dataset,
-            onClick = onMasterDataClick
-        )
+            if (isTablet) {
+                Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                    DashboardModuleCard(
+                        title = "E-Checksheet",
+                        subtitle = "Inspeksi harian Press, Sewing, dan Cutting",
+                        icon = Icons.AutoMirrored.Filled.Assignment,
+                        onClick = onChecksheetClick,
+                        modifier = Modifier.weight(1f)
+                    )
+                    DashboardModuleCard(
+                        title = "Master Data",
+                        subtitle = "Part, material, supplier, spec, dan defect",
+                        icon = Icons.Default.Dataset,
+                        onClick = onMasterDataClick,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            } else {
+                DashboardModuleCard(
+                    title = "E-Checksheet",
+                    subtitle = "Inspeksi harian Press, Sewing, dan Cutting",
+                    icon = Icons.AutoMirrored.Filled.Assignment,
+                    onClick = onChecksheetClick
+                )
+                DashboardModuleCard(
+                    title = "Master Data",
+                    subtitle = "Part, material, supplier, spec, dan defect",
+                    icon = Icons.Default.Dataset,
+                    onClick = onMasterDataClick
+                )
+            }
+        }
     }
 }
 
@@ -119,14 +138,15 @@ private fun DashboardModuleCard(
     title: String,
     subtitle: String,
     icon: ImageVector,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     ElevatedCard(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 132.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = Color(0xFF1A365D)
         ),
@@ -139,17 +159,22 @@ private fun DashboardModuleCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(46.dp)
-            )
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = Color.White.copy(alpha = 0.12f)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.padding(12.dp).size(32.dp)
+                )
+            }
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Black,
                     color = Color.White
                 )
@@ -163,7 +188,7 @@ private fun DashboardModuleCard(
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.8f)
+                tint = Color.White.copy(alpha = 0.75f)
             )
         }
     }

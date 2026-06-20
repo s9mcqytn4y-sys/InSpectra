@@ -2,18 +2,19 @@ package com.primaraya.inspectra.core.database
 
 import com.primaraya.inspectra.BuildConfig
 import com.primaraya.inspectra.core.network.InspectraHttpClient
-import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
+import kotlinx.serialization.json.Json
 
 /**
- * Client ringan untuk Supabase PostgREST.
+ * Client REST Supabase yang aman terhadap error PostgREST.
  *
- * Semua akses tabel dan view Supabase lewat client ini agar URL, header,
- * error mapping, dan parsing response konsisten.
+ * Seluruh response diperiksa statusnya sebelum decode agar error JSON
+ * dari server tidak memicu JsonConvertException pada UI.
  */
 class SupabaseRestClient {
 
@@ -22,51 +23,50 @@ class SupabaseRestClient {
         .removeSurrounding("\"")
         .trimEnd('/')
 
+    val json = Json {
+        ignoreUnknownKeys = true
+        explicitNulls = false
+        encodeDefaults = true
+        isLenient = true
+    }
+
     /**
-     * Mengambil daftar data dari tabel atau view Supabase.
-     *
-     * @param table nama tabel atau view di schema public.
-     * @param query query string PostgREST, contoh `select=*&aktif=eq.true`.
+     * Mengambil list dari tabel/view Supabase.
      */
     suspend inline fun <reified T> getList(
         table: String,
         query: String = "select=*"
     ): T {
-        return InspectraHttpClient.client
-            .get("$baseUrl/rest/v1/$table?$query")
-            .body()
+        val response = InspectraHttpClient.client.get("$baseUrl/rest/v1/$table?$query")
+
+        if (!response.status.isSuccess()) {
+            throw SupabaseRestException.fromBody(response.bodyAsText())
+        }
+
+        return json.decodeFromString(response.bodyAsText())
     }
 
     /**
-     * Insert data dan mengembalikan representasi baris yang tersimpan.
-     *
-     * @param table nama tabel public.
-     * @param body payload DTO.
+     * Insert dengan return representation.
      */
     suspend inline fun <reified TBody, reified TResponse> insertReturning(
         table: String,
         body: TBody
     ): TResponse {
-        val response = InspectraHttpClient.client.post("$baseUrl/rest/v1/$table") {
-            url {
-                parameters.append("select", "*")
-            }
+        val response = InspectraHttpClient.client.post("$baseUrl/rest/v1/$table?select=*") {
             headers.append("Prefer", "return=representation")
             setBody(body)
         }
 
         if (!response.status.isSuccess()) {
-            error("Permintaan penyimpanan belum berhasil.")
+            throw SupabaseRestException.fromBody(response.bodyAsText())
         }
 
-        return response.body()
+        return json.decodeFromString(response.bodyAsText())
     }
 
     /**
-     * Upsert data master.
-     *
-     * @param table nama tabel public.
-     * @param body payload DTO.
+     * Upsert data.
      */
     suspend inline fun <reified TBody> upsert(
         table: String,
@@ -78,31 +78,50 @@ class SupabaseRestClient {
         }
 
         if (!response.status.isSuccess()) {
-            error("Data belum berhasil disimpan.")
+            throw SupabaseRestException.fromBody(response.bodyAsText())
         }
     }
 
     /**
-     * Soft delete data dengan mengubah kolom aktif menjadi false.
-     *
-     * @param table nama tabel public.
-     * @param idColumn nama kolom id.
-     * @param id nilai id.
+     * Soft delete dengan update aktif=false.
      */
     suspend fun softDelete(
         table: String,
         idColumn: String,
         id: String
     ) {
-        val response = InspectraHttpClient.client.patch("$baseUrl/rest/v1/$table") {
-            url {
-                parameters.append(idColumn, "eq.$id")
-            }
+        val response = InspectraHttpClient.client.patch("$baseUrl/rest/v1/$table?$idColumn=eq.$id") {
             setBody(mapOf("aktif" to false))
         }
 
         if (!response.status.isSuccess()) {
-            error("Data belum berhasil dihapus.")
+            throw SupabaseRestException.fromBody(response.bodyAsText())
+        }
+    }
+}
+
+/**
+ * Exception internal untuk error PostgREST.
+ */
+class SupabaseRestException(
+    message: String,
+    val code: String? = null
+) : RuntimeException(message) {
+
+    companion object {
+        fun fromBody(body: String): SupabaseRestException {
+            val code = Regex("\"code\"\\s*:\\s*\"([^\"]+)\"")
+                .find(body)
+                ?.groupValues
+                ?.getOrNull(1)
+
+            val message = Regex("\"message\"\\s*:\\s*\"([^\"]+)\"")
+                .find(body)
+                ?.groupValues
+                ?.getOrNull(1)
+                ?: "Permintaan ke server belum berhasil."
+
+            return SupabaseRestException(message, code)
         }
     }
 }

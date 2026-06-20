@@ -20,8 +20,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.primaraya.inspectra.core.common.AsyncData
 import com.primaraya.inspectra.core.ui.component.AppEmptyState
 import com.primaraya.inspectra.core.ui.component.AppFriendlyDialog
+import com.primaraya.inspectra.core.ui.component.AppListSkeleton
 import com.primaraya.inspectra.core.ui.component.AppLoading
 import com.primaraya.inspectra.fitur.masterdata.domain.MasterDefectDto
 import com.primaraya.inspectra.fitur.masterdata.domain.MasterMaterialDto
@@ -39,18 +41,9 @@ fun MasterDataScreen(
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is MasterDataContract.Effect.TampilPesan -> {
-                    snackbarHostState.showSnackbar(effect.pesan)
-                }
-                is MasterDataContract.Effect.DataTersimpan -> {
-                    snackbarHostState.showSnackbar("Data berhasil disimpan")
-                }
-                is MasterDataContract.Effect.DataDihapus -> {
-                    snackbarHostState.showSnackbar("Data berhasil dihapus")
-                }
-                is MasterDataContract.Effect.TampilError -> {
-                    // Handled by UserMessage dialog for now
-                }
+                is MasterDataContract.Effect.TampilPesan -> snackbarHostState.showSnackbar(effect.pesan)
+                is MasterDataContract.Effect.DataTersimpan -> snackbarHostState.showSnackbar("Data berhasil disimpan")
+                is MasterDataContract.Effect.DataDihapus -> snackbarHostState.showSnackbar("Data berhasil dihapus")
                 else -> Unit
             }
         }
@@ -114,26 +107,19 @@ fun MasterDataScreen(
             }
 
             Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8FAFC))) {
-                if (state.loading) {
-                    AppLoading()
-                } else {
-                    when (state.tabAktif) {
-                        MasterDataContract.TabMasterData.PART -> PartList(
-                            state.daftarPart,
-                            onEdit = { viewModel.onIntent(MasterDataContract.Intent.EditPart(it)) },
-                            onDelete = { viewModel.onIntent(MasterDataContract.Intent.HapusPart(it)) }
-                        )
-                        MasterDataContract.TabMasterData.MATERIAL -> MaterialList(
-                            state.daftarMaterial,
-                            onEdit = { viewModel.onIntent(MasterDataContract.Intent.EditMaterial(it)) },
-                            onDelete = { viewModel.onIntent(MasterDataContract.Intent.HapusMaterial(it)) }
-                        )
-                        MasterDataContract.TabMasterData.DEFECT -> DefectList(
-                            state.daftarDefect,
-                            onEdit = { viewModel.onIntent(MasterDataContract.Intent.EditDefect(it)) },
-                            onDelete = { viewModel.onIntent(MasterDataContract.Intent.HapusDefect(it)) }
-                        )
-                    }
+                when (state.tabAktif) {
+                    MasterDataContract.TabMasterData.PART -> AsyncList(
+                        data = state.parts,
+                        content = { PartList(it, onEdit = { d -> viewModel.onIntent(MasterDataContract.Intent.EditPart(d)) }, onDelete = { d -> viewModel.onIntent(MasterDataContract.Intent.HapusPart(d)) }) }
+                    )
+                    MasterDataContract.TabMasterData.MATERIAL -> AsyncList(
+                        data = state.materials,
+                        content = { MaterialList(it, onEdit = { d -> viewModel.onIntent(MasterDataContract.Intent.EditMaterial(d)) }, onDelete = { d -> viewModel.onIntent(MasterDataContract.Intent.HapusMaterial(d)) }) }
+                    )
+                    MasterDataContract.TabMasterData.DEFECT -> AsyncList(
+                        data = state.defects,
+                        content = { DefectList(it, onEdit = { d -> viewModel.onIntent(MasterDataContract.Intent.EditDefect(d)) }, onDelete = { d -> viewModel.onIntent(MasterDataContract.Intent.HapusDefect(d)) }) }
+                    )
                 }
             }
         }
@@ -141,27 +127,24 @@ fun MasterDataScreen(
 
     state.dialogForm?.let { form ->
         when (form) {
-            is MasterDataContract.DialogForm.FormPart -> {
-                PartFormDialog(
-                    initialData = form.data,
-                    onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
-                    onSave = { viewModel.onIntent(MasterDataContract.Intent.SimpanPart(it)) }
-                )
-            }
-            is MasterDataContract.DialogForm.FormMaterial -> {
-                MaterialFormDialog(
-                    initialData = form.data,
-                    onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
-                    onSave = { viewModel.onIntent(MasterDataContract.Intent.SimpanMaterial(it)) }
-                )
-            }
-            is MasterDataContract.DialogForm.FormDefect -> {
-                DefectFormDialog(
-                    initialData = form.data,
-                    onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
-                    onSave = { viewModel.onIntent(MasterDataContract.Intent.SimpanDefect(it)) }
-                )
-            }
+            is MasterDataContract.DialogForm.FormPart -> PartFormSheet(
+                initialData = form.data,
+                onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
+                onSave = { viewModel.onIntent(MasterDataContract.Intent.SimpanPart(it)) },
+                saving = state.menyimpan
+            )
+            is MasterDataContract.DialogForm.FormMaterial -> MaterialFormSheet(
+                initialData = form.data,
+                onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
+                onSave = { viewModel.onIntent(MasterDataContract.Intent.SimpanMaterial(it)) },
+                saving = state.menyimpan
+            )
+            is MasterDataContract.DialogForm.FormDefect -> DefectFormSheet(
+                initialData = form.data,
+                onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
+                onSave = { viewModel.onIntent(MasterDataContract.Intent.SimpanDefect(it)) },
+                saving = state.menyimpan
+            )
         }
     }
 
@@ -176,29 +159,39 @@ fun MasterDataScreen(
 }
 
 @Composable
+fun <T> AsyncList(
+    data: AsyncData<T>,
+    content: @Composable (T) -> Unit
+) {
+    when (data) {
+        is AsyncData.Loading -> AppListSkeleton()
+        is AsyncData.Success -> content(data.data)
+        is AsyncData.Empty -> AppEmptyState(title = data.title, message = data.message)
+        is AsyncData.Error -> AppEmptyState(title = data.title, message = data.message)
+        else -> Unit
+    }
+}
+
+@Composable
 fun PartList(
     parts: List<MasterPartDto>,
     onEdit: (MasterPartDto) -> Unit,
     onDelete: (MasterPartDto) -> Unit
 ) {
-    if (parts.isEmpty()) {
-        AppEmptyState(title = "Data part belum tersedia", message = "Tambahkan data part terlebih dahulu.")
-    } else {
-        LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(parts) { part ->
-                ElevatedCard(shape = RoundedCornerShape(16.dp)) {
-                    Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(part.uniq_no, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
-                                Text(part.nama_part, style = MaterialTheme.typography.bodyLarge)
-                            }
-                            IconButton(onClick = { onEdit(part) }) { Icon(Icons.Default.Edit, contentDescription = "Edit") }
-                            IconButton(onClick = { onDelete(part) }) { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red) }
+    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        items(parts) { part ->
+            ElevatedCard(shape = RoundedCornerShape(16.dp)) {
+                Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(part.uniq_no, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+                            Text(part.nama_part, style = MaterialTheme.typography.bodyLarge)
                         }
-                        Text("Model: ${part.model ?: "-"}", style = MaterialTheme.typography.bodySmall)
-                        Text("Komoditas: ${part.komoditas}", style = MaterialTheme.typography.labelMedium, color = Color(0xFFD97706))
+                        IconButton(onClick = { onEdit(part) }) { Icon(Icons.Default.Edit, contentDescription = "Edit") }
+                        IconButton(onClick = { onDelete(part) }) { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red) }
                     }
+                    Text("Model: ${part.model ?: "-"}", style = MaterialTheme.typography.bodySmall)
+                    Text("Komoditas: ${part.komoditas}", style = MaterialTheme.typography.labelMedium, color = Color(0xFFD97706))
                 }
             }
         }
@@ -211,23 +204,19 @@ fun MaterialList(
     onEdit: (MasterMaterialDto) -> Unit,
     onDelete: (MasterMaterialDto) -> Unit
 ) {
-    if (materials.isEmpty()) {
-        AppEmptyState(title = "Data material belum tersedia", message = "Tambahkan data material terlebih dahulu.")
-    } else {
-        LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(materials) { material ->
-                ElevatedCard(shape = RoundedCornerShape(16.dp)) {
-                    Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(material.nama_material, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                Text("Supplier: ${material.supplier ?: "-"}", style = MaterialTheme.typography.bodyMedium)
-                            }
-                            IconButton(onClick = { onEdit(material) }) { Icon(Icons.Default.Edit, contentDescription = "Edit") }
-                            IconButton(onClick = { onDelete(material) }) { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red) }
+    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        items(materials) { material ->
+            ElevatedCard(shape = RoundedCornerShape(16.dp)) {
+                Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(material.nama_material, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("Supplier: ${material.supplier ?: "-"}", style = MaterialTheme.typography.bodyMedium)
                         }
-                        Text("Spec: ${material.spec ?: "-"}", style = MaterialTheme.typography.bodySmall)
+                        IconButton(onClick = { onEdit(material) }) { Icon(Icons.Default.Edit, contentDescription = "Edit") }
+                        IconButton(onClick = { onDelete(material) }) { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red) }
                     }
+                    Text("Spec: ${material.spec ?: "-"}", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -240,156 +229,138 @@ fun DefectList(
     onEdit: (MasterDefectDto) -> Unit,
     onDelete: (MasterDefectDto) -> Unit
 ) {
-    if (defects.isEmpty()) {
-        AppEmptyState(title = "Data defect belum tersedia", message = "Tambahkan data defect terlebih dahulu.")
-    } else {
-        LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(defects) { defect ->
-                ElevatedCard(shape = RoundedCornerShape(16.dp)) {
-                    Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(defect.nama_defect, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text("ID: ${defect.id_defect}", style = MaterialTheme.typography.bodySmall)
-                        }
-                        SuggestionChip(onClick = {}, label = { Text(defect.kategori) })
-                        IconButton(onClick = { onEdit(defect) }) { Icon(Icons.Default.Edit, contentDescription = "Edit") }
-                        IconButton(onClick = { onDelete(defect) }) { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red) }
+    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        items(defects) { defect ->
+            ElevatedCard(shape = RoundedCornerShape(16.dp)) {
+                Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(defect.nama_defect, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("ID: ${defect.id_defect}", style = MaterialTheme.typography.bodySmall)
                     }
+                    SuggestionChip(onClick = {}, label = { Text(defect.kategori) })
+                    IconButton(onClick = { onEdit(defect) }) { Icon(Icons.Default.Edit, contentDescription = "Edit") }
+                    IconButton(onClick = { onDelete(defect) }) { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red) }
                 }
             }
         }
     }
 }
 
-@Composable
-fun PartFormDialog(
-    initialData: MasterPartDto?,
-    onDismiss: () -> Unit,
-    onSave: (MasterPartDto) -> Unit
-) {
-    var uniqNo by remember { mutableStateOf(initialData?.uniq_no ?: "") }
-    var partNo by remember { mutableStateOf(initialData?.part_no ?: "") }
-    var namaPart by remember { mutableStateOf(initialData?.nama_part ?: "") }
-    var model by remember { mutableStateOf(initialData?.model ?: "") }
-    var customer by remember { mutableStateOf(initialData?.customer ?: "") }
-    var komoditas by remember { mutableStateOf(initialData?.komoditas ?: "PRESS") }
+// Form State and Sheets
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (initialData == null) "Tambah Part" else "Edit Part") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = uniqNo, onValueChange = { uniqNo = it }, label = { Text("UNIQ No") })
-                OutlinedTextField(value = partNo, onValueChange = { partNo = it }, label = { Text("Part No") })
-                OutlinedTextField(value = namaPart, onValueChange = { namaPart = it }, label = { Text("Nama Part") })
-                OutlinedTextField(value = model, onValueChange = { model = it }, label = { Text("Model") })
-                OutlinedTextField(value = customer, onValueChange = { customer = it }, label = { Text("Customer") })
-                Text("Komoditas: $komoditas")
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    listOf("PRESS", "SEWING", "CUTTING").forEach {
-                        FilterChip(selected = komoditas == it, onClick = { komoditas = it }, label = { Text(it) })
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                onSave(
-                    MasterPartDto(
-                        id = initialData?.id,
-                        uniq_no = uniqNo,
-                        part_no = partNo,
-                        nama_part = namaPart,
-                        model = model,
-                        customer = customer,
-                        komoditas = komoditas,
-                        aktif = true
-                    )
-                )
-            }) { Text("Simpan") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Batal") } }
-    )
+data class PartFormState(
+    val id: String? = null,
+    val uniqNo: String = "",
+    val partNo: String = "",
+    val namaPart: String = "",
+    val model: String = "",
+    val customer: String = "",
+    val komoditas: String = "PRESS",
+    val sudahDisubmit: Boolean = false
+) {
+    val uniqNoError: String? get() = if (sudahDisubmit && uniqNo.isBlank()) "UNIQ wajib diisi." else null
+    val namaPartError: String? get() = if (sudahDisubmit && namaPart.isBlank()) "Nama part wajib diisi." else null
 }
 
 @Composable
-fun MaterialFormDialog(
+fun PartFormSheet(
+    initialData: MasterPartDto?,
+    onDismiss: () -> Unit,
+    onSave: (MasterPartDto) -> Unit,
+    saving: Boolean
+) {
+    var formState by remember { mutableStateOf(
+        PartFormState(
+            id = initialData?.id,
+            uniqNo = initialData?.uniq_no ?: "",
+            partNo = initialData?.part_no ?: "",
+            namaPart = initialData?.nama_part ?: "",
+            model = initialData?.model ?: "",
+            customer = initialData?.customer ?: "",
+            komoditas = initialData?.komoditas ?: "PRESS"
+        )
+    ) }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(modifier = Modifier.padding(24.dp).fillMaxWidth().navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(if (initialData == null) "Tambah Part" else "Edit Part", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+            
+            OutlinedTextField(value = formState.uniqNo, onValueChange = { formState = formState.copy(uniqNo = it.uppercase()) }, label = { Text("UNIQ No") }, isError = formState.uniqNoError != null, supportingText = formState.uniqNoError?.let { { Text(it) } }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = formState.partNo, onValueChange = { formState = formState.copy(partNo = it.uppercase()) }, label = { Text("Part No") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = formState.namaPart, onValueChange = { formState = formState.copy(namaPart = it.uppercase()) }, label = { Text("Nama Part") }, isError = formState.namaPartError != null, supportingText = formState.namaPartError?.let { { Text(it) } }, modifier = Modifier.fillMaxWidth())
+            
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("PRESS", "SEWING", "CUTTING").forEach {
+                    FilterChip(selected = formState.komoditas == it, onClick = { formState = formState.copy(komoditas = it) }, label = { Text(it) })
+                }
+            }
+
+            Button(onClick = {
+                formState = formState.copy(sudahDisubmit = true)
+                if (formState.uniqNoError == null && formState.namaPartError == null) {
+                    onSave(MasterPartDto(formState.id, formState.partNo, formState.uniqNo, formState.namaPart, formState.model, formState.customer, formState.komoditas, null, true))
+                }
+            }, enabled = !saving, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                if (saving) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Simpan")
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+fun MaterialFormSheet(
     initialData: MasterMaterialDto?,
     onDismiss: () -> Unit,
-    onSave: (MasterMaterialDto) -> Unit
+    onSave: (MasterMaterialDto) -> Unit,
+    saving: Boolean
 ) {
     var namaMaterial by remember { mutableStateOf(initialData?.nama_material ?: "") }
     var supplier by remember { mutableStateOf(initialData?.supplier ?: "") }
     var spec by remember { mutableStateOf(initialData?.spec ?: "") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (initialData == null) "Tambah Material" else "Edit Material") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = namaMaterial, onValueChange = { namaMaterial = it }, label = { Text("Nama Material") })
-                OutlinedTextField(value = supplier, onValueChange = { supplier = it }, label = { Text("Supplier") })
-                OutlinedTextField(value = spec, onValueChange = { spec = it }, label = { Text("Spec") })
+    @OptIn(ExperimentalMaterial3Api::class)
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(modifier = Modifier.padding(24.dp).fillMaxWidth().navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(if (initialData == null) "Tambah Material" else "Edit Material", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+            OutlinedTextField(value = namaMaterial, onValueChange = { namaMaterial = it.uppercase() }, label = { Text("Nama Material") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = supplier, onValueChange = { supplier = it.uppercase() }, label = { Text("Supplier") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = spec, onValueChange = { spec = it.uppercase() }, label = { Text("Spec") }, modifier = Modifier.fillMaxWidth())
+            Button(onClick = { onSave(MasterMaterialDto(initialData?.id, supplier, namaMaterial, spec, null, true)) }, enabled = !saving, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                if (saving) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Simpan")
             }
-        },
-        confirmButton = {
-            Button(onClick = {
-                onSave(
-                    MasterMaterialDto(
-                        id = initialData?.id,
-                        nama_material = namaMaterial,
-                        supplier = supplier,
-                        spec = spec,
-                        aktif = true
-                    )
-                )
-            }) { Text("Simpan") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Batal") } }
-    )
+            Spacer(Modifier.height(24.dp))
+        }
+    }
 }
 
 @Composable
-fun DefectFormDialog(
+fun DefectFormSheet(
     initialData: MasterDefectDto?,
     onDismiss: () -> Unit,
-    onSave: (MasterDefectDto) -> Unit
+    onSave: (MasterDefectDto) -> Unit,
+    saving: Boolean
 ) {
     var idDefect by remember { mutableStateOf(initialData?.id_defect ?: "") }
     var namaDefect by remember { mutableStateOf(initialData?.nama_defect ?: "") }
     var kategori by remember { mutableStateOf(initialData?.kategori ?: "PROSES") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (initialData == null) "Tambah Defect" else "Edit Defect") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = idDefect, 
-                    onValueChange = { idDefect = it }, 
-                    label = { Text("ID Defect") },
-                    enabled = initialData == null
-                )
-                OutlinedTextField(value = namaDefect, onValueChange = { namaDefect = it }, label = { Text("Nama Defect") })
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    listOf("MATERIAL", "PROSES").forEach {
-                        FilterChip(selected = kategori == it, onClick = { kategori = it }, label = { Text(it) })
-                    }
+    @OptIn(ExperimentalMaterial3Api::class)
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(modifier = Modifier.padding(24.dp).fillMaxWidth().navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(if (initialData == null) "Tambah Defect" else "Edit Defect", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+            OutlinedTextField(value = idDefect, onValueChange = { idDefect = it.uppercase() }, label = { Text("ID Defect") }, enabled = initialData == null, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = namaDefect, onValueChange = { namaDefect = it.uppercase() }, label = { Text("Nama Defect") }, modifier = Modifier.fillMaxWidth())
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("MATERIAL", "PROSES").forEach {
+                    FilterChip(selected = kategori == it, onClick = { kategori = it }, label = { Text(it) })
                 }
             }
-        },
-        confirmButton = {
-            Button(onClick = {
-                onSave(
-                    MasterDefectDto(
-                        id_defect = idDefect,
-                        nama_defect = namaDefect,
-                        kategori = kategori,
-                        aktif = true
-                    )
-                )
-            }) { Text("Simpan") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Batal") } }
-    )
+            Button(onClick = { onSave(MasterDefectDto(idDefect, namaDefect, kategori, true)) }, enabled = !saving, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                if (saving) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Simpan")
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+    }
 }

@@ -2,6 +2,7 @@ package com.primaraya.inspectra.fitur.masterdata.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.primaraya.inspectra.core.common.AsyncData
 import com.primaraya.inspectra.core.network.NetworkResult
 import com.primaraya.inspectra.core.ui.UserMessageMapper
 import com.primaraya.inspectra.core.ui.KonteksOperasi
@@ -11,18 +12,9 @@ import com.primaraya.inspectra.fitur.masterdata.domain.MasterDefectDto
 import com.primaraya.inspectra.fitur.masterdata.domain.MasterMaterialDto
 import com.primaraya.inspectra.fitur.masterdata.domain.MasterPartDto
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-/**
- * ViewModel MVI untuk Master Data.
- */
 class MasterDataViewModel(
     private val repository: MasterDataRepository = SupabaseMasterDataRepository()
 ) : ViewModel() {
@@ -53,57 +45,41 @@ class MasterDataViewModel(
             }
 
             MasterDataContract.Intent.TambahPart -> {
-                _state.update {
-                    it.copy(dialogForm = MasterDataContract.DialogForm.FormPart())
-                }
+                _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormPart()) }
             }
 
             is MasterDataContract.Intent.EditPart -> {
-                _state.update {
-                    it.copy(dialogForm = MasterDataContract.DialogForm.FormPart(intent.data))
-                }
+                _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormPart(intent.data)) }
             }
 
             is MasterDataContract.Intent.SimpanPart -> simpanPart(intent.data)
             is MasterDataContract.Intent.HapusPart -> hapusPart(intent.data)
 
             MasterDataContract.Intent.TambahMaterial -> {
-                _state.update {
-                    it.copy(dialogForm = MasterDataContract.DialogForm.FormMaterial())
-                }
+                _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormMaterial()) }
             }
 
             is MasterDataContract.Intent.EditMaterial -> {
-                _state.update {
-                    it.copy(dialogForm = MasterDataContract.DialogForm.FormMaterial(intent.data))
-                }
+                _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormMaterial(intent.data)) }
             }
 
             is MasterDataContract.Intent.SimpanMaterial -> simpanMaterial(intent.data)
             is MasterDataContract.Intent.HapusMaterial -> hapusMaterial(intent.data)
 
             MasterDataContract.Intent.TambahDefect -> {
-                _state.update {
-                    it.copy(dialogForm = MasterDataContract.DialogForm.FormDefect())
-                }
+                _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormDefect()) }
             }
 
             is MasterDataContract.Intent.EditDefect -> {
-                _state.update {
-                    it.copy(dialogForm = MasterDataContract.DialogForm.FormDefect(intent.data))
-                }
+                _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormDefect(intent.data)) }
             }
 
             is MasterDataContract.Intent.SimpanDefect -> simpanDefect(intent.data)
             is MasterDataContract.Intent.HapusDefect -> hapusDefect(intent.data)
 
-            MasterDataContract.Intent.TutupDialog -> {
-                _state.update { it.copy(dialogForm = null) }
-            }
+            MasterDataContract.Intent.TutupDialog -> _state.update { it.copy(dialogForm = null) }
 
-            MasterDataContract.Intent.ClearUserMessage -> {
-                _state.update { it.copy(userMessage = null) }
-            }
+            MasterDataContract.Intent.ClearUserMessage -> _state.update { it.copy(userMessage = null) }
 
             MasterDataContract.Intent.Retry -> muatDataTabAktif()
         }
@@ -112,114 +88,94 @@ class MasterDataViewModel(
     private fun muatDataTabAktif() {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
-            _state.update { it.copy(loading = true, userMessage = null) }
+            val tab = _state.value.tabAktif
+            updateTabState(tab, AsyncData.Loading)
 
-            when (_state.value.tabAktif) {
+            when (tab) {
                 MasterDataContract.TabMasterData.PART -> {
-                    when (val result = repository.getParts()) {
-                        is NetworkResult.Success -> {
-                            _state.update {
-                                it.copy(loading = false, daftarPart = result.data)
-                            }
-                        }
-
-                        is NetworkResult.Error -> tampilkanError(result.message)
-                        NetworkResult.Loading -> Unit
-                    }
+                    val result = repository.getParts()
+                    handleLoadResult(result) { data -> _state.update { it.copy(parts = AsyncData.Success(data)) } }
                 }
-
                 MasterDataContract.TabMasterData.MATERIAL -> {
-                    when (val result = repository.getMaterials()) {
-                        is NetworkResult.Success -> {
-                            _state.update {
-                                it.copy(loading = false, daftarMaterial = result.data)
-                            }
-                        }
-
-                        is NetworkResult.Error -> tampilkanError(result.message)
-                        NetworkResult.Loading -> Unit
-                    }
+                    val result = repository.getMaterials()
+                    handleLoadResult(result) { data -> _state.update { it.copy(materials = AsyncData.Success(data)) } }
                 }
-
                 MasterDataContract.TabMasterData.DEFECT -> {
-                    when (val result = repository.getDefects()) {
-                        is NetworkResult.Success -> {
-                            _state.update {
-                                it.copy(loading = false, daftarDefect = result.data)
-                            }
-                        }
-
-                        is NetworkResult.Error -> tampilkanError(result.message)
-                        NetworkResult.Loading -> Unit
-                    }
+                    val result = repository.getDefects()
+                    handleLoadResult(result) { data -> _state.update { it.copy(defects = AsyncData.Success(data)) } }
                 }
             }
         }
     }
 
-    private fun simpanPart(data: MasterPartDto) {
-        val error = validasiPart(data)
-        if (error != null) {
-            kirimError("Data part belum lengkap", error)
-            return
+    private fun <T> handleLoadResult(result: NetworkResult<List<T>>, onSuccess: (List<T>) -> Unit) {
+        when (result) {
+            is NetworkResult.Success -> {
+                if (result.data.isEmpty()) {
+                    updateTabState(_state.value.tabAktif, AsyncData.Empty("Data Kosong", "Belum ada data tersedia."))
+                } else {
+                    onSuccess(result.data)
+                }
+            }
+            is NetworkResult.Error -> {
+                val msg = UserMessageMapper.fromThrowableMessage(result.message, KonteksOperasi.MASTER_DATA)
+                updateTabState(_state.value.tabAktif, AsyncData.Error(msg.title, msg.body))
+            }
+            else -> Unit
         }
+    }
 
+    private fun updateTabState(tab: MasterDataContract.TabMasterData, async: AsyncData<*>) {
+        _state.update {
+            when (tab) {
+                MasterDataContract.TabMasterData.PART -> it.copy(parts = async as AsyncData<List<MasterPartDto>>)
+                MasterDataContract.TabMasterData.MATERIAL -> it.copy(materials = async as AsyncData<List<MasterMaterialDto>>)
+                MasterDataContract.TabMasterData.DEFECT -> it.copy(defects = async as AsyncData<List<MasterDefectDto>>)
+            }
+        }
+    }
+
+    private fun simpanPart(data: MasterPartDto) {
         viewModelScope.launch {
             _state.update { it.copy(menyimpan = true) }
-
             when (val result = repository.upsertPart(data)) {
                 is NetworkResult.Success -> {
                     _state.update { it.copy(menyimpan = false, dialogForm = null) }
                     _effect.emit(MasterDataContract.Effect.DataTersimpan)
                     muatDataTabAktif()
                 }
-
                 is NetworkResult.Error -> tampilkanError(result.message)
-                NetworkResult.Loading -> Unit
+                else -> Unit
             }
         }
     }
 
     private fun simpanMaterial(data: MasterMaterialDto) {
-        if (data.nama_material.isBlank()) {
-            kirimError("Data material belum lengkap", "Nama material wajib diisi.")
-            return
-        }
-
         viewModelScope.launch {
             _state.update { it.copy(menyimpan = true) }
-
             when (val result = repository.upsertMaterial(data)) {
                 is NetworkResult.Success -> {
                     _state.update { it.copy(menyimpan = false, dialogForm = null) }
                     _effect.emit(MasterDataContract.Effect.DataTersimpan)
                     muatDataTabAktif()
                 }
-
                 is NetworkResult.Error -> tampilkanError(result.message)
-                NetworkResult.Loading -> Unit
+                else -> Unit
             }
         }
     }
 
     private fun simpanDefect(data: MasterDefectDto) {
-        if (data.id_defect.isBlank() || data.nama_defect.isBlank()) {
-            kirimError("Data defect belum lengkap", "Kode dan nama defect wajib diisi.")
-            return
-        }
-
         viewModelScope.launch {
             _state.update { it.copy(menyimpan = true) }
-
             when (val result = repository.upsertDefect(data)) {
                 is NetworkResult.Success -> {
                     _state.update { it.copy(menyimpan = false, dialogForm = null) }
                     _effect.emit(MasterDataContract.Effect.DataTersimpan)
                     muatDataTabAktif()
                 }
-
                 is NetworkResult.Error -> tampilkanError(result.message)
-                NetworkResult.Loading -> Unit
+                else -> Unit
             }
         }
     }
@@ -232,9 +188,8 @@ class MasterDataViewModel(
                     _effect.emit(MasterDataContract.Effect.DataDihapus)
                     muatDataTabAktif()
                 }
-
                 is NetworkResult.Error -> tampilkanError(result.message)
-                NetworkResult.Loading -> Unit
+                else -> Unit
             }
         }
     }
@@ -247,9 +202,8 @@ class MasterDataViewModel(
                     _effect.emit(MasterDataContract.Effect.DataDihapus)
                     muatDataTabAktif()
                 }
-
                 is NetworkResult.Error -> tampilkanError(result.message)
-                NetworkResult.Loading -> Unit
+                else -> Unit
             }
         }
     }
@@ -261,30 +215,14 @@ class MasterDataViewModel(
                     _effect.emit(MasterDataContract.Effect.DataDihapus)
                     muatDataTabAktif()
                 }
-
                 is NetworkResult.Error -> tampilkanError(result.message)
-                NetworkResult.Loading -> Unit
+                else -> Unit
             }
-        }
-    }
-
-    private fun validasiPart(data: MasterPartDto): String? {
-        return when {
-            data.uniq_no.isBlank() -> "UNIQ wajib diisi."
-            data.nama_part.isBlank() -> "Nama part wajib diisi."
-            data.komoditas.isBlank() -> "Proses atau komoditas wajib dipilih."
-            else -> null
         }
     }
 
     private fun tampilkanError(raw: String?) {
         val message = UserMessageMapper.fromThrowableMessage(raw, KonteksOperasi.MASTER_DATA)
-        _state.update { it.copy(loading = false, menyimpan = false, userMessage = message) }
-    }
-
-    private fun kirimError(judul: String, pesan: String) {
-        viewModelScope.launch {
-            _effect.emit(MasterDataContract.Effect.TampilError(judul, pesan))
-        }
+        _state.update { it.copy(menyimpan = false, userMessage = message) }
     }
 }

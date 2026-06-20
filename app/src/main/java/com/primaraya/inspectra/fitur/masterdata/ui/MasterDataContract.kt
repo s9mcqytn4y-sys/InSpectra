@@ -1,5 +1,6 @@
 package com.primaraya.inspectra.fitur.masterdata.ui
 
+import com.primaraya.inspectra.core.common.AsyncData
 import com.primaraya.inspectra.core.ui.UserMessage
 import com.primaraya.inspectra.fitur.masterdata.domain.MasterDefectDto
 import com.primaraya.inspectra.fitur.masterdata.domain.MasterMaterialDto
@@ -10,33 +11,23 @@ import com.primaraya.inspectra.fitur.masterdata.domain.MasterPartDto
  */
 object MasterDataContract {
 
-    /**
-     * Tab aktif pada Master Data.
-     */
     enum class TabMasterData {
         PART,
         MATERIAL,
         DEFECT
     }
 
-    /**
-     * State tunggal yang dirender oleh MasterDataScreen.
-     */
     data class State(
-        val loading: Boolean = false,
-        val menyimpan: Boolean = false,
         val tabAktif: TabMasterData = TabMasterData.PART,
-        val daftarPart: List<MasterPartDto> = emptyList(),
-        val daftarMaterial: List<MasterMaterialDto> = emptyList(),
-        val daftarDefect: List<MasterDefectDto> = emptyList(),
+        val parts: AsyncData<List<MasterPartDto>> = AsyncData.Idle,
+        val materials: AsyncData<List<MasterMaterialDto>> = AsyncData.Idle,
+        val defects: AsyncData<List<MasterDefectDto>> = AsyncData.Idle,
+        val menyimpan: Boolean = false,
         val kataKunci: String = "",
         val dialogForm: DialogForm? = null,
         val userMessage: UserMessage? = null
     )
 
-    /**
-     * Intent dari UI ke ViewModel.
-     */
     sealed interface Intent {
         data object MuatAwal : Intent
         data class PilihTab(val tab: TabMasterData) : Intent
@@ -62,9 +53,6 @@ object MasterDataContract {
         data object Retry : Intent
     }
 
-    /**
-     * Side-effect satu kali, seperti snackbar, dialog, atau navigasi.
-     */
     sealed interface Effect {
         data class TampilPesan(val pesan: String) : Effect
         data class TampilError(val judul: String, val pesan: String) : Effect
@@ -72,9 +60,6 @@ object MasterDataContract {
         data object DataDihapus : Effect
     }
 
-    /**
-     * Dialog form aktif.
-     */
     sealed interface DialogForm {
         data class FormPart(val data: MasterPartDto? = null) : DialogForm
         data class FormMaterial(val data: MasterMaterialDto? = null) : DialogForm
