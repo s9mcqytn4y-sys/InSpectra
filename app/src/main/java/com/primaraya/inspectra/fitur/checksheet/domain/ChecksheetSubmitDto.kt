@@ -33,3 +33,11 @@ data class DefectChecksheetDto(
     val kategori: String,
     val jumlah: Int
 )
+
+@Serializable
+data class DefectSlotChecksheetDto(
+    val id: String? = null,
+    val id_defect_checksheet: String,
+    val slot_waktu_id: String,
+    val jumlah: Int
+)

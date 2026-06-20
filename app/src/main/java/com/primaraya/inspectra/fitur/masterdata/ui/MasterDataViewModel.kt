@@ -1,8 +1,11 @@
 package com.primaraya.inspectra.fitur.masterdata.ui
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.primaraya.inspectra.core.common.AsyncData
+import com.primaraya.inspectra.core.data.PageRequest
+import com.primaraya.inspectra.core.draft.DraftStore
 import com.primaraya.inspectra.core.network.NetworkResult
 import com.primaraya.inspectra.core.ui.UserMessageMapper
 import com.primaraya.inspectra.core.ui.KonteksOperasi
@@ -12,10 +15,13 @@ import com.primaraya.inspectra.fitur.masterdata.domain.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.ListSerializer
 
 class MasterDataViewModel(
-    private val repository: MasterDataRepository = SupabaseMasterDataRepository()
-) : ViewModel() {
+    application: Application,
+    private val repository: MasterDataRepository = SupabaseMasterDataRepository(),
+    private val draftStore: DraftStore = DraftStore(application)
+) : AndroidViewModel(application) {
 
     private val _state = MutableStateFlow(MasterDataContract.State())
     val state: StateFlow<MasterDataContract.State> = _state.asStateFlow()
@@ -24,170 +30,206 @@ class MasterDataViewModel(
     val effect: SharedFlow<MasterDataContract.Effect> = _effect.asSharedFlow()
 
     private var loadJob: Job? = null
+    
+    private val keywordFlow = MutableStateFlow("")
 
     init {
         onIntent(MasterDataContract.Intent.MuatAwal)
+        
+        keywordFlow
+            .debounce(350)
+            .distinctUntilChanged()
+            .onEach { muatDataTabAktif(reset = true) }
+            .launchIn(viewModelScope)
+
+        viewModelScope.launch {
+            combine(
+                draftStore.readDraft("part_form_draft", PartFormState.serializer()),
+                draftStore.readDraft("material_form_draft", MaterialFormState.serializer()),
+                draftStore.readDraft("supplier_form_draft", SupplierFormState.serializer()),
+                draftStore.readDraft("defect_form_draft", DefectFormState.serializer())
+            ) { part, mat, sup, def ->
+                _state.update { it.copy(
+                    partFormDraft = part ?: it.partFormDraft,
+                    materialFormDraft = mat ?: it.materialFormDraft,
+                    supplierFormDraft = sup ?: it.supplierFormDraft,
+                    defectFormDraft = def ?: it.defectFormDraft
+                ) }
+            }.collect()
+        }
     }
 
     fun onIntent(intent: MasterDataContract.Intent) {
         when (intent) {
-            MasterDataContract.Intent.MuatAwal -> muatDataTabAktif()
+            MasterDataContract.Intent.MuatAwal -> muatDataTabAktif(reset = true)
+            MasterDataContract.Intent.MuatLebihBanyak -> muatDataTabAktif(reset = false)
             is MasterDataContract.Intent.PilihTab -> {
-                _state.update { it.copy(tabAktif = intent.tab, kataKunci = "") }
-                muatDataTabAktif()
+                _state.update { it.copy(tabAktif = intent.tab, kataKunci = "", canLoadMore = true) }
+                keywordFlow.value = ""
+                muatDataTabAktif(reset = true)
             }
-            is MasterDataContract.Intent.Cari -> _state.update { it.copy(kataKunci = intent.keyword) }
+            is MasterDataContract.Intent.Cari -> {
+                _state.update { it.copy(kataKunci = intent.keyword) }
+                keywordFlow.value = intent.keyword
+            }
 
             // Part
             MasterDataContract.Intent.TambahPart -> _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormPart()) }
-            is MasterDataContract.Intent.EditPart -> _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormPart(intent.data)) }
+            is MasterDataContract.Intent.EditPart -> {
+                val form = PartFormState(
+                    id = intent.data.id,
+                    uniqNo = intent.data.uniq_no,
+                    partNo = intent.data.part_no ?: "",
+                    namaPart = intent.data.nama_part,
+                    model = intent.data.model ?: "",
+                    customer = intent.data.customer ?: "",
+                    komoditas = intent.data.komoditas
+                )
+                _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormPart(intent.data), partFormDraft = form) }
+            }
+            is MasterDataContract.Intent.UbahFormPart -> {
+                _state.update { it.copy(partFormDraft = intent.data) }
+                viewModelScope.launch { draftStore.saveDraft("part_form_draft", PartFormState.serializer(), intent.data) }
+            }
             is MasterDataContract.Intent.SimpanPart -> simpanPart(intent.data)
-            is MasterDataContract.Intent.HapusPart -> confirmHapus("Hapus Part", "Hapus part ${intent.data.uniq_no}?") { hapusPart(intent.data) }
+            is MasterDataContract.Intent.HapusPart -> confirmHapus("Hapus Part", "Part akan dinonaktifkan.") { hapusPart(intent.data) }
             is MasterDataContract.Intent.TogglePartDetail -> togglePartDetail(intent.uniqNo)
 
             // Material
             MasterDataContract.Intent.TambahMaterial -> _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormMaterial()) }
-            is MasterDataContract.Intent.EditMaterial -> _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormMaterial(intent.data)) }
+            is MasterDataContract.Intent.EditMaterial -> {
+                val form = MaterialFormState(
+                    id = intent.data.id,
+                    supplier = intent.data.supplier ?: "",
+                    namaMaterial = intent.data.nama_material,
+                    spec = intent.data.spec ?: "",
+                    satuan = intent.data.satuan ?: "PCS"
+                )
+                _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormMaterial(intent.data), materialFormDraft = form) }
+            }
+            is MasterDataContract.Intent.UbahFormMaterial -> {
+                _state.update { it.copy(materialFormDraft = intent.data) }
+                viewModelScope.launch { draftStore.saveDraft("material_form_draft", MaterialFormState.serializer(), intent.data) }
+            }
             is MasterDataContract.Intent.SimpanMaterial -> simpanMaterial(intent.data)
-            is MasterDataContract.Intent.HapusMaterial -> confirmHapus("Hapus Material", "Hapus material ${intent.data.nama_material}?") { hapusMaterial(intent.data) }
+            is MasterDataContract.Intent.HapusMaterial -> confirmHapus("Hapus Material", "Material akan dinonaktifkan.") { hapusMaterial(intent.data) }
 
             // Supplier
             MasterDataContract.Intent.TambahSupplier -> _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormSupplier()) }
-            is MasterDataContract.Intent.EditSupplier -> _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormSupplier(intent.data)) }
+            is MasterDataContract.Intent.EditSupplier -> {
+                val form = SupplierFormState(
+                    id = intent.data.id,
+                    kodeSupplier = intent.data.kode_supplier ?: "",
+                    namaSupplier = intent.data.nama_supplier,
+                    kategori = intent.data.kategori ?: ""
+                )
+                _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormSupplier(intent.data), supplierFormDraft = form) }
+            }
+            is MasterDataContract.Intent.UbahFormSupplier -> {
+                _state.update { it.copy(supplierFormDraft = intent.data) }
+                viewModelScope.launch { draftStore.saveDraft("supplier_form_draft", SupplierFormState.serializer(), intent.data) }
+            }
             is MasterDataContract.Intent.SimpanSupplier -> simpanSupplier(intent.data)
-            is MasterDataContract.Intent.HapusSupplier -> confirmHapus("Hapus Supplier", "Hapus supplier ${intent.data.nama_supplier}?") { hapusSupplier(intent.data) }
+            is MasterDataContract.Intent.HapusSupplier -> confirmHapus("Hapus Supplier", "Supplier akan dinonaktifkan.") { hapusSupplier(intent.data) }
 
             // Defect
             MasterDataContract.Intent.TambahDefect -> _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormDefect()) }
-            is MasterDataContract.Intent.EditDefect -> _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormDefect(intent.data)) }
+            is MasterDataContract.Intent.EditDefect -> {
+                val form = DefectFormState(
+                    idDefect = intent.data.id_defect,
+                    namaDefect = intent.data.nama_defect,
+                    kategori = intent.data.kategori
+                )
+                _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormDefect(intent.data), defectFormDraft = form) }
+            }
+            is MasterDataContract.Intent.UbahFormDefect -> {
+                _state.update { it.copy(defectFormDraft = intent.data) }
+                viewModelScope.launch { draftStore.saveDraft("defect_form_draft", DefectFormState.serializer(), intent.data) }
+            }
             is MasterDataContract.Intent.SimpanDefect -> simpanDefect(intent.data)
-            is MasterDataContract.Intent.HapusDefect -> confirmHapus("Hapus Defect", "Hapus defect ${intent.data.nama_defect}?") { hapusDefect(intent.data) }
+            is MasterDataContract.Intent.HapusDefect -> confirmHapus("Hapus Defect", "Defect akan dinonaktifkan.") { hapusDefect(intent.data) }
 
-            // Relations - Defect
+            // Relations
             is MasterDataContract.Intent.BukaPilihDefect -> _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.PilihDefectUntukPart(intent.uniqNo)) }
             is MasterDataContract.Intent.TambahDefectKePart -> tambahDefectKePart(intent.uniqNo, intent.idDefect)
-            is MasterDataContract.Intent.HapusDefectDariPart -> hapusDefectDariPart(intent.uniqNo, intent.relationId)
-
-            // Relations - Material
+            is MasterDataContract.Intent.HapusDefectDariPart -> confirmHapus("Hapus Tautan", "Defect tidak akan muncul di checksheet part ini.") { hapusDefectDariPart(intent.uniqNo, intent.relationId) }
             is MasterDataContract.Intent.BukaPilihMaterial -> _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.PilihMaterialUntukPart(intent.uniqNo)) }
             is MasterDataContract.Intent.TambahMaterialKePart -> tambahMaterialKePart(intent.uniqNo, intent.materialId, intent.label)
-            is MasterDataContract.Intent.HapusMaterialDariPart -> hapusMaterialDariPart(intent.uniqNo, intent.relationId)
+            is MasterDataContract.Intent.HapusMaterialDariPart -> confirmHapus("Hapus Tautan", "Material tidak lagi tertaut ke part ini.") { hapusMaterialDariPart(intent.uniqNo, intent.relationId) }
 
             MasterDataContract.Intent.TutupDialog -> _state.update { it.copy(dialogForm = null) }
             MasterDataContract.Intent.ClearUserMessage -> _state.update { it.copy(userMessage = null) }
-            MasterDataContract.Intent.Retry -> muatDataTabAktif()
+            MasterDataContract.Intent.Retry -> muatDataTabAktif(reset = true)
         }
     }
 
-    private fun muatDataTabAktif() {
+    private fun muatDataTabAktif(reset: Boolean) {
+        if (!reset && (!_state.value.canLoadMore || _state.value.loadingMore)) return
+
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
-            val tab = _state.value.tabAktif
-            updateTabState(tab, AsyncData.Loading)
-            when (tab) {
-                MasterDataContract.TabMasterData.PART -> handleLoadResult(repository.getParts()) { d -> _state.update { it.copy(parts = AsyncData.Success(d)) } }
-                MasterDataContract.TabMasterData.MATERIAL -> handleLoadResult(repository.getMaterials()) { d -> _state.update { it.copy(materials = AsyncData.Success(d)) } }
-                MasterDataContract.TabMasterData.SUPPLIER -> handleLoadResult(repository.getSuppliers()) { d -> _state.update { it.copy(suppliers = AsyncData.Success(d)) } }
-                MasterDataContract.TabMasterData.DEFECT -> handleLoadResult(repository.getDefects()) { d -> _state.update { it.copy(defects = AsyncData.Success(d)) } }
+            val s = _state.value
+            val tab = s.tabAktif
+            val search = s.kataKunci
+            
+            if (reset) updateTabState(tab, AsyncData.Loading)
+            else _state.update { it.copy(loadingMore = true) }
+
+            val cursorVal = if (reset) null else when (tab) {
+                MasterDataContract.TabMasterData.PART -> (s.parts as? AsyncData.Success)?.data?.lastOrNull()?.uniq_no
+                MasterDataContract.TabMasterData.MATERIAL -> (s.materials as? AsyncData.Success)?.data?.lastOrNull()?.nama_material
+                MasterDataContract.TabMasterData.SUPPLIER -> (s.suppliers as? AsyncData.Success)?.data?.lastOrNull()?.nama_supplier
+                MasterDataContract.TabMasterData.DEFECT -> (s.defects as? AsyncData.Success)?.data?.lastOrNull()?.nama_defect
             }
-        }
-    }
 
-    private fun togglePartDetail(uniqNo: String) {
-        val current = _state.value.partDetails[uniqNo] ?: MasterDataContract.PartRelationState()
-        val next = !current.expanded
-        _state.update { it.copy(partDetails = it.partDetails + (uniqNo to current.copy(expanded = next))) }
-        if (next) muatDetailPart(uniqNo)
-    }
+            val page = when (tab) {
+                MasterDataContract.TabMasterData.PART -> PageRequest(cursorColumn = "uniq_no", cursorValue = cursorVal, searchColumn = "nama_part", searchKeyword = search.ifBlank { null })
+                MasterDataContract.TabMasterData.MATERIAL -> PageRequest(cursorColumn = "nama_material", cursorValue = cursorVal, searchColumn = "nama_material", searchKeyword = search.ifBlank { null })
+                MasterDataContract.TabMasterData.SUPPLIER -> PageRequest(cursorColumn = "nama_supplier", cursorValue = cursorVal, searchColumn = "nama_supplier", searchKeyword = search.ifBlank { null })
+                MasterDataContract.TabMasterData.DEFECT -> PageRequest(cursorColumn = "nama_defect", cursorValue = cursorVal, searchColumn = "nama_defect", searchKeyword = search.ifBlank { null })
+            }
 
-    private fun muatDetailPart(uniqNo: String) {
-        viewModelScope.launch {
-            updatePartRelation(uniqNo) { it.copy(defects = AsyncData.Loading, materials = AsyncData.Loading) }
-            
-            val defectRes = repository.getPartDefects(uniqNo)
-            val materialRes = repository.getPartMaterials(uniqNo)
-            
-            updatePartRelation(uniqNo) { s ->
-                s.copy(
-                    defects = when (defectRes) {
-                        is NetworkResult.Success -> AsyncData.Success(defectRes.data)
-                        is NetworkResult.Error -> AsyncData.Error("Error", defectRes.message)
-                        else -> s.defects
-                    },
-                    materials = when (materialRes) {
-                        is NetworkResult.Success -> AsyncData.Success(materialRes.data)
-                        is NetworkResult.Error -> AsyncData.Error("Error", materialRes.message)
-                        else -> s.materials
+            val result = when (tab) {
+                MasterDataContract.TabMasterData.PART -> repository.getPartsPage(page)
+                MasterDataContract.TabMasterData.MATERIAL -> repository.getMaterialsPage(page)
+                MasterDataContract.TabMasterData.SUPPLIER -> repository.getSuppliersPage(page)
+                MasterDataContract.TabMasterData.DEFECT -> repository.getDefectsPage(page)
+            }
+
+            _state.update { it.copy(loadingMore = false) }
+
+            when (result) {
+                is NetworkResult.Success -> {
+                    val newData = result.data
+                    val canMore = newData.size >= page.limit
+                    _state.update { it.copy(canLoadMore = canMore) }
+
+                    if (reset) {
+                        if (newData.isEmpty()) updateTabState(tab, AsyncData.Empty("Data Kosong", "Belum ada data."))
+                        else updateTabState(tab, AsyncData.Success(newData))
+                    } else {
+                        appendDataToTab(tab, newData)
                     }
-                )
+                }
+                is NetworkResult.Error -> {
+                    val msg = UserMessageMapper.fromThrowableMessage(result.message, KonteksOperasi.MASTER_DATA)
+                    if (reset) updateTabState(tab, AsyncData.Error(msg.title, msg.body))
+                    else _state.update { it.copy(userMessage = msg) }
+                }
+                else -> Unit
             }
         }
     }
 
-    private fun updatePartRelation(uniqNo: String, transform: (MasterDataContract.PartRelationState) -> MasterDataContract.PartRelationState) {
-        _state.update { 
-            val s = it.partDetails[uniqNo] ?: MasterDataContract.PartRelationState()
-            it.copy(partDetails = it.partDetails + (uniqNo to transform(s))) 
-        }
-    }
-
-    private fun tambahDefectKePart(uniqNo: String, idDefect: String) {
-        viewModelScope.launch {
-            _state.update { it.copy(menyimpan = true) }
-            val dto = MasterPartDefectDto(uniq_no = uniqNo, id_defect = idDefect)
-            if (repository.upsertPartDefect(dto) is NetworkResult.Success) {
-                _state.update { it.copy(menyimpan = false, dialogForm = null) }
-                _effect.emit(MasterDataContract.Effect.DataTersimpan)
-                muatDetailPart(uniqNo)
-            } else tampilkanError("Gagal menautkan defect")
-        }
-    }
-
-    private fun hapusDefectDariPart(uniqNo: String, relationId: String) {
-        viewModelScope.launch {
-            if (repository.deletePartDefect(relationId) is NetworkResult.Success) {
-                _effect.emit(MasterDataContract.Effect.DataDihapus)
-                muatDetailPart(uniqNo)
-            } else tampilkanError("Gagal menghapus tautan")
-        }
-    }
-
-    private fun tambahMaterialKePart(uniqNo: String, materialId: String, label: String) {
-        viewModelScope.launch {
-            _state.update { it.copy(menyimpan = true) }
-            val dto = MasterPartMaterialDto(uniq_no = uniqNo, material_id = materialId, label_material = label)
-            if (repository.upsertPartMaterial(dto) is NetworkResult.Success) {
-                _state.update { it.copy(menyimpan = false, dialogForm = null) }
-                _effect.emit(MasterDataContract.Effect.DataTersimpan)
-                muatDetailPart(uniqNo)
-            } else tampilkanError("Gagal menautkan material")
-        }
-    }
-
-    private fun hapusMaterialDariPart(uniqNo: String, relationId: String) {
-        viewModelScope.launch {
-            if (repository.deletePartMaterial(relationId) is NetworkResult.Success) {
-                _effect.emit(MasterDataContract.Effect.DataDihapus)
-                muatDetailPart(uniqNo)
-            } else tampilkanError("Gagal menghapus tautan material")
-        }
-    }
-
-    private fun confirmHapus(judul: String, pesan: String, action: () -> Unit) {
-        _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.KonfirmasiHapus(judul, pesan, action)) }
-    }
-
-    private fun <T> handleLoadResult(result: NetworkResult<List<T>>, onSuccess: (List<T>) -> Unit) {
-        when (result) {
-            is NetworkResult.Success -> {
-                if (result.data.isEmpty()) updateTabState(_state.value.tabAktif, AsyncData.Empty("Data Kosong", "Belum ada data."))
-                else onSuccess(result.data)
+    @Suppress("UNCHECKED_CAST")
+    private fun appendDataToTab(tab: MasterDataContract.TabMasterData, newData: List<Any>) {
+        _state.update { s ->
+            when (tab) {
+                MasterDataContract.TabMasterData.PART -> s.copy(parts = AsyncData.Success((s.parts as AsyncData.Success<List<MasterPartDto>>).data + (newData as List<MasterPartDto>)))
+                MasterDataContract.TabMasterData.MATERIAL -> s.copy(materials = AsyncData.Success((s.materials as AsyncData.Success<List<MasterMaterialDto>>).data + (newData as List<MasterMaterialDto>)))
+                MasterDataContract.TabMasterData.SUPPLIER -> s.copy(suppliers = AsyncData.Success((s.suppliers as AsyncData.Success<List<MasterSupplierDto>>).data + (newData as List<MasterSupplierDto>)))
+                MasterDataContract.TabMasterData.DEFECT -> s.copy(defects = AsyncData.Success((s.defects as AsyncData.Success<List<MasterDefectDto>>).data + (newData as List<MasterDefectDto>)))
             }
-            is NetworkResult.Error -> {
-                val msg = UserMessageMapper.fromThrowableMessage(result.message, KonteksOperasi.MASTER_DATA)
-                updateTabState(_state.value.tabAktif, AsyncData.Error(msg.title, msg.body))
-            }
-            else -> Unit
         }
     }
 
@@ -202,67 +244,105 @@ class MasterDataViewModel(
         }
     }
 
-    private fun simpanPart(data: MasterPartDto) {
+    private fun togglePartDetail(uniqNo: String) {
+        val current = _state.value.partDetails[uniqNo] ?: MasterDataContract.PartRelationState()
+        val next = !current.expanded
+        _state.update { it.copy(partDetails = it.partDetails + (uniqNo to current.copy(expanded = next))) }
+        if (next) muatDetailPart(uniqNo)
+    }
+
+    private fun muatDetailPart(uniqNo: String) {
+        viewModelScope.launch {
+            updatePartRelation(uniqNo) { it.copy(defects = AsyncData.Loading, materials = AsyncData.Loading) }
+            val dRes = repository.getPartDefects(uniqNo)
+            val mRes = repository.getPartMaterials(uniqNo)
+            updatePartRelation(uniqNo) { s ->
+                s.copy(
+                    defects = if (dRes is NetworkResult.Success) AsyncData.Success(dRes.data) else AsyncData.Error("Error", (dRes as? NetworkResult.Error)?.message ?: ""),
+                    materials = if (mRes is NetworkResult.Success) AsyncData.Success(mRes.data) else AsyncData.Error("Error", (mRes as? NetworkResult.Error)?.message ?: "")
+                )
+            }
+        }
+    }
+
+    private fun updatePartRelation(u: String, transform: (MasterDataContract.PartRelationState) -> MasterDataContract.PartRelationState) {
+        _state.update { it.copy(partDetails = it.partDetails + (u to transform(it.partDetails[u] ?: MasterDataContract.PartRelationState()))) }
+    }
+
+    private fun simpanPart(f: PartFormState) {
         viewModelScope.launch {
             _state.update { it.copy(menyimpan = true) }
-            if (repository.upsertPart(data) is NetworkResult.Success) { _state.update { it.copy(menyimpan = false, dialogForm = null) }; _effect.emit(MasterDataContract.Effect.DataTersimpan); muatDataTabAktif() }
-            else tampilkanError("Gagal menyimpan part")
+            val dto = MasterPartDto(id = f.id, uniq_no = f.uniqNo, part_no = f.partNo, nama_part = f.namaPart, model = f.model, customer = f.customer, komoditas = f.komoditas)
+            if (repository.upsertPart(dto) is NetworkResult.Success) {
+                _state.update { it.copy(menyimpan = false, dialogForm = null) }
+                _effect.emit(MasterDataContract.Effect.TampilPesan("Part disimpan."))
+                draftStore.clearDraft("part_form_draft")
+                muatDataTabAktif(reset = true)
+            } else tampilkanError("Gagal simpan part")
         }
     }
 
-    private fun simpanMaterial(data: MasterMaterialDto) {
+    private fun simpanMaterial(f: MaterialFormState) {
         viewModelScope.launch {
             _state.update { it.copy(menyimpan = true) }
-            if (repository.upsertMaterial(data) is NetworkResult.Success) { _state.update { it.copy(menyimpan = false, dialogForm = null) }; _effect.emit(MasterDataContract.Effect.DataTersimpan); muatDataTabAktif() }
-            else tampilkanError("Gagal menyimpan material")
+            val dto = MasterMaterialDto(id = f.id, supplier = f.supplier, nama_material = f.namaMaterial, spec = f.spec, satuan = f.satuan)
+            if (repository.upsertMaterial(dto) is NetworkResult.Success) {
+                _state.update { it.copy(menyimpan = false, dialogForm = null) }
+                _effect.emit(MasterDataContract.Effect.TampilPesan("Material disimpan."))
+                draftStore.clearDraft("material_form_draft")
+                muatDataTabAktif(reset = true)
+            } else tampilkanError("Gagal simpan material")
         }
     }
 
-    private fun simpanSupplier(data: MasterSupplierDto) {
+    private fun simpanSupplier(f: SupplierFormState) {
         viewModelScope.launch {
             _state.update { it.copy(menyimpan = true) }
-            if (repository.upsertSupplier(data) is NetworkResult.Success) { _state.update { it.copy(menyimpan = false, dialogForm = null) }; _effect.emit(MasterDataContract.Effect.DataTersimpan); muatDataTabAktif() }
-            else tampilkanError("Gagal menyimpan supplier")
+            val dto = MasterSupplierDto(id = f.id, kode_supplier = f.kodeSupplier, nama_supplier = f.namaSupplier, kategori = f.kategori)
+            if (repository.upsertSupplier(dto) is NetworkResult.Success) {
+                _state.update { it.copy(menyimpan = false, dialogForm = null) }
+                _effect.emit(MasterDataContract.Effect.TampilPesan("Supplier disimpan."))
+                draftStore.clearDraft("supplier_form_draft")
+                muatDataTabAktif(reset = true)
+            } else tampilkanError("Gagal simpan supplier")
         }
     }
 
-    private fun simpanDefect(data: MasterDefectDto) {
+    private fun simpanDefect(f: DefectFormState) {
         viewModelScope.launch {
             _state.update { it.copy(menyimpan = true) }
-            if (repository.upsertDefect(data) is NetworkResult.Success) { _state.update { it.copy(menyimpan = false, dialogForm = null) }; _effect.emit(MasterDataContract.Effect.DataTersimpan); muatDataTabAktif() }
-            else tampilkanError("Gagal menyimpan defect")
+            val dto = MasterDefectDto(id_defect = f.idDefect, nama_defect = f.namaDefect, kategori = f.kategori)
+            if (repository.upsertDefect(dto) is NetworkResult.Success) {
+                _state.update { it.copy(menyimpan = false, dialogForm = null) }
+                _effect.emit(MasterDataContract.Effect.TampilPesan("Defect disimpan."))
+                draftStore.clearDraft("defect_form_draft")
+                muatDataTabAktif(reset = true)
+            } else tampilkanError("Gagal simpan defect")
         }
     }
 
-    private fun hapusPart(data: MasterPartDto) {
-        val id = data.id ?: return
-        viewModelScope.launch {
-            if (repository.deletePartSoft(id) is NetworkResult.Success) { _effect.emit(MasterDataContract.Effect.DataDihapus); _state.update { it.copy(dialogForm = null) }; muatDataTabAktif() }
+    private fun hapusPart(d: MasterPartDto) = viewModelScope.launch { if (repository.deletePartSoft(d.id!!) is NetworkResult.Success) { _effect.emit(MasterDataContract.Effect.TampilPesan("Part dinonaktifkan.")); _state.update { it.copy(dialogForm = null) }; muatDataTabAktif(reset = true) } }
+    private fun hapusMaterial(d: MasterMaterialDto) = viewModelScope.launch { if (repository.deleteMaterialSoft(d.id!!) is NetworkResult.Success) { _effect.emit(MasterDataContract.Effect.TampilPesan("Material dinonaktifkan.")); _state.update { it.copy(dialogForm = null) }; muatDataTabAktif(reset = true) } }
+    private fun hapusSupplier(d: MasterSupplierDto) = viewModelScope.launch { if (repository.deleteSupplierSoft(d.id!!) is NetworkResult.Success) { _effect.emit(MasterDataContract.Effect.TampilPesan("Supplier dinonaktifkan.")); _state.update { it.copy(dialogForm = null) }; muatDataTabAktif(reset = true) } }
+    private fun hapusDefect(d: MasterDefectDto) = viewModelScope.launch { if (repository.deleteDefectSoft(d.id_defect) is NetworkResult.Success) { _effect.emit(MasterDataContract.Effect.TampilPesan("Defect dinonaktifkan.")); _state.update { it.copy(dialogForm = null) }; muatDataTabAktif(reset = true) } }
+
+    private fun tambahDefectKePart(u: String, idD: String) = viewModelScope.launch {
+        if (repository.upsertPartDefect(MasterPartDefectDto(uniq_no = u, id_defect = idD)) is NetworkResult.Success) {
+            _effect.emit(MasterDataContract.Effect.TampilPesan("Defect ditautkan.")); muatDetailPart(u); _state.update { it.copy(dialogForm = null) }
         }
     }
-
-    private fun hapusMaterial(data: MasterMaterialDto) {
-        val id = data.id ?: return
-        viewModelScope.launch {
-            if (repository.deleteMaterialSoft(id) is NetworkResult.Success) { _effect.emit(MasterDataContract.Effect.DataDihapus); _state.update { it.copy(dialogForm = null) }; muatDataTabAktif() }
+    private fun hapusDefectDariPart(u: String, rI: String) = viewModelScope.launch {
+        if (repository.deletePartDefect(rI) is NetworkResult.Success) { _effect.emit(MasterDataContract.Effect.TampilPesan("Tautan dilepas.")); muatDetailPart(u); _state.update { it.copy(dialogForm = null) } }
+    }
+    private fun tambahMaterialKePart(u: String, mI: String, l: String) = viewModelScope.launch {
+        if (repository.upsertPartMaterial(MasterPartMaterialDto(uniq_no = u, material_id = mI, label_material = l)) is NetworkResult.Success) {
+            _effect.emit(MasterDataContract.Effect.TampilPesan("Material ditautkan.")); muatDetailPart(u); _state.update { it.copy(dialogForm = null) }
         }
     }
-
-    private fun hapusSupplier(data: MasterSupplierDto) {
-        val id = data.id ?: return
-        viewModelScope.launch {
-            if (repository.deleteSupplierSoft(id) is NetworkResult.Success) { _effect.emit(MasterDataContract.Effect.DataDihapus); _state.update { it.copy(dialogForm = null) }; muatDataTabAktif() }
-        }
+    private fun hapusMaterialDariPart(u: String, rI: String) = viewModelScope.launch {
+        if (repository.deletePartMaterial(rI) is NetworkResult.Success) { _effect.emit(MasterDataContract.Effect.TampilPesan("Tautan dilepas.")); muatDetailPart(u); _state.update { it.copy(dialogForm = null) } }
     }
 
-    private fun hapusDefect(data: MasterDefectDto) {
-        viewModelScope.launch {
-            if (repository.deleteDefectSoft(data.id_defect) is NetworkResult.Success) { _effect.emit(MasterDataContract.Effect.DataDihapus); _state.update { it.copy(dialogForm = null) }; muatDataTabAktif() }
-        }
-    }
-
-    private fun tampilkanError(raw: String?) {
-        val message = UserMessageMapper.fromThrowableMessage(raw, KonteksOperasi.MASTER_DATA)
-        _state.update { it.copy(menyimpan = false, userMessage = message) }
-    }
+    private fun confirmHapus(j: String, p: String, a: () -> Unit) { _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.KonfirmasiHapus(j, p, a)) } }
+    private fun tampilkanError(r: String?) { val m = UserMessageMapper.fromThrowableMessage(r, KonteksOperasi.MASTER_DATA); _state.update { it.copy(menyimpan = false, userMessage = m) } }
 }

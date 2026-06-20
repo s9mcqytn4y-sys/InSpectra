@@ -78,3 +78,13 @@ data class MasterDefectDto(
     val kategori: String,
     val aktif: Boolean = true
 )
+
+@Serializable
+data class MasterSlotWaktuDto(
+    val id: String,
+    val kode_slot: String,
+    val tipe_proses: String,
+    val nama_shift: String,
+    val label_waktu: String,
+    val urutan: Int
+)

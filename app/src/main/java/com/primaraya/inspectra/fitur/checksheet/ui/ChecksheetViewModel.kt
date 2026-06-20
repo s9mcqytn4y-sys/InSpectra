@@ -1,8 +1,10 @@
 package com.primaraya.inspectra.fitur.checksheet.ui
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.primaraya.inspectra.core.common.AsyncData
+import com.primaraya.inspectra.core.draft.DraftStore
 import com.primaraya.inspectra.fitur.checksheet.data.ChecksheetRepository
 import com.primaraya.inspectra.fitur.checksheet.data.SupabaseChecksheetRepository
 import com.primaraya.inspectra.core.network.NetworkResult
@@ -14,14 +16,17 @@ import com.primaraya.inspectra.fitur.masterdata.data.SupabaseMasterDataRepositor
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.ListSerializer
 
 /**
  * ViewModel MVI untuk E-Checksheet.
  */
 class ChecksheetMviViewModel(
+    application: Application,
     private val masterRepository: MasterDataRepository = SupabaseMasterDataRepository(),
-    private val checksheetRepository: ChecksheetRepository = SupabaseChecksheetRepository()
-) : ViewModel() {
+    private val checksheetRepository: ChecksheetRepository = SupabaseChecksheetRepository(),
+    private val draftStore: DraftStore = DraftStore(application)
+) : AndroidViewModel(application) {
 
     private val _state = MutableStateFlow(ChecksheetContract.State())
     val state: StateFlow<ChecksheetContract.State> = _state.asStateFlow()
@@ -37,6 +42,7 @@ class ChecksheetMviViewModel(
             is ChecksheetContract.Intent.TogglePart -> togglePart(intent.uniqNo)
             is ChecksheetContract.Intent.UbahJumlahDiperiksa -> ubahJumlahDiperiksa(intent.uniqNo, intent.jumlah)
             is ChecksheetContract.Intent.UbahJumlahDefect -> ubahJumlahDefect(intent.uniqNo, intent.idDefect, intent.jumlah)
+            is ChecksheetContract.Intent.UbahJumlahSlotDefect -> ubahJumlahSlotDefect(intent)
             is ChecksheetContract.Intent.TambahDefect -> tambahKurangi(intent.uniqNo, intent.idDefect, 1)
             is ChecksheetContract.Intent.KurangiDefect -> tambahKurangi(intent.uniqNo, intent.idDefect, -1)
             is ChecksheetContract.Intent.UbahDetailCutting -> ubahDetailCutting(intent)
@@ -58,6 +64,19 @@ class ChecksheetMviViewModel(
                 )
             }
 
+            // 1. Cek Draft Dulu
+            val draftKey = "checksheet_draft_${tipeProses.name}"
+            val draft = draftStore.readDraft(draftKey, ListSerializer(RingkasanPartChecksheet.serializer())).first()
+            
+            if (draft != null) {
+                _state.update { it.copy(dataChecksheet = AsyncData.Success(draft)) }
+                return@launch
+            }
+
+            // 2. Jika tidak ada draft, muat dari remote
+            val slotsRes = masterRepository.getSlotWaktu(tipeProses.name)
+            val slots = (slotsRes as? NetworkResult.Success)?.data ?: emptyList()
+
             when (val result = masterRepository.getChecksheetData(tipeProses.name)) {
                 is NetworkResult.Success -> {
                     val daftar = result.data.map { dto ->
@@ -73,7 +92,8 @@ class ChecksheetMviViewModel(
                                     kategori = runCatching {
                                         KategoriDefect.valueOf(defect.kategori.uppercase())
                                     }.getOrDefault(KategoriDefect.PROSES),
-                                    jumlahNg = 0
+                                    jumlahNg = 0,
+                                    detailSlot = slots.map { SlotNg(it.id, it.label_waktu) }
                                 )
                             },
                             lokasiGambar = dto.lokasi_gambar,
@@ -115,6 +135,23 @@ class ChecksheetMviViewModel(
         }
     }
 
+    private fun ubahJumlahSlotDefect(intent: ChecksheetContract.Intent.UbahJumlahSlotDefect) {
+        _state.update { it.copy(preview = null) }
+        updateDaftarPart(intent.uniqNo) { part ->
+            part.copy(
+                daftarDefect = part.daftarDefect.map { defect ->
+                    if (defect.idDefect == intent.idDefect) {
+                        defect.copy(
+                            detailSlot = defect.detailSlot.map { slot ->
+                                if (slot.slotId == intent.slotId) slot.copy(jumlah = intent.jumlah.coerceAtLeast(0)) else slot
+                            }
+                        )
+                    } else defect
+                }
+            )
+        }
+    }
+
     private fun tambahKurangi(uniqNo: String, idDefect: String, delta: Int) {
         val part = _state.value.daftarPart.firstOrNull { it.uniqNo == uniqNo } ?: return
         val defect = part.daftarDefect.firstOrNull { it.idDefect == idDefect } ?: return
@@ -144,6 +181,12 @@ class ChecksheetMviViewModel(
                 if (targetUniqNo == null || it.uniqNo == targetUniqNo) transform(it) else it
             }
             _state.update { it.copy(dataChecksheet = AsyncData.Success(updated)) }
+            
+            // Simpan ke draft
+            viewModelScope.launch {
+                val draftKey = "checksheet_draft_${_state.value.tipeProses.name}"
+                draftStore.saveDraft(draftKey, ListSerializer(RingkasanPartChecksheet.serializer()), updated)
+            }
         }
     }
 
@@ -157,6 +200,11 @@ class ChecksheetMviViewModel(
 
         if (state.adaQtyTidakValid) {
             kirimError("Jumlah belum sesuai", "Jumlah NG tidak boleh melebihi jumlah diperiksa.")
+            return
+        }
+
+        if (state.adaSlotTidakMatch) {
+            kirimError("Slot belum sesuai", "Total detail slot harus sama dengan jumlah NG.")
             return
         }
 
@@ -196,22 +244,28 @@ class ChecksheetMviViewModel(
 
             when (val result = checksheetRepository.submitChecksheet(payload)) {
                 is NetworkResult.Success -> {
+                    val clearedList = _state.value.daftarPart.map { part ->
+                        part.copy(
+                            jumlahDiperiksa = 0,
+                            terbuka = false,
+                            daftarDefect = part.daftarDefect.map { defect ->
+                                defect.copy(jumlahNg = 0)
+                            },
+                            detailCutting = if (part.komoditas == TipeProses.CUTTING) DetailCutting() else null
+                        )
+                    }
+                    
                     _state.update {
                         it.copy(
                             mengirim = false,
                             preview = null,
-                            dataChecksheet = AsyncData.Success(it.daftarPart.map { part ->
-                                part.copy(
-                                    jumlahDiperiksa = 0,
-                                    terbuka = false,
-                                    daftarDefect = part.daftarDefect.map { defect ->
-                                        defect.copy(jumlahNg = 0)
-                                    },
-                                    detailCutting = if (part.komoditas == TipeProses.CUTTING) DetailCutting() else null
-                                )
-                            })
+                            dataChecksheet = AsyncData.Success(clearedList)
                         )
                     }
+
+                    // Hapus draft setelah berhasil kirim
+                    val draftKey = "checksheet_draft_${_state.value.tipeProses.name}"
+                    draftStore.clearDraft(draftKey)
 
                     _effect.emit(ChecksheetContract.Effect.KirimBerhasil(result.data))
                     _effect.emit(ChecksheetContract.Effect.PesanSukses("Checksheet berhasil dikirim."))

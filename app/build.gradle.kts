@@ -105,8 +105,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
 
-    // implementation(libs.supabase.postgrest)
-    // implementation(libs.supabase.gotrue)
+    implementation(libs.androidx.datastore.preferences)
 
     implementation(libs.ktor.client.android)
     implementation(libs.ktor.client.okhttp)

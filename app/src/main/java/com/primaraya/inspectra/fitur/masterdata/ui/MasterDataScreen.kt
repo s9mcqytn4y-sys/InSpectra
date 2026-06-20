@@ -5,6 +5,8 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,155 +50,131 @@ fun MasterDataScreen(
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text("Manajemen Master Data", fontWeight = FontWeight.Black) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A365D),
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    when (state.tabAktif) {
-                        MasterDataContract.TabMasterData.PART -> viewModel.onIntent(MasterDataContract.Intent.TambahPart)
-                        MasterDataContract.TabMasterData.MATERIAL -> viewModel.onIntent(MasterDataContract.Intent.TambahMaterial)
-                        MasterDataContract.TabMasterData.SUPPLIER -> viewModel.onIntent(MasterDataContract.Intent.TambahSupplier)
-                        MasterDataContract.TabMasterData.DEFECT -> viewModel.onIntent(MasterDataContract.Intent.TambahDefect)
-                    }
-                },
-                containerColor = Color(0xFFD97706),
-                contentColor = Color.White
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah")
-            }
-        }
-    ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
-            TabRow(
-                selectedTabIndex = state.tabAktif.ordinal,
-                containerColor = Color(0xFF1A365D),
-                contentColor = Color.White,
-                indicator = { tabPositions ->
-                    if (state.tabAktif.ordinal < tabPositions.size) {
-                        TabRowDefaults.SecondaryIndicator(
-                            Modifier.tabIndicatorOffset(tabPositions[state.tabAktif.ordinal]),
-                            color = Color(0xFFD97706)
-                        )
-                    }
-                }
-            ) {
-                MasterDataContract.TabMasterData.values().forEach { tab ->
-                    Tab(
-                        selected = state.tabAktif == tab,
-                        onClick = { viewModel.onIntent(MasterDataContract.Intent.PilihTab(tab)) }
-                    ) {
-                        Text(tab.name, modifier = Modifier.padding(16.dp))
-                    }
-                }
-            }
-
-            Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8FAFC))) {
-                when (state.tabAktif) {
-                    MasterDataContract.TabMasterData.PART -> AsyncList(
-                        data = state.parts,
-                        content = { list ->
-                            PartList(
-                                parts = list, 
-                                detailState = state.partDetails,
-                                onEdit = { d -> viewModel.onIntent(MasterDataContract.Intent.EditPart(d)) }, 
-                                onDelete = { d -> viewModel.onIntent(MasterDataContract.Intent.HapusPart(d)) },
-                                onToggleDetail = { uniqNo -> viewModel.onIntent(MasterDataContract.Intent.TogglePartDetail(uniqNo)) },
-                                onRemoveDefect = { uniqNo, relId -> viewModel.onIntent(MasterDataContract.Intent.HapusDefectDariPart(uniqNo, relId)) },
-                                onAddDefect = { uniqNo -> viewModel.onIntent(MasterDataContract.Intent.BukaPilihDefect(uniqNo)) },
-                                onRemoveMaterial = { uniqNo, relId -> viewModel.onIntent(MasterDataContract.Intent.HapusMaterialDariPart(uniqNo, relId)) },
-                                onAddMaterial = { uniqNo -> viewModel.onIntent(MasterDataContract.Intent.BukaPilihMaterial(uniqNo)) }
-                            ) 
-                        }
-                    )
-                    MasterDataContract.TabMasterData.MATERIAL -> AsyncList(
-                        data = state.materials,
-                        content = { list -> MaterialList(list, onEdit = { d -> viewModel.onIntent(MasterDataContract.Intent.EditMaterial(d)) }, onDelete = { d -> viewModel.onIntent(MasterDataContract.Intent.HapusMaterial(d)) }) }
-                    )
-                    MasterDataContract.TabMasterData.SUPPLIER -> AsyncList(
-                        data = state.suppliers,
-                        content = { list -> SupplierList(list, onEdit = { d -> viewModel.onIntent(MasterDataContract.Intent.EditSupplier(d)) }, onDelete = { d -> viewModel.onIntent(MasterDataContract.Intent.HapusSupplier(d)) }) }
-                    )
-                    MasterDataContract.TabMasterData.DEFECT -> AsyncList(
-                        data = state.defects,
-                        content = { list -> DefectList(list, onEdit = { d -> viewModel.onIntent(MasterDataContract.Intent.EditDefect(d)) }, onDelete = { d -> viewModel.onIntent(MasterDataContract.Intent.HapusDefect(d)) }) }
-                    )
-                }
-            }
-        }
-    }
-
-    state.dialogForm?.let { form ->
-        when (form) {
-            is MasterDataContract.DialogForm.FormPart -> PartFormSheet(
-                initialData = form.data,
-                onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
-                onSave = { viewModel.onIntent(MasterDataContract.Intent.SimpanPart(it)) },
-                saving = state.menyimpan
-            )
-            is MasterDataContract.DialogForm.FormMaterial -> MaterialFormSheet(
-                initialData = form.data,
-                onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
-                onSave = { viewModel.onIntent(MasterDataContract.Intent.SimpanMaterial(it)) },
-                saving = state.menyimpan
-            )
-            is MasterDataContract.DialogForm.FormSupplier -> SupplierFormSheet(
-                initialData = form.data,
-                onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
-                onSave = { viewModel.onIntent(MasterDataContract.Intent.SimpanSupplier(it)) },
-                saving = state.menyimpan
-            )
-            is MasterDataContract.DialogForm.FormDefect -> DefectFormSheet(
-                initialData = form.data,
-                onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
-                onSave = { viewModel.onIntent(MasterDataContract.Intent.SimpanDefect(it)) },
-                saving = state.menyimpan
-            )
-            is MasterDataContract.DialogForm.PilihDefectUntukPart -> {
-                PilihDefectDialog(
-                    availableDefects = (state.defects as? AsyncData.Success)?.data ?: emptyList(),
-                    onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
-                    onSelect = { idDefect -> viewModel.onIntent(MasterDataContract.Intent.TambahDefectKePart(form.uniqNo, idDefect)) }
-                )
-            }
-            is MasterDataContract.DialogForm.PilihMaterialUntukPart -> {
-                PilihMaterialDialog(
-                    availableMaterials = (state.materials as? AsyncData.Success)?.data ?: emptyList(),
-                    onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
-                    onSelect = { matId, label -> viewModel.onIntent(MasterDataContract.Intent.TambahMaterialKePart(form.uniqNo, matId, label)) }
-                )
-            }
-            is MasterDataContract.DialogForm.KonfirmasiHapus -> {
-                AlertDialog(
-                    onDismissRequest = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
-                    title = { Text(form.judul) },
-                    text = { Text(form.pesan) },
-                    confirmButton = {
-                        Button(onClick = form.onConfirm, colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) {
-                            Text("Hapus", color = Color.White)
+    AppResponsiveContent { isTablet, contentModifier ->
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            topBar = {
+                TopAppBar(
+                    title = { Text("Manajemen Master Data", fontWeight = FontWeight.Black) },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                         }
                     },
-                    dismissButton = {
-                        TextButton(onClick = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) }) {
-                            Text("Batal")
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color(0xFF1A365D),
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White
+                    )
+                )
+            },
+            floatingActionButton = {
+                val currentForm = state.dialogForm
+                if (!(isTablet && currentForm != null && isSidePaneForm(currentForm))) {
+                    FloatingActionButton(
+                        onClick = {
+                            when (state.tabAktif) {
+                                MasterDataContract.TabMasterData.PART -> viewModel.onIntent(MasterDataContract.Intent.TambahPart)
+                                MasterDataContract.TabMasterData.MATERIAL -> viewModel.onIntent(MasterDataContract.Intent.TambahMaterial)
+                                MasterDataContract.TabMasterData.SUPPLIER -> viewModel.onIntent(MasterDataContract.Intent.TambahSupplier)
+                                MasterDataContract.TabMasterData.DEFECT -> viewModel.onIntent(MasterDataContract.Intent.TambahDefect)
+                            }
+                        },
+                        containerColor = Color(0xFFD97706),
+                        contentColor = Color.White
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Tambah")
+                    }
+                }
+            }
+        ) { padding ->
+            Row(modifier = Modifier.padding(padding).fillMaxSize()) {
+                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    TabRow(
+                        selectedTabIndex = state.tabAktif.ordinal,
+                        containerColor = Color(0xFF1A365D),
+                        contentColor = Color.White,
+                        indicator = { tabPositions ->
+                            if (state.tabAktif.ordinal < tabPositions.size) {
+                                TabRowDefaults.SecondaryIndicator(
+                                    Modifier.tabIndicatorOffset(tabPositions[state.tabAktif.ordinal]),
+                                    color = Color(0xFFD97706)
+                                )
+                            }
+                        }
+                    ) {
+                        MasterDataContract.TabMasterData.values().forEach { tab ->
+                            Tab(
+                                selected = state.tabAktif == tab,
+                                onClick = { viewModel.onIntent(MasterDataContract.Intent.PilihTab(tab)) }
+                            ) {
+                                Text(tab.name, modifier = Modifier.padding(16.dp))
+                            }
                         }
                     }
-                )
+
+                    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8FAFC))) {
+                        when (state.tabAktif) {
+                            MasterDataContract.TabMasterData.PART -> AsyncList(
+                                data = state.parts,
+                                canLoadMore = state.canLoadMore,
+                                loadingMore = state.loadingMore,
+                                onLoadMore = { viewModel.onIntent(MasterDataContract.Intent.MuatLebihBanyak) },
+                                content = { list ->
+                                    PartList(
+                                        parts = list, 
+                                        detailState = state.partDetails,
+                                        onEdit = { d -> viewModel.onIntent(MasterDataContract.Intent.EditPart(d)) }, 
+                                        onDelete = { d -> viewModel.onIntent(MasterDataContract.Intent.HapusPart(d)) },
+                                        onToggleDetail = { uniqNo -> viewModel.onIntent(MasterDataContract.Intent.TogglePartDetail(uniqNo)) },
+                                        onRemoveDefect = { uniqNo, relId -> viewModel.onIntent(MasterDataContract.Intent.HapusDefectDariPart(uniqNo, relId)) },
+                                        onAddDefect = { uniqNo -> viewModel.onIntent(MasterDataContract.Intent.BukaPilihDefect(uniqNo)) },
+                                        onRemoveMaterial = { uniqNo, relId -> viewModel.onIntent(MasterDataContract.Intent.HapusMaterialDariPart(uniqNo, relId)) },
+                                        onAddMaterial = { uniqNo -> viewModel.onIntent(MasterDataContract.Intent.BukaPilihMaterial(uniqNo)) }
+                                    ) 
+                                }
+                            )
+                            MasterDataContract.TabMasterData.MATERIAL -> AsyncList(
+                                data = state.materials,
+                                canLoadMore = state.canLoadMore,
+                                loadingMore = state.loadingMore,
+                                onLoadMore = { viewModel.onIntent(MasterDataContract.Intent.MuatLebihBanyak) },
+                                content = { list -> MaterialList(list, onEdit = { d -> viewModel.onIntent(MasterDataContract.Intent.EditMaterial(d)) }, onDelete = { d -> viewModel.onIntent(MasterDataContract.Intent.HapusMaterial(d)) }) }
+                            )
+                            MasterDataContract.TabMasterData.SUPPLIER -> AsyncList(
+                                data = state.suppliers,
+                                canLoadMore = state.canLoadMore,
+                                loadingMore = state.loadingMore,
+                                onLoadMore = { viewModel.onIntent(MasterDataContract.Intent.MuatLebihBanyak) },
+                                content = { list -> SupplierList(list, onEdit = { d -> viewModel.onIntent(MasterDataContract.Intent.EditSupplier(d)) }, onDelete = { d -> viewModel.onIntent(MasterDataContract.Intent.HapusSupplier(d)) }) }
+                            )
+                            MasterDataContract.TabMasterData.DEFECT -> AsyncList(
+                                data = state.defects,
+                                canLoadMore = state.canLoadMore,
+                                loadingMore = state.loadingMore,
+                                onLoadMore = { viewModel.onIntent(MasterDataContract.Intent.MuatLebihBanyak) },
+                                content = { list -> DefectList(list, onEdit = { d -> viewModel.onIntent(MasterDataContract.Intent.EditDefect(d)) }, onDelete = { d -> viewModel.onIntent(MasterDataContract.Intent.HapusDefect(d)) }) }
+                            )
+                        }
+                    }
+                }
+
+                val currentForm = state.dialogForm
+                if (isTablet && currentForm != null && isSidePaneForm(currentForm)) {
+                    Surface(
+                        modifier = Modifier.width(420.dp).fillMaxHeight(),
+                        tonalElevation = 6.dp
+                    ) {
+                        MasterDataFormContent(state, viewModel)
+                    }
+                }
+            }
+        }
+
+        val currentForm = state.dialogForm
+        if (currentForm != null && (!isTablet || !isSidePaneForm(currentForm))) {
+            ModalBottomSheet(onDismissRequest = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) }) {
+                MasterDataFormContent(state, viewModel)
             }
         }
     }
@@ -211,14 +189,104 @@ fun MasterDataScreen(
     }
 }
 
+private fun isSidePaneForm(form: MasterDataContract.DialogForm): Boolean {
+    return form is MasterDataContract.DialogForm.FormPart ||
+           form is MasterDataContract.DialogForm.FormMaterial ||
+           form is MasterDataContract.DialogForm.FormSupplier ||
+           form is MasterDataContract.DialogForm.FormDefect
+}
+
+@Composable
+fun MasterDataFormContent(
+    state: MasterDataContract.State,
+    viewModel: MasterDataViewModel
+) {
+    when (val form = state.dialogForm) {
+        is MasterDataContract.DialogForm.FormPart -> PartFormSheet(
+            initialData = state.partFormDraft,
+            onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
+            onSave = { viewModel.onIntent(MasterDataContract.Intent.SimpanPart(it)) },
+            onUpdate = { viewModel.onIntent(MasterDataContract.Intent.UbahFormPart(it)) },
+            saving = state.menyimpan
+        )
+        is MasterDataContract.DialogForm.FormMaterial -> MaterialFormSheet(
+            initialData = state.materialFormDraft,
+            onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
+            onSave = { viewModel.onIntent(MasterDataContract.Intent.SimpanMaterial(it)) },
+            onUpdate = { viewModel.onIntent(MasterDataContract.Intent.UbahFormMaterial(it)) },
+            saving = state.menyimpan
+        )
+        is MasterDataContract.DialogForm.FormSupplier -> SupplierFormSheet(
+            initialData = state.supplierFormDraft,
+            onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
+            onSave = { viewModel.onIntent(MasterDataContract.Intent.SimpanSupplier(it)) },
+            onUpdate = { viewModel.onIntent(MasterDataContract.Intent.UbahFormSupplier(it)) },
+            saving = state.menyimpan
+        )
+        is MasterDataContract.DialogForm.FormDefect -> DefectFormSheet(
+            initialData = state.defectFormDraft,
+            isEdit = form.data != null,
+            onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
+            onSave = { viewModel.onIntent(MasterDataContract.Intent.SimpanDefect(it)) },
+            onUpdate = { viewModel.onIntent(MasterDataContract.Intent.UbahFormDefect(it)) },
+            saving = state.menyimpan
+        )
+        is MasterDataContract.DialogForm.PilihDefectUntukPart -> {
+            PilihDefectDialog(
+                availableDefects = (state.defects as? AsyncData.Success)?.data ?: emptyList(),
+                onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
+                onSelect = { idDefect -> viewModel.onIntent(MasterDataContract.Intent.TambahDefectKePart(form.uniqNo, idDefect)) }
+            )
+        }
+        is MasterDataContract.DialogForm.PilihMaterialUntukPart -> {
+            PilihMaterialDialog(
+                availableMaterials = (state.materials as? AsyncData.Success)?.data ?: emptyList(),
+                onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
+                onSelect = { matId, label -> viewModel.onIntent(MasterDataContract.Intent.TambahMaterialKePart(form.uniqNo, matId, label)) }
+            )
+        }
+        is MasterDataContract.DialogForm.KonfirmasiHapus -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
+                title = { Text(form.judul) },
+                text = { Text(form.pesan) },
+                confirmButton = {
+                    Button(onClick = form.onConfirm, colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) {
+                        Text("Konfirmasi", color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) }) {
+                        Text("Batal")
+                    }
+                }
+            )
+        }
+        else -> Unit
+    }
+}
+
 @Composable
 fun <T> AsyncList(
     data: AsyncData<T>,
+    canLoadMore: Boolean,
+    loadingMore: Boolean,
+    onLoadMore: () -> Unit,
     content: @Composable (T) -> Unit
 ) {
     when (data) {
         is AsyncData.Loading -> AppListSkeleton()
-        is AsyncData.Success -> content(data.data)
+        is AsyncData.Success -> {
+            Box {
+                content(data.data)
+                
+                if (canLoadMore && !loadingMore) {
+                    LaunchedEffect(data.data) {
+                        onLoadMore()
+                    }
+                }
+            }
+        }
         is AsyncData.Empty -> AppEmptyState(title = data.title, message = data.message)
         is AsyncData.Error -> AppEmptyState(title = data.title, message = data.message)
         else -> Unit
@@ -238,14 +306,14 @@ fun PartList(
     onAddMaterial: (String) -> Unit
 ) {
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        items(parts) { part ->
+        items(parts, key = { it.uniq_no }) { part ->
             val detail = detailState[part.uniq_no] ?: MasterDataContract.PartRelationState()
             
             ElevatedCard(
                 shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.animateContentSize()
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp).fillMaxWidth().animateContentSize()) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.clickable { onToggleDetail(part.uniq_no) }
@@ -265,7 +333,7 @@ fun PartList(
                     Text("Model: ${part.model ?: "-"}", style = MaterialTheme.typography.bodySmall)
                     Text("Komoditas: ${part.komoditas}", style = MaterialTheme.typography.labelMedium, color = Color(0xFFD97706))
                     
-                    AnimatedVisibility(visible = detail.expanded) {
+                    if (detail.expanded) {
                         Column(modifier = Modifier.padding(top = 16.dp)) {
                             HorizontalDivider()
                             Spacer(Modifier.height(12.dp))
@@ -337,7 +405,7 @@ fun SupplierList(
     onDelete: (MasterSupplierDto) -> Unit
 ) {
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        items(suppliers) { supplier ->
+        items(suppliers, key = { it.id ?: it.nama_supplier }) { supplier ->
             ElevatedCard(shape = RoundedCornerShape(16.dp)) {
                 Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -362,7 +430,7 @@ fun MaterialList(
     onDelete: (MasterMaterialDto) -> Unit
 ) {
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        items(materials) { material ->
+        items(materials, key = { it.id ?: it.nama_material }) { material ->
             ElevatedCard(shape = RoundedCornerShape(16.dp)) {
                 Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -387,7 +455,7 @@ fun DefectList(
     onDelete: (MasterDefectDto) -> Unit
 ) {
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        items(defects) { defect ->
+        items(defects, key = { it.id_defect }) { defect ->
             ElevatedCard(shape = RoundedCornerShape(16.dp)) {
                 Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -467,152 +535,291 @@ fun PilihMaterialDialog(
 
 // Forms
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PartFormSheet(
-    initialData: MasterPartDto?,
+    initialData: PartFormState,
     onDismiss: () -> Unit,
-    onSave: (MasterPartDto) -> Unit,
+    onSave: (PartFormState) -> Unit,
+    onUpdate: (PartFormState) -> Unit,
     saving: Boolean
 ) {
-    var uniqNo by remember { mutableStateOf(initialData?.uniq_no ?: "") }
-    var partNo by remember { mutableStateOf(initialData?.part_no ?: "") }
-    var namaPart by remember { mutableStateOf(initialData?.nama_part ?: "") }
-    var model by remember { mutableStateOf(initialData?.model ?: "") }
-    var customer by remember { mutableStateOf(initialData?.customer ?: "") }
-    var komoditas by remember { mutableStateOf(initialData?.komoditas ?: "PRESS") }
-    var sudahDisubmit by remember { mutableStateOf(false) }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text("Form Part", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
 
-    val uniqError = if (sudahDisubmit) Validator.validateRequired(uniqNo, "UNIQ No") else null
-    val namaError = if (sudahDisubmit) Validator.validateRequired(namaPart, "Nama Part") else null
+        OutlinedTextField(
+            value = initialData.uniqNo,
+            onValueChange = { onUpdate(initialData.copy(uniqNo = it.uppercase())) },
+            label = { Text("UNIQ (ID)") },
+            isError = initialData.uniqNoError != null,
+            supportingText = initialData.uniqNoError?.let { { Text(it) } },
+            modifier = Modifier.fillMaxWidth()
+        )
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(modifier = Modifier.padding(24.dp).fillMaxWidth().navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(if (initialData == null) "Tambah Part" else "Edit Part", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
-            OutlinedTextField(value = uniqNo, onValueChange = { uniqNo = it.uppercase() }, label = { Text("UNIQ No") }, isError = uniqError != null, supportingText = uniqError?.let { { Text(it) } }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = partNo, onValueChange = { partNo = it.uppercase() }, label = { Text("Part No") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = namaPart, onValueChange = { namaPart = it.uppercase() }, label = { Text("Nama Part") }, isError = namaError != null, supportingText = namaError?.let { { Text(it) } }, modifier = Modifier.fillMaxWidth())
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("PRESS", "SEWING", "CUTTING").forEach {
-                    FilterChip(selected = komoditas == it, onClick = { komoditas = it }, label = { Text(it) })
-                }
-            }
-            Button(onClick = { 
-                sudahDisubmit = true
-                if (uniqError == null && namaError == null) onSave(MasterPartDto(initialData?.id, partNo, uniqNo, namaPart, model, customer, komoditas, null, true)) 
-            }, enabled = !saving, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                if (saving) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Simpan")
-            }
-            Spacer(Modifier.height(24.dp))
+        OutlinedTextField(
+            value = initialData.partNo,
+            onValueChange = { onUpdate(initialData.copy(partNo = it.uppercase())) },
+            label = { Text("Part Number") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            value = initialData.namaPart,
+            onValueChange = { onUpdate(initialData.copy(namaPart = it.uppercase())) },
+            label = { Text("Nama Part") },
+            isError = initialData.namaPartError != null,
+            supportingText = initialData.namaPartError?.let { { Text(it) } },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(
+                value = initialData.model,
+                onValueChange = { onUpdate(initialData.copy(model = it.uppercase())) },
+                label = { Text("Model") },
+                modifier = Modifier.weight(1f)
+            )
+            OutlinedTextField(
+                value = initialData.customer,
+                onValueChange = { onUpdate(initialData.copy(customer = it.uppercase())) },
+                label = { Text("Customer") },
+                modifier = Modifier.weight(1f)
+            )
         }
+
+        AppDropdownField(
+            label = "Komoditas",
+            value = initialData.komoditas,
+            options = listOf("PRESS", "SEWING", "CUTTING"),
+            onSelected = { onUpdate(initialData.copy(komoditas = it)) }
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(
+                value = initialData.totalItemPerKanban,
+                onValueChange = { onUpdate(initialData.copy(totalItemPerKanban = it)) },
+                label = { Text("Qty/Kanban") },
+                isError = initialData.totalKanbanError != null,
+                supportingText = initialData.totalKanbanError?.let { { Text(it) } },
+                modifier = Modifier.weight(1f)
+            )
+            OutlinedTextField(
+                value = initialData.sampleItemPerKanban,
+                onValueChange = { onUpdate(initialData.copy(sampleItemPerKanban = it)) },
+                label = { Text("Sample/Kanban") },
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        OutlinedTextField(
+            value = initialData.sampleCycleNote,
+            onValueChange = { onUpdate(initialData.copy(sampleCycleNote = it)) },
+            label = { Text("Catatan Siklus Sample") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Button(
+            onClick = { onSave(initialData.copy(submitted = true)) },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !saving && (initialData.uniqNo.isNotBlank() && initialData.namaPart.isNotBlank())
+        ) {
+            if (saving) CircularProgressIndicator(Modifier.size(24.dp), color = Color.White)
+            else Text("Simpan Part")
+        }
+
+        TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+            Text("Batal")
+        }
+        
+        Spacer(Modifier.height(32.dp))
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MaterialFormSheet(
-    initialData: MasterMaterialDto?,
+    initialData: MaterialFormState,
     onDismiss: () -> Unit,
-    onSave: (MasterMaterialDto) -> Unit,
+    onSave: (MaterialFormState) -> Unit,
+    onUpdate: (MaterialFormState) -> Unit,
     saving: Boolean
 ) {
-    var namaMaterial by remember { mutableStateOf(initialData?.nama_material ?: "") }
-    var supplier by remember { mutableStateOf(initialData?.supplier ?: "") }
-    var spec by remember { mutableStateOf(initialData?.spec ?: "") }
-    var satuan by remember { mutableStateOf(initialData?.satuan ?: "") }
-    var sudahDisubmit by remember { mutableStateOf(false) }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text("Form Material", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
 
-    val nameError = if (sudahDisubmit) Validator.validateRequired(namaMaterial, "Nama Material") else null
+        OutlinedTextField(
+            value = initialData.namaMaterial,
+            onValueChange = { onUpdate(initialData.copy(namaMaterial = it.uppercase())) },
+            label = { Text("Nama Material") },
+            isError = initialData.namaMaterialError != null,
+            supportingText = initialData.namaMaterialError?.let { { Text(it) } },
+            modifier = Modifier.fillMaxWidth()
+        )
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(modifier = Modifier.padding(24.dp).fillMaxWidth().navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(if (initialData == null) "Tambah Material" else "Edit Material", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
-            OutlinedTextField(value = namaMaterial, onValueChange = { namaMaterial = it.uppercase() }, label = { Text("Nama Material") }, isError = nameError != null, supportingText = nameError?.let { { Text(it) } }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = supplier, onValueChange = { supplier = it.uppercase() }, label = { Text("Supplier") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = spec, onValueChange = { spec = it.uppercase() }, label = { Text("Spec / Deskripsi") }, modifier = Modifier.fillMaxWidth())
-            
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("ROLL", "PCS", "MTR", "KG").forEach {
-                    FilterChip(selected = satuan == it, onClick = { satuan = it }, label = { Text(it) })
-                }
-            }
+        OutlinedTextField(
+            value = initialData.supplier,
+            onValueChange = { onUpdate(initialData.copy(supplier = it.uppercase())) },
+            label = { Text("Supplier (Manual/Info)") },
+            modifier = Modifier.fillMaxWidth()
+        )
 
-            Button(onClick = { 
-                sudahDisubmit = true
-                if (nameError == null) onSave(MasterMaterialDto(initialData?.id, supplier, namaMaterial, spec, satuan, true))
-            }, enabled = !saving, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                if (saving) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Simpan")
-            }
-            Spacer(Modifier.height(24.dp))
+        OutlinedTextField(
+            value = initialData.spec,
+            onValueChange = { onUpdate(initialData.copy(spec = it.uppercase())) },
+            label = { Text("Spec / Deskripsi") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        AppDropdownField(
+            label = "Satuan",
+            value = initialData.satuan,
+            options = listOf("ROLL", "PCS", "MTR", "KG", "GRAM", "SET"),
+            onSelected = { onUpdate(initialData.copy(satuan = it)) }
+        )
+
+        Button(
+            onClick = { onSave(initialData.copy(submitted = true)) },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !saving && initialData.valid
+        ) {
+            if (saving) CircularProgressIndicator(Modifier.size(24.dp), color = Color.White)
+            else Text("Simpan Material")
         }
+
+        TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+            Text("Batal")
+        }
+        
+        Spacer(Modifier.height(32.dp))
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SupplierFormSheet(
-    initialData: MasterSupplierDto?,
+    initialData: SupplierFormState,
     onDismiss: () -> Unit,
-    onSave: (MasterSupplierDto) -> Unit,
+    onSave: (SupplierFormState) -> Unit,
+    onUpdate: (SupplierFormState) -> Unit,
     saving: Boolean
 ) {
-    var namaSupplier by remember { mutableStateOf(initialData?.nama_supplier ?: "") }
-    var kodeSupplier by remember { mutableStateOf(initialData?.kode_supplier ?: "") }
-    var kategori by remember { mutableStateOf(initialData?.kategori ?: "") }
-    var sudahDisubmit by remember { mutableStateOf(false) }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text("Form Supplier", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
 
-    val nameError = if (sudahDisubmit) Validator.validateRequired(namaSupplier, "Nama Supplier") else null
+        OutlinedTextField(
+            value = initialData.namaSupplier,
+            onValueChange = { onUpdate(initialData.copy(namaSupplier = it.uppercase())) },
+            label = { Text("Nama Supplier") },
+            isError = initialData.namaSupplierError != null,
+            supportingText = initialData.namaSupplierError?.let { { Text(it) } },
+            modifier = Modifier.fillMaxWidth()
+        )
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(modifier = Modifier.padding(24.dp).fillMaxWidth().navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(if (initialData == null) "Tambah Supplier" else "Edit Supplier", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
-            OutlinedTextField(value = namaSupplier, onValueChange = { namaSupplier = it.uppercase() }, label = { Text("Nama Supplier") }, isError = nameError != null, supportingText = nameError?.let { { Text(it) } }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = kodeSupplier, onValueChange = { kodeSupplier = it.uppercase() }, label = { Text("Kode Supplier") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = kategori, onValueChange = { kategori = it.uppercase() }, label = { Text("Kategori") }, modifier = Modifier.fillMaxWidth())
-            Button(onClick = { 
-                sudahDisubmit = true
-                if (nameError == null) onSave(MasterSupplierDto(initialData?.id, kodeSupplier, namaSupplier, kategori, true)) 
-            }, enabled = !saving, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                if (saving) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Simpan")
-            }
-            Spacer(Modifier.height(24.dp))
+        OutlinedTextField(
+            value = initialData.kodeSupplier,
+            onValueChange = { onUpdate(initialData.copy(kodeSupplier = it.uppercase())) },
+            label = { Text("Kode Supplier") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            value = initialData.kategori,
+            onValueChange = { onUpdate(initialData.copy(kategori = it.uppercase())) },
+            label = { Text("Kategori") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Button(
+            onClick = { onSave(initialData.copy(submitted = true)) },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !saving && initialData.valid
+        ) {
+            if (saving) CircularProgressIndicator(Modifier.size(24.dp), color = Color.White)
+            else Text("Simpan Supplier")
         }
+
+        TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+            Text("Batal")
+        }
+        
+        Spacer(Modifier.height(32.dp))
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DefectFormSheet(
-    initialData: MasterDefectDto?,
+    initialData: DefectFormState,
+    isEdit: Boolean,
     onDismiss: () -> Unit,
-    onSave: (MasterDefectDto) -> Unit,
+    onSave: (DefectFormState) -> Unit,
+    onUpdate: (DefectFormState) -> Unit,
     saving: Boolean
 ) {
-    var idDefect by remember { mutableStateOf(initialData?.id_defect ?: "") }
-    var namaDefect by remember { mutableStateOf(initialData?.nama_defect ?: "") }
-    var kategori by remember { mutableStateOf(initialData?.kategori ?: "PROSES") }
-    var sudahDisubmit by remember { mutableStateOf(false) }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text("Form Defect", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
 
-    val idError = if (sudahDisubmit) Validator.validateRequired(idDefect, "ID Defect") else null
-    val nameError = if (sudahDisubmit) Validator.validateRequired(namaDefect, "Nama Defect") else null
+        OutlinedTextField(
+            value = initialData.idDefect,
+            onValueChange = { onUpdate(initialData.copy(idDefect = it.uppercase())) },
+            label = { Text("ID Defect") },
+            enabled = !isEdit,
+            isError = initialData.idDefectError != null,
+            supportingText = initialData.idDefectError?.let { { Text(it) } },
+            modifier = Modifier.fillMaxWidth()
+        )
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(modifier = Modifier.padding(24.dp).fillMaxWidth().navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(if (initialData == null) "Tambah Defect" else "Edit Defect", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
-            OutlinedTextField(value = idDefect, onValueChange = { idDefect = it.uppercase() }, label = { Text("ID Defect") }, enabled = initialData == null, isError = idError != null, supportingText = idError?.let { { Text(it) } }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = namaDefect, onValueChange = { namaDefect = it.uppercase() }, label = { Text("Nama Defect") }, isError = nameError != null, supportingText = nameError?.let { { Text(it) } }, modifier = Modifier.fillMaxWidth())
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("MATERIAL", "PROSES").forEach {
-                    FilterChip(selected = kategori == it, onClick = { kategori = it }, label = { Text(it) })
-                }
-            }
-            Button(onClick = { 
-                sudahDisubmit = true
-                if (idError == null && nameError == null) onSave(MasterDefectDto(idDefect, namaDefect, kategori, true)) 
-            }, enabled = !saving, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                if (saving) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Simpan")
-            }
-            Spacer(Modifier.height(24.dp))
+        OutlinedTextField(
+            value = initialData.namaDefect,
+            onValueChange = { onUpdate(initialData.copy(namaDefect = it.uppercase())) },
+            label = { Text("Nama Defect") },
+            isError = initialData.namaDefectError != null,
+            supportingText = initialData.namaDefectError?.let { { Text(it) } },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        AppDropdownField(
+            label = "Kategori",
+            value = initialData.kategori,
+            options = listOf("PROSES", "MATERIAL"),
+            onSelected = { onUpdate(initialData.copy(kategori = it)) }
+        )
+
+        Button(
+            onClick = { onSave(initialData.copy(submitted = true)) },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !saving && initialData.valid
+        ) {
+            if (saving) CircularProgressIndicator(Modifier.size(24.dp), color = Color.White)
+            else Text("Simpan Defect")
         }
+
+        TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+            Text("Batal")
+        }
+        
+        Spacer(Modifier.height(32.dp))
     }
 }

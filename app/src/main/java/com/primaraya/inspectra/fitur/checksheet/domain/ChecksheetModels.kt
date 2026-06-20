@@ -32,12 +32,23 @@ data class PartAcuan(
 )
 
 @Serializable
+data class SlotNg(
+    val slotId: String,
+    val labelWaktu: String,
+    val jumlah: Int = 0
+)
+
+@Serializable
 data class InputDefect(
     val idDefect: String,
     val namaDefect: String,
     val kategori: KategoriDefect,
-    val jumlahNg: Int = 0
-)
+    val jumlahNg: Int = 0,
+    val detailSlot: List<SlotNg> = emptyList()
+) {
+    val totalNgDariSlot: Int get() = detailSlot.sumOf { it.jumlah }
+    val slotMatch: Boolean get() = detailSlot.isEmpty() || totalNgDariSlot == jumlahNg
+}
 
 @Serializable
 data class DetailCutting(
@@ -49,12 +60,40 @@ data class DetailCutting(
 )
 
 @Serializable
+data class MaterialAcuan(
+    val no: Int,
+    val namaSupplier: String,
+    val namaMaterial: String,
+    val spec: String?,
+    val satuan: String?
+)
+
+@Serializable
+data class MaterialPartAcuan(
+    val barisExcel: Int,
+    val uniqNo: String,
+    val nomorPart: String?,
+    val namaPart: String,
+    val komoditas: TipeProses,
+    val materialDigunakan: String,
+    val namaSupplier: String?,
+    val potensiDefectMaterial: List<String>,
+    val lebar: Double? = null,
+    val panjang: Double? = null,
+    val tebalMm: Double? = null,
+    val beratGsmGr: Double? = null,
+    val qty: Double? = null,
+    val satuan: String? = null,
+    val specAsli: String? = null
+)
+
+@Serializable
 data class RingkasanPartChecksheet(
     val uniqNo: String,
     val nomorPart: String?,
     val namaPart: String,
     val komoditas: TipeProses,
-    val daftarMaterial: List<String> = emptyList(), // Not used for now
+    val daftarMaterial: List<MaterialPartAcuan> = emptyList(),
     val daftarDefect: List<InputDefect>,
     val lokasiGambar: String? = null,
     val jumlahDiperiksa: Int = 0,

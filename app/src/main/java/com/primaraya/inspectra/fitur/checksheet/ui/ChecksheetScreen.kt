@@ -28,7 +28,7 @@ import com.primaraya.inspectra.core.ui.component.AppEmptyState
 import com.primaraya.inspectra.core.ui.component.AppFriendlyDialog
 import com.primaraya.inspectra.core.ui.component.AppListSkeleton
 import com.primaraya.inspectra.core.ui.component.AppLoading
-import com.primaraya.inspectra.core.ui.component.KonfirmasiKirimChecksheetDialog
+import com.primaraya.inspectra.core.ui.component.PreviewChecksheetDialog
 import com.primaraya.inspectra.core.ui.component.RingkasanAtas
 import com.primaraya.inspectra.fitur.checksheet.domain.InputDefect
 import com.primaraya.inspectra.fitur.checksheet.domain.KategoriDefect
@@ -99,7 +99,7 @@ fun ChecksheetScreen(
             Surface(shadowElevation = 10.dp) {
                 Button(
                     onClick = { viewModel.onIntent(ChecksheetContract.Intent.Tinjau) },
-                    enabled = state.adaInput && !state.adaQtyTidakValid && !state.mengirim,
+                    enabled = state.adaInput && !state.adaQtyTidakValid && !state.adaSlotTidakMatch && !state.mengirim,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp)
@@ -171,6 +171,9 @@ fun ChecksheetScreen(
                                     onDefectInputManual = { idDefect, qty ->
                                         viewModel.onIntent(ChecksheetContract.Intent.UbahJumlahDefect(part.uniqNo, idDefect, qty))
                                     },
+                                    onSlotDefectUbah = { idDefect, slotId, qty ->
+                                        viewModel.onIntent(ChecksheetContract.Intent.UbahJumlahSlotDefect(part.uniqNo, idDefect, slotId, qty))
+                                    },
                                     onDetailCuttingUbah = { lot, roll, size, waste, pic ->
                                         viewModel.onIntent(ChecksheetContract.Intent.UbahDetailCutting(part.uniqNo, lot, roll, size, waste, pic))
                                     }
@@ -185,10 +188,11 @@ fun ChecksheetScreen(
     }
 
     state.preview?.let { payload ->
-        KonfirmasiKirimChecksheetDialog(
+        PreviewChecksheetDialog(
             payload = payload,
             onDismiss = { viewModel.onIntent(ChecksheetContract.Intent.TutupPreview) },
-            onConfirm = { viewModel.onIntent(ChecksheetContract.Intent.Kirim) }
+            onConfirm = { viewModel.onIntent(ChecksheetContract.Intent.Kirim) },
+            sending = state.mengirim
         )
     }
 }
@@ -201,6 +205,7 @@ fun KartuPartChecksheetRingkas(
     onJumlahDiperiksaUbah: (Int) -> Unit,
     onDefectTambahKurang: (String, Boolean) -> Unit,
     onDefectInputManual: (String, Int) -> Unit,
+    onSlotDefectUbah: (String, String, Int) -> Unit,
     onDetailCuttingUbah: (String?, String?, String?, Double?, String?) -> Unit
 ) {
     ElevatedCard(
@@ -370,7 +375,8 @@ fun KartuPartChecksheetRingkas(
                                 defect = defect,
                                 onMinus = { onDefectTambahKurang(defect.idDefect, false) },
                                 onPlus = { onDefectTambahKurang(defect.idDefect, true) },
-                                onManual = { qty -> onDefectInputManual(defect.idDefect, qty) }
+                                onManual = { qty -> onDefectInputManual(defect.idDefect, qty) },
+                                onSlotUbah = { slotId, qty -> onSlotDefectUbah(defect.idDefect, slotId, qty) }
                             )
                         }
                     }
@@ -384,69 +390,143 @@ fun BarisDefectStepper(
     defect: InputDefect,
     onMinus: () -> Unit,
     onPlus: () -> Unit,
-    onManual: (Int) -> Unit
+    onManual: (Int) -> Unit,
+    onSlotUbah: (String, Int) -> Unit
 ) {
     var showManualDialog by remember { mutableStateOf(false) }
+    var showSlotDialog by remember { mutableStateOf(false) }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = defect.namaDefect,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-            color = Color(0xFF1F2937)
-        )
-
-        IconButton(onClick = onMinus) {
-            Icon(
-                Icons.Default.RemoveCircleOutline,
-                contentDescription = "Kurangi",
-                tint = Color(0xFFDC2626)
-            )
-        }
-
-        Surface(
+    Column {
+        Row(
             modifier = Modifier
-                .width(56.dp)
-                .height(42.dp)
-                .clickable { showManualDialog = true },
-            shape = RoundedCornerShape(12.dp),
-            tonalElevation = 1.dp,
-            color = Color(0xFFF1F5F9)
+                .fillMaxWidth()
+                .padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(contentAlignment = Alignment.Center) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = defect.jumlahNg.toString(),
-                    fontWeight = FontWeight.Black,
-                    color = Color(0xFF1A365D)
+                    text = defect.namaDefect,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF1F2937)
+                )
+                if (defect.detailSlot.isNotEmpty()) {
+                    Text(
+                        text = "Detail Slot: ${defect.totalNgDariSlot} / ${defect.jumlahNg}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (defect.slotMatch) Color(0xFF16A34A) else Color(0xFFDC2626),
+                        modifier = Modifier.clickable { showSlotDialog = true }
+                    )
+                }
+            }
+
+            IconButton(onClick = onMinus) {
+                Icon(
+                    Icons.Default.RemoveCircleOutline,
+                    contentDescription = "Kurangi",
+                    tint = Color(0xFFDC2626)
+                )
+            }
+
+            Surface(
+                modifier = Modifier
+                    .width(56.dp)
+                    .height(42.dp)
+                    .clickable { showManualDialog = true },
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = 1.dp,
+                color = Color(0xFFF1F5F9)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = defect.jumlahNg.toString(),
+                        fontWeight = FontWeight.Black,
+                        color = Color(0xFF1A365D)
+                    )
+                }
+            }
+
+            IconButton(onClick = onPlus) {
+                Icon(
+                    Icons.Default.AddCircleOutline,
+                    contentDescription = "Tambah",
+                    tint = Color(0xFF16A34A)
                 )
             }
         }
 
-        IconButton(onClick = onPlus) {
-            Icon(
-                Icons.Default.AddCircleOutline,
-                contentDescription = "Tambah",
-                tint = Color(0xFF16A34A)
+        if (showManualDialog) {
+            DialogInputJumlahNg(
+                title = defect.namaDefect,
+                initialValue = defect.jumlahNg,
+                onDismiss = { showManualDialog = false },
+                onConfirm = {
+                    onManual(it)
+                    showManualDialog = false
+                }
+            )
+        }
+
+        if (showSlotDialog) {
+            DialogInputSlotNg(
+                defect = defect,
+                onDismiss = { showSlotDialog = false },
+                onSlotUbah = onSlotUbah
             )
         }
     }
+}
 
-    if (showManualDialog) {
-        DialogInputJumlahNg(
-            title = defect.namaDefect,
-            initialValue = defect.jumlahNg,
-            onDismiss = { showManualDialog = false },
-            onConfirm = {
-                onManual(it)
-                showManualDialog = false
+@Composable
+fun DialogInputSlotNg(
+    defect: InputDefect,
+    onDismiss: () -> Unit,
+    onSlotUbah: (String, Int) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Detail NG per Slot: ${defect.namaDefect}") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("Total NG: ${defect.jumlahNg}", fontWeight = FontWeight.Bold)
+                HorizontalDivider()
+                
+                Box(modifier = Modifier.heightIn(max = 300.dp)) {
+                    LazyColumn {
+                        items(defect.detailSlot) { slot ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(slot.labelWaktu, modifier = Modifier.weight(1f))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(onClick = { onSlotUbah(slot.slotId, slot.jumlah - 1) }) {
+                                        Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    }
+                                    Text(slot.jumlah.toString(), fontWeight = FontWeight.Bold)
+                                    IconButton(onClick = { onSlotUbah(slot.slotId, slot.jumlah + 1) }) {
+                                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                HorizontalDivider()
+                Text(
+                    text = "Total Slot: ${defect.totalNgDariSlot}",
+                    color = if (defect.slotMatch) Color(0xFF16A34A) else Color(0xFFDC2626)
+                )
             }
-        )
-    }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) { Text("Selesai") }
+        }
+    )
 }
 
 @Composable

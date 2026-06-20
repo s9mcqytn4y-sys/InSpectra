@@ -29,6 +29,7 @@ object ChecksheetContract {
         val rasioNg: Float get() = if (totalDiperiksa > 0) totalNg.toFloat() / totalDiperiksa * 100f else 0f
         val adaInput: Boolean get() = daftarPart.any { it.jumlahDiperiksa > 0 || it.jumlahNg > 0 }
         val adaQtyTidakValid: Boolean get() = daftarPart.any { it.kuantitasTidakValid }
+        val adaSlotTidakMatch: Boolean get() = daftarPart.any { p -> p.daftarDefect.any { !it.slotMatch } }
     }
 
     /**
@@ -39,6 +40,7 @@ object ChecksheetContract {
         data class TogglePart(val uniqNo: String) : Intent
         data class UbahJumlahDiperiksa(val uniqNo: String, val jumlah: Int) : Intent
         data class UbahJumlahDefect(val uniqNo: String, val idDefect: String, val jumlah: Int) : Intent
+        data class UbahJumlahSlotDefect(val uniqNo: String, val idDefect: String, val slotId: String, val jumlah: Int) : Intent
         data class TambahDefect(val uniqNo: String, val idDefect: String) : Intent
         data class KurangiDefect(val uniqNo: String, val idDefect: String) : Intent
         

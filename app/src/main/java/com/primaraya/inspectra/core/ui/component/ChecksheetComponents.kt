@@ -61,39 +61,44 @@ fun RingkasanAtas(
 }
 
 @Composable
-fun KonfirmasiKirimChecksheetDialog(
+fun PreviewChecksheetDialog(
     payload: PayloadChecksheet,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    sending: Boolean
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        icon = {
-            Icon(Icons.Default.CloudUpload, contentDescription = null)
-        },
-        title = {
-            Text(
-                text = "Kirim Checksheet?",
-                fontWeight = FontWeight.Black
-            )
-        },
+        title = { Text("Tinjau Checksheet", fontWeight = FontWeight.Black) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Pastikan data pemeriksaan sudah sesuai sebelum dikirim.")
-
+                Text("Pastikan data pemeriksaan sudah benar sebelum dikirim.")
                 HorizontalDivider()
-
                 Text("Proses: ${payload.tipeProses}")
                 Text("Part diisi: ${payload.daftarPart.size}")
                 Text("Diperiksa: ${payload.totalDiperiksa} pcs")
                 Text("OK: ${payload.totalOk} pcs")
                 Text("NG: ${payload.totalNg} pcs")
-                Text("Rasio NG: ${payload.rasioNgGlobal}%")
+                Text("Rasio NG: ${"%.1f".format(payload.rasioNgGlobal)}%")
+
+                if (payload.daftarPart.any { it.jumlahNg > it.jumlahDiperiksa }) {
+                    Text(
+                        "Ada jumlah NG yang melebihi jumlah diperiksa.",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         },
         confirmButton = {
-            Button(onClick = onConfirm) {
-                Text("Kirim")
+            Button(
+                enabled = !sending,
+                onClick = onConfirm
+            ) {
+                if (sending) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Text("Kirim")
+                }
             }
         },
         dismissButton = {

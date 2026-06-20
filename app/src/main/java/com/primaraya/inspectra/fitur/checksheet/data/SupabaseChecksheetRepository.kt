@@ -1,20 +1,32 @@
 package com.primaraya.inspectra.fitur.checksheet.data
 
-import com.primaraya.inspectra.core.database.SupabaseRestClient
+import com.primaraya.inspectra.core.data.DatabaseDriver
+import com.primaraya.inspectra.core.data.RemoteTable
+import com.primaraya.inspectra.core.data.SupabasePgRestDriver
 import com.primaraya.inspectra.core.network.NetworkResult
 import com.primaraya.inspectra.core.network.runNetworkCatching
 import com.primaraya.inspectra.fitur.checksheet.domain.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 
 class SupabaseChecksheetRepository(
-    private val client: SupabaseRestClient = SupabaseRestClient()
+    private val driver: DatabaseDriver = SupabasePgRestDriver()
 ) : ChecksheetRepository {
+
+    private val json = Json {
+        ignoreUnknownKeys = true
+        explicitNulls = false
+        encodeDefaults = true
+        isLenient = true
+    }
 
     override suspend fun submitChecksheet(
         payload: PayloadChecksheet
     ): NetworkResult<String> = withContext(Dispatchers.IO) {
         runNetworkCatching {
+            // 1. Simpan Sesi
             val sesiDto = SesiChecksheetDto(
                 tipe_proses = payload.tipeProses,
                 total_diperiksa = payload.totalDiperiksa,
@@ -23,14 +35,16 @@ class SupabaseChecksheetRepository(
                 rasio_ng_global = payload.rasioNgGlobal.toDouble()
             )
 
-            val insertedSesi = client.insertReturning<SesiChecksheetDto, List<SesiChecksheetDto>>(
-                table = "e_sesi_checksheet",
-                body = sesiDto
-            ).firstOrNull() ?: error("Sesi belum berhasil dibuat.")
+            val insertedSesiList = driver.insertReturning(
+                table = RemoteTable.SesiChecksheet,
+                body = sesiDto,
+                encode = { json.encodeToString(SesiChecksheetDto.serializer(), it) },
+                decode = { json.decodeFromString(ListSerializer(SesiChecksheetDto.serializer()), it) }
+            )
+            
+            val sesiId = insertedSesiList.firstOrNull()?.id ?: error("Sesi gagal dibuat.")
 
-            val sesiId = insertedSesi.id
-                ?: error("ID Sesi tidak dikembalikan.")
-
+            // 2. Simpan Item (Parts)
             val itemDtos = payload.daftarPart.map { part ->
                 ItemChecksheetDto(
                     id_sesi = sesiId,
@@ -42,22 +56,23 @@ class SupabaseChecksheetRepository(
                 )
             }
 
-            val insertedItems = client.insertReturning<List<ItemChecksheetDto>, List<ItemChecksheetDto>>(
-                table = "e_item_checksheet",
-                body = itemDtos
+            val insertedItems = driver.insertReturning(
+                table = RemoteTable.ItemChecksheet,
+                body = itemDtos,
+                encode = { json.encodeToString(ListSerializer(ItemChecksheetDto.serializer()), it) },
+                decode = { json.decodeFromString(ListSerializer(ItemChecksheetDto.serializer()), it) }
             )
 
-            val itemIdByUniq = insertedItems
-                .mapNotNull { item ->
-                    val id = item.id ?: return@mapNotNull null
-                    item.uniq_no to id
-                }
-                .toMap()
+            val itemIdByUniq = insertedItems.mapNotNull { it.id?.let { id -> it.uniq_no to id } }.toMap()
 
-            val defectDtos = payload.daftarPart.flatMap { part ->
-                val itemId = itemIdByUniq[part.uniqNo] ?: return@flatMap emptyList()
+            // 3. Simpan Defect & Detail Slot
+            val allDefectSlots = mutableListOf<DefectSlotChecksheetDto>()
 
-                part.daftarDefectNg.map { defect ->
+            payload.daftarPart.forEach { part ->
+                val itemId = itemIdByUniq[part.uniqNo] ?: return@forEach
+                
+                // Simpan Defect (Returning ID)
+                val defectDtos = part.daftarDefectNg.map { defect ->
                     DefectChecksheetDto(
                         id_item = itemId,
                         id_defect = defect.idDefect,
@@ -66,34 +81,50 @@ class SupabaseChecksheetRepository(
                         jumlah = defect.jumlahNg
                     )
                 }
+
+                if (defectDtos.isNotEmpty()) {
+                    val insertedDefects = driver.insertReturning(
+                        table = RemoteTable.DefectChecksheet,
+                        body = defectDtos,
+                        encode = { json.encodeToString(ListSerializer(DefectChecksheetDto.serializer()), it) },
+                        decode = { json.decodeFromString(ListSerializer(DefectChecksheetDto.serializer()), it) }
+                    )
+
+                    // Map ID ke Slot
+                    insertedDefects.forEach { defRow ->
+                        val originalDefect = part.daftarDefectNg.firstOrNull { it.idDefect == defRow.id_defect }
+                        originalDefect?.detailSlot?.filter { it.jumlah > 0 }?.forEach { slot ->
+                            allDefectSlots.add(
+                                DefectSlotChecksheetDto(
+                                    id_defect_checksheet = defRow.id!!,
+                                    slot_waktu_id = slot.slotId,
+                                    jumlah = slot.jumlah
+                                )
+                            )
+                        }
+                    }
+                }
             }
 
-            if (defectDtos.isNotEmpty()) {
-                client.upsert(table = "e_defect_checksheet", body = defectDtos)
-            }
-
-            // Handle Detail Cutting
-            val cuttingDtos = payload.daftarPart.mapNotNull { part ->
-                val detail = part.detailCutting ?: return@mapNotNull null
-                // Check if at least one field is filled
-                if (detail.noLot.isNullOrBlank() && detail.noRoll.isNullOrBlank() && 
-                    detail.sizeCuttingCm.isNullOrBlank() && detail.waste == null && 
-                    detail.pic.isNullOrBlank()) return@mapNotNull null
-                
-                val itemId = itemIdByUniq[part.uniqNo] ?: return@mapNotNull null
-                
-                DetailCuttingDto(
-                    id_item = itemId,
-                    no_lot = detail.noLot,
-                    no_roll = detail.noRoll,
-                    size_cutting_cm = detail.sizeCuttingCm,
-                    waste = detail.waste,
-                    pic = detail.pic
+            if (allDefectSlots.isNotEmpty()) {
+                driver.upsert(
+                    table = RemoteTable.DefectSlotChecksheet,
+                    body = allDefectSlots,
+                    encode = { json.encodeToString(ListSerializer(DefectSlotChecksheetDto.serializer()), it) }
                 )
             }
 
+            // 4. Handle Detail Cutting
+            val cuttingDtos = payload.daftarPart.mapNotNull { part ->
+                val detail = part.detailCutting ?: return@mapNotNull null
+                if (detail.noLot.isNullOrBlank() && detail.noRoll.isNullOrBlank()) return@mapNotNull null
+                
+                val itemId = itemIdByUniq[part.uniqNo] ?: return@mapNotNull null
+                DetailCuttingDto(id_item = itemId, no_lot = detail.noLot, no_roll = detail.noRoll, size_cutting_cm = detail.sizeCuttingCm, waste = detail.waste, pic = detail.pic)
+            }
+
             if (cuttingDtos.isNotEmpty()) {
-                client.upsert(table = "e_detail_cutting", body = cuttingDtos)
+                driver.upsert(RemoteTable.DetailCutting, cuttingDtos, { json.encodeToString(ListSerializer(DetailCuttingDto.serializer()), it) })
             }
 
             sesiId

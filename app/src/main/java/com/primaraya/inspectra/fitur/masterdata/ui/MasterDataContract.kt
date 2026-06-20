@@ -26,7 +26,13 @@ object MasterDataContract {
         val menyimpan: Boolean = false,
         val kataKunci: String = "",
         val dialogForm: DialogForm? = null,
-        val userMessage: UserMessage? = null
+        val userMessage: UserMessage? = null,
+        val partFormDraft: PartFormState = PartFormState(),
+        val materialFormDraft: MaterialFormState = MaterialFormState(),
+        val supplierFormDraft: SupplierFormState = SupplierFormState(),
+        val defectFormDraft: DefectFormState = DefectFormState(),
+        val canLoadMore: Boolean = true,
+        val loadingMore: Boolean = false
     )
 
     data class PartRelationState(
@@ -42,23 +48,27 @@ object MasterDataContract {
 
         data object TambahPart : Intent
         data class EditPart(val data: MasterPartDto) : Intent
-        data class SimpanPart(val data: MasterPartDto) : Intent
+        data class UbahFormPart(val data: PartFormState) : Intent
+        data class SimpanPart(val data: PartFormState) : Intent
         data class HapusPart(val data: MasterPartDto) : Intent
         data class TogglePartDetail(val uniqNo: String) : Intent
 
         data object TambahMaterial : Intent
         data class EditMaterial(val data: MasterMaterialDto) : Intent
-        data class SimpanMaterial(val data: MasterMaterialDto) : Intent
+        data class UbahFormMaterial(val data: MaterialFormState) : Intent
+        data class SimpanMaterial(val data: MaterialFormState) : Intent
         data class HapusMaterial(val data: MasterMaterialDto) : Intent
 
         data object TambahSupplier : Intent
         data class EditSupplier(val data: MasterSupplierDto) : Intent
-        data class SimpanSupplier(val data: MasterSupplierDto) : Intent
+        data class UbahFormSupplier(val data: SupplierFormState) : Intent
+        data class SimpanSupplier(val data: SupplierFormState) : Intent
         data class HapusSupplier(val data: MasterSupplierDto) : Intent
 
         data object TambahDefect : Intent
         data class EditDefect(val data: MasterDefectDto) : Intent
-        data class SimpanDefect(val data: MasterDefectDto) : Intent
+        data class UbahFormDefect(val data: DefectFormState) : Intent
+        data class SimpanDefect(val data: DefectFormState) : Intent
         data class HapusDefect(val data: MasterDefectDto) : Intent
 
         // Relations - Defect
@@ -71,6 +81,7 @@ object MasterDataContract {
         data class TambahMaterialKePart(val uniqNo: String, val materialId: String, val label: String) : Intent
         data class HapusMaterialDariPart(val uniqNo: String, val relationId: String) : Intent
 
+        data object MuatLebihBanyak : Intent
         data object TutupDialog : Intent
         data object ClearUserMessage : Intent
         data object Retry : Intent
