@@ -23,12 +23,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.primaraya.inspectra.domain.model.TipeProses
-import com.primaraya.inspectra.ui.screens.checksheet.ChecksheetScreen
-import com.primaraya.inspectra.ui.screens.checksheet.ChecksheetViewModel
-import com.primaraya.inspectra.ui.screens.checksheet.labelIndonesia
-import com.primaraya.inspectra.ui.screens.masterdata.MasterDataScreen
-import com.primaraya.inspectra.ui.screens.splash.SplashScreen
+import com.primaraya.inspectra.core.ui.theme.InSpectraTheme
+import com.primaraya.inspectra.fitur.checksheet.domain.TipeProses
+import com.primaraya.inspectra.fitur.checksheet.ui.ChecksheetScreen
+import com.primaraya.inspectra.fitur.checksheet.ui.labelIndonesia
+import com.primaraya.inspectra.fitur.masterdata.ui.MasterDataScreen
+import com.primaraya.inspectra.fitur.splash.SplashScreen
 
 enum class NavState { 
     SPLASH, 
@@ -44,9 +44,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             var currentScreen by rememberSaveable { mutableStateOf(NavState.SPLASH) }
             var prosesTerpilih by rememberSaveable { mutableStateOf(TipeProses.PRESS) }
-            val checksheetViewModel: ChecksheetViewModel = viewModel()
 
-            MaterialTheme {
+            InSpectraTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF8FAFC)) {
                     when (currentScreen) {
                         NavState.SPLASH -> SplashScreen(onHealthCheckPassed = {
@@ -69,7 +68,6 @@ class MainActivity : ComponentActivity() {
                         )
                         NavState.FORM_CHECKSHEET -> ChecksheetScreen(
                             tipeProses = prosesTerpilih,
-                            viewModel = checksheetViewModel,
                             onBackClick = { currentScreen = NavState.MENU_CHECKSHEET }
                         )
                         NavState.MASTER_DATA -> MasterDataScreen(
