@@ -5,23 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.primaraya.inspectra.checksheet.data.ChecksheetRepository
 import com.primaraya.inspectra.checksheet.data.SupabaseChecksheetRepository
 import com.primaraya.inspectra.core.network.NetworkResult
-import com.primaraya.inspectra.domain.model.DataAcuanChecksheet
-import com.primaraya.inspectra.domain.model.PayloadChecksheet
-import com.primaraya.inspectra.domain.model.PayloadPartDiperiksa
-import com.primaraya.inspectra.domain.model.RingkasanPartChecksheet
-import com.primaraya.inspectra.domain.model.TipeProses
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
 import com.primaraya.inspectra.core.ui.UserMessage
 import com.primaraya.inspectra.core.ui.UserMessageMapper
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import com.primaraya.inspectra.domain.model.*
+import com.primaraya.inspectra.masterdata.data.MasterDataRepository
+import com.primaraya.inspectra.masterdata.data.SupabaseMasterDataRepository
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 data class ChecksheetUiState(
     val isLoading: Boolean = false,
@@ -52,6 +42,7 @@ sealed interface ChecksheetEvent {
 
 class ChecksheetViewModel : ViewModel() {
     private val repository: ChecksheetRepository = SupabaseChecksheetRepository()
+    private val masterDataRepository: MasterDataRepository = SupabaseMasterDataRepository()
 
     private val _uiState = MutableStateFlow(ChecksheetUiState())
     val uiState: StateFlow<ChecksheetUiState> = _uiState.asStateFlow()
@@ -63,17 +54,46 @@ class ChecksheetViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, userMessage = null, previewPayload = null) }
             
-            val daftar = withContext(Dispatchers.Default) {
-                DataAcuanChecksheet.daftarPartChecksheet(tipeProses).map {
-                    it.copy(
-                        jumlahDiperiksa = 0,
-                        terbuka = false,
-                        daftarDefect = it.daftarDefect.map { defect -> defect.copy(jumlahNg = 0) }
-                    )
-                }
-            }
+            val result = masterDataRepository.getChecksheetData(tipeProses.name)
             
-            _uiState.update { it.copy(isLoading = false, daftarPart = daftar) }
+            when (result) {
+                is NetworkResult.Success -> {
+                    val daftar = result.data.map { dto ->
+                        RingkasanPartChecksheet(
+                            uniqNo = dto.uniq_no,
+                            nomorPart = dto.part_no,
+                            namaPart = dto.nama_part,
+                            komoditas = tipeProses,
+                            daftarMaterial = emptyList(),
+                            daftarDefect = dto.daftar_defect.map { d ->
+                                InputDefect(
+                                    idDefect = d.id_defect,
+                                    namaDefect = d.nama_defect,
+                                    kategori = try {
+                                        KategoriDefect.valueOf(d.kategori.uppercase())
+                                    } catch (e: Exception) {
+                                        KategoriDefect.PROSES
+                                    },
+                                    jumlahNg = 0
+                                )
+                            },
+                            lokasiGambar = dto.lokasi_gambar,
+                            jumlahDiperiksa = 0,
+                            terbuka = false
+                        )
+                    }
+                    _uiState.update { it.copy(isLoading = false, daftarPart = daftar) }
+                }
+                is NetworkResult.Error -> {
+                    _uiState.update { 
+                        it.copy(
+                            isLoading = false, 
+                            userMessage = UserMessageMapper.fromThrowableMessage(result.message)
+                        ) 
+                    }
+                }
+                else -> Unit
+            }
         }
     }
 

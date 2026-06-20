@@ -3,6 +3,7 @@ package com.primaraya.inspectra.masterdata.data
 import com.primaraya.inspectra.core.network.NetworkResult
 import com.primaraya.inspectra.core.network.SupabaseProvider
 import com.primaraya.inspectra.core.network.runNetworkCatching
+import com.primaraya.inspectra.masterdata.domain.ChecksheetPartDefectViewDto
 import com.primaraya.inspectra.masterdata.domain.MasterDefectDto
 import com.primaraya.inspectra.masterdata.domain.MasterMaterialDto
 import com.primaraya.inspectra.masterdata.domain.MasterPartDto
@@ -14,6 +15,20 @@ import kotlinx.coroutines.withContext
 class SupabaseMasterDataRepository : MasterDataRepository {
 
     private val client = SupabaseProvider.client
+
+    override suspend fun getChecksheetData(
+        komoditas: String
+    ): NetworkResult<List<ChecksheetPartDefectViewDto>> = withContext(Dispatchers.IO) {
+        runNetworkCatching {
+            client.postgrest["v_checksheet_part_defect"]
+                .select {
+                    filter {
+                        eq("komoditas", komoditas)
+                    }
+                }
+                .decodeList<ChecksheetPartDefectViewDto>()
+        }
+    }
 
     override suspend fun getParts(): NetworkResult<List<MasterPartDto>> = withContext(Dispatchers.IO) {
         runNetworkCatching {

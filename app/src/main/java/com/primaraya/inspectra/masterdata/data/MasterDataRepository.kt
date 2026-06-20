@@ -1,11 +1,14 @@
 package com.primaraya.inspectra.masterdata.data
 
 import com.primaraya.inspectra.core.network.NetworkResult
+import com.primaraya.inspectra.masterdata.domain.ChecksheetPartDefectViewDto
 import com.primaraya.inspectra.masterdata.domain.MasterDefectDto
 import com.primaraya.inspectra.masterdata.domain.MasterMaterialDto
 import com.primaraya.inspectra.masterdata.domain.MasterPartDto
 
 interface MasterDataRepository {
+    suspend fun getChecksheetData(komoditas: String): NetworkResult<List<ChecksheetPartDefectViewDto>>
+
     suspend fun getParts(): NetworkResult<List<MasterPartDto>>
     suspend fun upsertPart(part: MasterPartDto): NetworkResult<Unit>
     suspend fun deletePartSoft(id: String): NetworkResult<Unit>
