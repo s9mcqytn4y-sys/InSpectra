@@ -1,6 +1,5 @@
 package com.primaraya.inspectra.ui.screens.checksheet
 
-import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,16 +15,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.primaraya.inspectra.domain.model.InputDefect
 import com.primaraya.inspectra.domain.model.KategoriDefect
-import com.primaraya.inspectra.domain.model.MaterialPartAcuan
+import com.primaraya.inspectra.domain.model.PayloadChecksheet
 import com.primaraya.inspectra.domain.model.RingkasanPartChecksheet
 import com.primaraya.inspectra.domain.model.TipeProses
 
@@ -36,55 +35,29 @@ fun ChecksheetScreen(
     viewModel: ChecksheetViewModel,
     onBackClick: () -> Unit
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
     LaunchedEffect(tipeProses) {
         viewModel.muatChecksheet(tipeProses)
     }
 
-    val context = LocalContext.current
-    val snackbarHostState = remember { SnackbarHostState() }
-
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is ChecksheetEvent.ShowToast -> {
-                    Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
+                is ChecksheetEvent.ShowSuccess -> {
+                    snackbarHostState.showSnackbar(event.message)
                 }
+
+                is ChecksheetEvent.ShowError -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+
                 is ChecksheetEvent.SubmitSuccess -> {
-                    viewModel.muatChecksheet(tipeProses) // Reset data
+                    snackbarHostState.showSnackbar("Data tersimpan. ID sesi: ${event.sesiId.take(8)}")
                 }
             }
         }
-    }
-
-    val uiState by viewModel.uiState.collectAsState()
-    val daftarPart = uiState.daftarPart
-    val pesanValidasi = uiState.pesanValidasi
-    val payloadJson = uiState.payloadJson
-
-    val totalDiperiksa by remember(daftarPart) {
-        derivedStateOf { daftarPart.sumOf { it.jumlahDiperiksa } }
-    }
-
-    val totalNg by remember(daftarPart) {
-        derivedStateOf { daftarPart.sumOf { it.jumlahNg } }
-    }
-
-    val totalOk by remember(daftarPart) {
-        derivedStateOf { totalDiperiksa - totalNg }
-    }
-
-    val rasioNg by remember(daftarPart) {
-        derivedStateOf {
-            if (totalDiperiksa > 0) {
-                (totalNg.toFloat() / totalDiperiksa.toFloat()) * 100f
-            } else {
-                0f
-            }
-        }
-    }
-
-    val adaKuantitasTidakValid by remember(daftarPart) {
-        derivedStateOf { daftarPart.any { it.kuantitasTidakValid } }
     }
 
     Scaffold(
@@ -95,12 +68,12 @@ fun ChecksheetScreen(
                     Column {
                         Text(
                             text = "Inspeksi ${tipeProses.labelIndonesia()}",
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Black
                         )
                         Text(
-                            text = "Supabase Connected",
-                            fontSize = 11.sp,
-                            color = Color(0xFFCBD5E1)
+                            text = "Form pemeriksaan harian",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.78f)
                         )
                     }
                 },
@@ -116,119 +89,152 @@ fun ChecksheetScreen(
                 )
             )
         },
-        floatingActionButton = {
-            if (payloadJson == null && daftarPart.isNotEmpty()) {
-                ExtendedFloatingActionButton(
-                    onClick = { viewModel.buatPayloadValidasi(tipeProses) },
-                    containerColor = Color(0xFFD97706),
-                    contentColor = Color.White,
-                    shape = RoundedCornerShape(12.dp)
+        bottomBar = {
+            Surface(shadowElevation = 10.dp) {
+                Button(
+                    onClick = { viewModel.buatPreviewPayload(tipeProses) },
+                    enabled = uiState.adaInput &&
+                        !uiState.adaQtyTidakValid &&
+                        !uiState.isSubmitting,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .height(54.dp),
+                    shape = RoundedCornerShape(18.dp)
                 ) {
-                    Icon(Icons.Default.Send, contentDescription = "Payload")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Buat Payload", fontWeight = FontWeight.Bold)
+                    if (uiState.isSubmitting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White
+                        )
+                    } else {
+                        Icon(Icons.Default.TaskAlt, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Tinjau & Kirim", fontWeight = FontWeight.Black)
+                    }
                 }
             }
         }
-    ) { innerPadding ->
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(padding)
                 .background(Color(0xFFF8FAFC))
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column {
                 RingkasanAtas(
-                    totalDiperiksa = totalDiperiksa,
-                    totalOk = totalOk,
-                    totalNg = totalNg,
-                    rasioNg = rasioNg,
-                    adaKuantitasTidakValid = adaKuantitasTidakValid
+                    totalDiperiksa = uiState.totalDiperiksa,
+                    totalOk = uiState.totalOk,
+                    totalNg = uiState.totalNg,
+                    rasioNg = uiState.rasioNg,
+                    adaKuantitasTidakValid = uiState.adaQtyTidakValid
                 )
 
-                if (pesanValidasi != null) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFEE2E2))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFDC2626))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = pesanValidasi,
-                                color = Color(0xFFDC2626),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                when {
+                    uiState.isLoading -> {
+                        ChecksheetSkeleton()
                     }
-                }
 
-                if (payloadJson != null) {
-                    PanelPayloadValidasi(
-                        json = payloadJson,
-                        onTutup = { viewModel.hapusPayload() },
-                        onSubmit = { viewModel.submitKeSupabase() }
-                    )
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(bottom = 96.dp)
-                    ) {
-                        if (daftarPart.isEmpty() && !uiState.isLoading) {
-                            item {
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = CardDefaults.cardColors(containerColor = Color.White)
-                                ) {
-                                    Column(modifier = Modifier.padding(16.dp)) {
-                                        Text(
-                                            text = "Belum ada data acuan untuk proses ini",
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF1A365D)
-                                        )
+                    uiState.daftarPart.isEmpty() -> {
+                        EmptyStateCard(
+                            title = "Belum ada data part",
+                            message = "Data acuan untuk proses ini belum tersedia."
+                        )
+                    }
+
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                end = 16.dp,
+                                bottom = 24.dp
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(
+                                items = uiState.daftarPart,
+                                key = { it.uniqNo }
+                            ) { part ->
+                                KartuPartChecksheetRingkas(
+                                    part = part,
+                                    onBukaTutup = { viewModel.ubahBukaTutup(part.uniqNo) },
+                                    onJumlahDiperiksaUbah = {
+                                        viewModel.ubahJumlahDiperiksa(part.uniqNo, it)
+                                    },
+                                    onDefectTambahKurang = { idDefect, tambah ->
+                                        viewModel.tambahKurangiDefect(part.uniqNo, idDefect, tambah)
+                                    },
+                                    onDefectInputManual = { idDefect, qty ->
+                                        viewModel.isiManualDefect(part.uniqNo, idDefect, qty)
                                     }
-                                }
+                                )
                             }
                         }
-
-                        items(daftarPart, key = { it.uniqNo }) { part ->
-                            KartuPartChecksheet(
-                                part = part,
-                                onBukaTutup = { viewModel.ubahBukaTutup(part.uniqNo) },
-                                onJumlahDiperiksaUbah = { viewModel.ubahJumlahDiperiksa(part.uniqNo, it) },
-                                onDefectTambahKurang = { idDefect, isTambah ->
-                                    viewModel.tambahKurangiDefect(part.uniqNo, idDefect, isTambah)
-                                },
-                                onDefectInputManual = { idDefect, qty ->
-                                    viewModel.isiManualDefect(part.uniqNo, idDefect, qty)
-                                }
-                            )
-                        }
                     }
-                }
-            }
-            
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = Color.White)
                 }
             }
         }
     }
+
+    uiState.previewPayload?.let { payload ->
+        KonfirmasiKirimChecksheetDialog(
+            payload = payload,
+            onDismiss = { viewModel.hapusPayload() },
+            onConfirm = { viewModel.submitKeSupabase() }
+        )
+    }
+
+    uiState.userMessage?.let { msg ->
+        FriendlyInfoDialog(
+            title = msg.title,
+            message = msg.body,
+            buttonText = msg.actionLabel ?: "Mengerti",
+            onDismiss = { viewModel.clearUserMessage() }
+        )
+    }
+}
+
+@Composable
+fun ChecksheetSkeleton() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(color = Color(0xFF1A365D))
+    }
+}
+
+@Composable
+fun EmptyStateCard(title: String, message: String) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(Icons.Default.Inbox, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
+        Spacer(Modifier.height(16.dp))
+        Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(message, textAlign = TextAlign.Center, color = Color.Gray)
+    }
+}
+
+@Composable
+fun FriendlyInfoDialog(
+    title: String,
+    message: String,
+    buttonText: String,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, fontWeight = FontWeight.Black) },
+        text = { Text(message) },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text(buttonText)
+            }
+        }
+    )
 }
 
 @Composable
@@ -279,253 +285,297 @@ fun RingkasanAtas(
 }
 
 @Composable
-fun KartuPartChecksheet(
+fun KartuPartChecksheetRingkas(
     part: RingkasanPartChecksheet,
     onBukaTutup: () -> Unit,
     onJumlahDiperiksaUbah: (Int) -> Unit,
     onDefectTambahKurang: (String, Boolean) -> Unit,
     onDefectInputManual: (String, Int) -> Unit
 ) {
-    Card(
+    ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (part.kuantitasTidakValid) Color(0xFFFEF2F2) else Color.White
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = if (part.kuantitasTidakValid) {
+                Color(0xFFFFF1F2)
+            } else {
+                Color.White
+            }
+        )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(18.dp)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onBukaTutup() },
+                    .clickable(onClick = onBukaTutup),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Layers, contentDescription = null, modifier = Modifier.size(36.dp), tint = Color(0xFF1A365D))
-                Spacer(modifier = Modifier.width(16.dp))
+                Icon(
+                    imageVector = Icons.Default.Layers,
+                    contentDescription = null,
+                    tint = Color(0xFF1A365D),
+                    modifier = Modifier.size(38.dp)
+                )
+
+                Spacer(Modifier.width(16.dp))
+
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(part.uniqNo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black, color = Color(0xFF1A365D))
-                    Text("${part.nomorPart ?: "-"} | ${part.namaPart}", style = MaterialTheme.typography.bodyMedium, color = Color.DarkGray)
-                    
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
-                        SuggestionChip(onClick = {}, label = { Text("Cek: ${part.jumlahDiperiksa}") })
-                        SuggestionChip(
-                            onClick = {}, 
-                            label = { Text("NG: ${part.jumlahNg}", color = if (part.jumlahNg > 0) Color.Red else Color.DarkGray) },
-                            colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = if (part.kuantitasTidakValid) Color(0xFFFEE2E2) else Color.Transparent
-                            )
+                    Text(
+                        text = part.uniqNo,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Black,
+                        color = Color(0xFF1A365D)
+                    )
+
+                    Text(
+                        text = "${part.nomorPart ?: "-"} | ${part.namaPart}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF475569),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Row(
+                        modifier = Modifier.padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        AssistChip(
+                            onClick = {},
+                            label = { Text("Cek: ${part.jumlahDiperiksa}") }
+                        )
+                        AssistChip(
+                            onClick = {},
+                            label = { Text("NG: ${part.jumlahNg}") }
                         )
                     }
                 }
-                Icon(if (part.terbuka) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null, tint = Color.Gray)
+
+                Icon(
+                    imageVector = if (part.terbuka) {
+                        Icons.Default.KeyboardArrowUp
+                    } else {
+                        Icons.Default.KeyboardArrowDown
+                    },
+                    contentDescription = null,
+                    tint = Color(0xFF64748B)
+                )
             }
 
             if (part.terbuka) {
-                Spacer(modifier = Modifier.height(16.dp))
-                
+                Spacer(Modifier.height(16.dp))
+
                 OutlinedTextField(
                     value = if (part.jumlahDiperiksa == 0) "" else part.jumlahDiperiksa.toString(),
                     onValueChange = { onJumlahDiperiksaUbah(it.toIntOrNull() ?: 0) },
                     label = { Text("Jumlah Diperiksa") },
+                    supportingText = {
+                        if (part.kuantitasTidakValid) {
+                            Text("Jumlah NG tidak boleh melebihi jumlah diperiksa.")
+                        }
+                    },
                     isError = part.kuantitasTidakValid,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true
                 )
-                
-                if (part.kuantitasTidakValid) {
-                    Text(
-                        text = "Jumlah NG melebihi jumlah diperiksa",
-                        color = Color(0xFFDC2626),
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(start = 4.dp, top = 4.dp)
-                    )
-                }
 
-                if (part.daftarMaterial.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Material Digunakan:", fontWeight = FontWeight.Bold, color = Color(0xFF1A365D), style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color(0xFFF8FAFC), RoundedCornerShape(8.dp))
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        part.daftarMaterial.forEach { material ->
-                            BarisMaterial(material)
-                        }
-                    }
-                }
+                Spacer(Modifier.height(16.dp))
 
-                if (part.daftarDefect.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Jenis Temuan NG:", fontWeight = FontWeight.Bold, color = Color(0xFF1A365D), style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Jenis Temuan NG",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFF1A365D)
+                )
 
-                    val groupedDefects = part.daftarDefect.groupBy { it.kategori }
-                    
-                    groupedDefects.forEach { (kategori, defects) ->
+                Spacer(Modifier.height(8.dp))
+
+                part.daftarDefect
+                    .groupBy { it.kategori }
+                    .forEach { (kategori, defects) ->
                         Text(
-                            text = "Kategori ${kategori.name}",
-                            style = MaterialTheme.typography.labelMedium,
+                            text = if (kategori == KategoriDefect.MATERIAL) {
+                                "Material"
+                            } else {
+                                "Proses"
+                            },
+                            style = MaterialTheme.typography.labelLarge,
                             color = Color(0xFF64748B),
-                            modifier = Modifier.padding(vertical = 4.dp)
+                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                         )
-                        
+
                         defects.forEach { defect ->
-                            BarisInputDefect(
+                            BarisDefectStepper(
                                 defect = defect,
-                                onUbahQty = { isTambah -> onDefectTambahKurang(defect.idDefect, isTambah) },
-                                onInputManual = { qty -> onDefectInputManual(defect.idDefect, qty) }
+                                onMinus = { onDefectTambahKurang(defect.idDefect, false) },
+                                onPlus = { onDefectTambahKurang(defect.idDefect, true) },
+                                onManual = { qty -> onDefectInputManual(defect.idDefect, qty) }
                             )
                         }
                     }
-                }
             }
         }
     }
 }
 
 @Composable
-fun BarisMaterial(material: MaterialPartAcuan) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(material.materialDigunakan, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("Supplier: ${material.namaSupplier ?: "-"}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-            Text("Spec: ${material.specAsli ?: "-"}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-        }
-        HorizontalDivider(modifier = Modifier.padding(top = 4.dp), color = Color(0xFFE2E8F0))
-    }
-}
-
-@Composable
-fun BarisInputDefect(
+fun BarisDefectStepper(
     defect: InputDefect,
-    onUbahQty: (Boolean) -> Unit,
-    onInputManual: (Int) -> Unit
+    onMinus: () -> Unit,
+    onPlus: () -> Unit,
+    onManual: (Int) -> Unit
 ) {
+    var showManualDialog by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(defect.namaDefect, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                IconButton(onClick = { onUbahQty(false) }, modifier = Modifier.fillMaxSize()) {
-                    Icon(Icons.Default.RemoveCircleOutline, contentDescription = "Kurang", tint = Color(0xFFDC2626), modifier = Modifier.size(24.dp))
-                }
-            }
-            
-            OutlinedTextField(
-                value = if (defect.jumlahNg == 0) "" else defect.jumlahNg.toString(),
-                onValueChange = { text ->
-                    val manualValue = text.toIntOrNull() ?: 0
-                    onInputManual(manualValue)
-                },
-                textStyle = TextStyle(
-                    textAlign = TextAlign.Center, 
-                    fontWeight = FontWeight.Black,
-                    fontSize = 14.sp
-                ),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier
-                    .width(56.dp)
-                    .height(48.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF1A365D),
-                    unfocusedBorderColor = Color.LightGray
-                ),
-                singleLine = true
-            )
+        Text(
+            text = defect.namaDefect,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+            color = Color(0xFF1F2937)
+        )
 
-            Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                IconButton(onClick = { onUbahQty(true) }, modifier = Modifier.fillMaxSize()) {
-                    Icon(Icons.Default.AddCircleOutline, contentDescription = "Tambah", tint = Color(0xFF16A34A), modifier = Modifier.size(24.dp))
-                }
+        IconButton(onClick = onMinus) {
+            Icon(
+                Icons.Default.RemoveCircleOutline,
+                contentDescription = "Kurangi",
+                tint = Color(0xFFDC2626)
+            )
+        }
+
+        Surface(
+            modifier = Modifier
+                .width(56.dp)
+                .height(42.dp)
+                .clickable { showManualDialog = true },
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 1.dp,
+            color = Color(0xFFF1F5F9)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = defect.jumlahNg.toString(),
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFF1A365D)
+                )
             }
         }
+
+        IconButton(onClick = onPlus) {
+            Icon(
+                Icons.Default.AddCircleOutline,
+                contentDescription = "Tambah",
+                tint = Color(0xFF16A34A)
+            )
+        }
+    }
+
+    if (showManualDialog) {
+        DialogInputJumlahNg(
+            title = defect.namaDefect,
+            initialValue = defect.jumlahNg,
+            onDismiss = { showManualDialog = false },
+            onConfirm = {
+                onManual(it)
+                showManualDialog = false
+            }
+        )
     }
 }
 
 @Composable
-fun PanelPayloadValidasi(json: String, onTutup: () -> Unit, onSubmit: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF1A365D))
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Payload JSON",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                IconButton(onClick = onTutup) {
-                    Icon(Icons.Default.Close, contentDescription = "Tutup", tint = Color.White)
-                }
-            }
-            
-            Button(
-                onClick = onSubmit,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Icon(Icons.Default.CloudUpload, contentDescription = null, tint = Color.White)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Kirim ke Supabase", color = Color.White, fontWeight = FontWeight.Bold)
-            }
+fun DialogInputJumlahNg(
+    title: String,
+    initialValue: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit
+) {
+    var value by remember { mutableStateOf(if (initialValue == 0) "" else initialValue.toString()) }
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                item {
-                    Text(
-                        text = json,
-                        style = TextStyle(
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                            fontSize = 12.sp
-                        ),
-                        modifier = Modifier
-                            .background(Color(0xFFF1F5F9), RoundedCornerShape(8.dp))
-                            .padding(16.dp)
-                            .fillMaxWidth()
-                    )
-                }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Ubah Jumlah NG",
+                fontWeight = FontWeight.Black
+            )
+        },
+        text = {
+            Column {
+                Text(title, color = Color(0xFF64748B))
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = { value = it.filter(Char::isDigit) },
+                    label = { Text("Jumlah NG") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(value.toIntOrNull() ?: 0) }) {
+                Text("Simpan")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal")
             }
         }
-    }
+    )
+}
+
+@Composable
+fun KonfirmasiKirimChecksheetDialog(
+    payload: PayloadChecksheet,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(Icons.Default.CloudUpload, contentDescription = null)
+        },
+        title = {
+            Text(
+                text = "Kirim Checksheet?",
+                fontWeight = FontWeight.Black
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Pastikan data pemeriksaan sudah sesuai sebelum dikirim.")
+
+                HorizontalDivider()
+
+                Text("Proses: ${payload.tipeProses}")
+                Text("Part diisi: ${payload.daftarPart.size}")
+                Text("Diperiksa: ${payload.totalDiperiksa} pcs")
+                Text("OK: ${payload.totalOk} pcs")
+                Text("NG: ${payload.totalNg} pcs")
+                Text("Rasio NG: ${payload.rasioNgGlobal}%")
+            }
+        },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("Kirim")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Tinjau Lagi")
+            }
+        }
+    )
 }
 
 fun TipeProses.labelIndonesia(): String {

@@ -14,9 +14,10 @@ import kotlinx.coroutines.withContext
 class SupabaseChecksheetRepository : ChecksheetRepository {
     private val client = SupabaseProvider.client
 
-    override suspend fun submitChecksheet(payload: PayloadChecksheet): NetworkResult<String> = withContext(Dispatchers.IO) {
+    override suspend fun submitChecksheet(
+        payload: PayloadChecksheet
+    ): NetworkResult<String> = withContext(Dispatchers.IO) {
         runNetworkCatching {
-            // 1. Insert Sesi
             val sesiDto = SesiChecksheetDto(
                 tipe_proses = payload.tipeProses,
                 total_diperiksa = payload.totalDiperiksa,
@@ -24,18 +25,18 @@ class SupabaseChecksheetRepository : ChecksheetRepository {
                 total_ng = payload.totalNg,
                 rasio_ng_global = payload.rasioNgGlobal.toDouble()
             )
-            
+
             val insertedSesi = client.postgrest["e_sesi_checksheet"]
                 .insert(sesiDto) {
-                    select() // Minta data dikembalikan setelah insert
+                    select()
                 }
                 .decodeSingle<SesiChecksheetDto>()
-                
-            val sesiId = insertedSesi.id ?: throw IllegalStateException("ID Sesi tidak dikembalikan oleh Supabase")
 
-            // 2. Insert Items and Defects
-            payload.daftarPart.forEach { part ->
-                val itemDto = ItemChecksheetDto(
+            val sesiId = insertedSesi.id
+                ?: error("Sesi belum berhasil dibuat.")
+
+            val itemDtos = payload.daftarPart.map { part ->
+                ItemChecksheetDto(
                     id_sesi = sesiId,
                     uniq_no = part.uniqNo,
                     jumlah_diperiksa = part.jumlahDiperiksa,
@@ -43,15 +44,25 @@ class SupabaseChecksheetRepository : ChecksheetRepository {
                     jumlah_ng = part.jumlahNg,
                     rasio_ng = part.rasioNg.toDouble()
                 )
-                
-                val insertedItem = client.postgrest["e_item_checksheet"]
-                    .insert(itemDto) { select() }
-                    .decodeSingle<ItemChecksheetDto>()
-                    
-                val itemId = insertedItem.id ?: throw IllegalStateException("ID Item tidak dikembalikan oleh Supabase")
-                
-                // 3. Insert Defects if any
-                val defectsToInsert = part.daftarDefectNg.filter { it.jumlahNg > 0 }.map { defect ->
+            }
+
+            val insertedItems = client.postgrest["e_item_checksheet"]
+                .insert(itemDtos) {
+                    select()
+                }
+                .decodeList<ItemChecksheetDto>()
+
+            val itemIdByUniq = insertedItems
+                .mapNotNull { item ->
+                    val id = item.id ?: return@mapNotNull null
+                    item.uniq_no to id
+                }
+                .toMap()
+
+            val defectDtos = payload.daftarPart.flatMap { part ->
+                val itemId = itemIdByUniq[part.uniqNo] ?: return@flatMap emptyList()
+
+                part.daftarDefectNg.map { defect ->
                     DefectChecksheetDto(
                         id_item = itemId,
                         id_defect = defect.idDefect,
@@ -60,12 +71,12 @@ class SupabaseChecksheetRepository : ChecksheetRepository {
                         jumlah = defect.jumlahNg
                     )
                 }
-                
-                if (defectsToInsert.isNotEmpty()) {
-                    client.postgrest["e_defect_checksheet"].insert(defectsToInsert)
-                }
             }
-            
+
+            if (defectDtos.isNotEmpty()) {
+                client.postgrest["e_defect_checksheet"].insert(defectDtos)
+            }
+
             sesiId
         }
     }

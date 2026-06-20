@@ -3,7 +3,6 @@ package com.primaraya.inspectra.core.network
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.annotations.SupabaseInternal
 import io.github.jan.supabase.createSupabaseClient
-import io.github.jan.supabase.gotrue.Auth
 import io.github.jan.supabase.postgrest.Postgrest
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpTimeout
@@ -28,7 +27,6 @@ object SupabaseProvider {
             supabaseKey = config.key
         ) {
             install(Postgrest)
-            install(Auth)
 
             httpConfig {
                 expectSuccess = false

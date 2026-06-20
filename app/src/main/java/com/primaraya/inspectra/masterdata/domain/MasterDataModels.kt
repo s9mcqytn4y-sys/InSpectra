@@ -10,8 +10,9 @@ data class MasterPartDto(
     val nama_part: String,
     val model: String? = null,
     val customer: String? = null,
-    val komoditas: String? = null,
-    val lokasi_gambar: String? = null
+    val komoditas: String,
+    val lokasi_gambar: String? = null,
+    val aktif: Boolean = true
 )
 
 @Serializable
@@ -20,5 +21,14 @@ data class MasterMaterialDto(
     val supplier: String? = null,
     val nama_material: String,
     val spec: String? = null,
-    val satuan: String? = null
+    val satuan: String? = null,
+    val aktif: Boolean = true
+)
+
+@Serializable
+data class MasterDefectDto(
+    val id_defect: String,
+    val nama_defect: String,
+    val kategori: String,
+    val aktif: Boolean = true
 )
