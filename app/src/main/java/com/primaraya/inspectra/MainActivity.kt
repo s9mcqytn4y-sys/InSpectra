@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -101,7 +103,7 @@ fun MainDashboard(
         DashboardModuleCard(
             title = "E-Checksheet",
             subtitle = "Inspeksi harian Press, Sewing, dan Cutting",
-            icon = Icons.Default.Assignment,
+            icon = Icons.AutoMirrored.Filled.Assignment,
             onClick = onChecksheetClick
         )
 
@@ -190,7 +192,7 @@ fun MenuChecksheet(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
             }
 
             Text(
