@@ -27,6 +27,7 @@ import com.primaraya.inspectra.domain.model.TipeProses
 import com.primaraya.inspectra.ui.screens.checksheet.ChecksheetScreen
 import com.primaraya.inspectra.ui.screens.checksheet.ChecksheetViewModel
 import com.primaraya.inspectra.ui.screens.checksheet.labelIndonesia
+import com.primaraya.inspectra.ui.screens.masterdata.MasterDataScreen
 import com.primaraya.inspectra.ui.screens.splash.SplashScreen
 
 enum class NavState { 
@@ -71,10 +72,9 @@ class MainActivity : ComponentActivity() {
                             viewModel = checksheetViewModel,
                             onBackClick = { currentScreen = NavState.MENU_CHECKSHEET }
                         )
-                        NavState.MASTER_DATA -> {
-                            // TODO: Master Data Screen
-                            Text("Master Data Module (Coming Soon)")
-                        }
+                        NavState.MASTER_DATA -> MasterDataScreen(
+                            onBackClick = { currentScreen = NavState.DASHBOARD }
+                        )
                     }
                 }
             }
