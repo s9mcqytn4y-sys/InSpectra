@@ -61,9 +61,13 @@ object MasterDataContract {
         data class SimpanDefect(val data: MasterDefectDto) : Intent
         data class HapusDefect(val data: MasterDefectDto) : Intent
 
-        // Relations
+        // Relations - Defect
         data class TambahDefectKePart(val uniqNo: String, val idDefect: String) : Intent
         data class HapusDefectDariPart(val uniqNo: String, val relationId: String) : Intent
+
+        // Relations - Material
+        data class TambahMaterialKePart(val uniqNo: String, val materialId: String, val label: String) : Intent
+        data class HapusMaterialDariPart(val uniqNo: String, val relationId: String) : Intent
 
         data object TutupDialog : Intent
         data object ClearUserMessage : Intent
@@ -83,5 +87,7 @@ object MasterDataContract {
         data class FormSupplier(val data: MasterSupplierDto? = null) : DialogForm
         data class FormDefect(val data: MasterDefectDto? = null) : DialogForm
         data class PilihDefectUntukPart(val uniqNo: String) : DialogForm
+        data class PilihMaterialUntukPart(val uniqNo: String) : DialogForm
+        data class KonfirmasiHapus(val judul: String, val pesan: String, val onConfirm: () -> Unit) : DialogForm
     }
 }
