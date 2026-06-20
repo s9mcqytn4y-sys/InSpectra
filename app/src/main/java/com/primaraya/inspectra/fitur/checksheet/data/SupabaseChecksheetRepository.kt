@@ -3,10 +3,7 @@ package com.primaraya.inspectra.fitur.checksheet.data
 import com.primaraya.inspectra.core.database.SupabaseRestClient
 import com.primaraya.inspectra.core.network.NetworkResult
 import com.primaraya.inspectra.core.network.runNetworkCatching
-import com.primaraya.inspectra.fitur.checksheet.domain.PayloadChecksheet
-import com.primaraya.inspectra.fitur.checksheet.domain.DefectChecksheetDto
-import com.primaraya.inspectra.fitur.checksheet.domain.ItemChecksheetDto
-import com.primaraya.inspectra.fitur.checksheet.domain.SesiChecksheetDto
+import com.primaraya.inspectra.fitur.checksheet.domain.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -73,6 +70,30 @@ class SupabaseChecksheetRepository(
 
             if (defectDtos.isNotEmpty()) {
                 client.upsert(table = "e_defect_checksheet", body = defectDtos)
+            }
+
+            // Handle Detail Cutting
+            val cuttingDtos = payload.daftarPart.mapNotNull { part ->
+                val detail = part.detailCutting ?: return@mapNotNull null
+                // Check if at least one field is filled
+                if (detail.noLot.isNullOrBlank() && detail.noRoll.isNullOrBlank() && 
+                    detail.sizeCuttingCm.isNullOrBlank() && detail.waste == null && 
+                    detail.pic.isNullOrBlank()) return@mapNotNull null
+                
+                val itemId = itemIdByUniq[part.uniqNo] ?: return@mapNotNull null
+                
+                DetailCuttingDto(
+                    id_item = itemId,
+                    no_lot = detail.noLot,
+                    no_roll = detail.noRoll,
+                    size_cutting_cm = detail.sizeCuttingCm,
+                    waste = detail.waste,
+                    pic = detail.pic
+                )
+            }
+
+            if (cuttingDtos.isNotEmpty()) {
+                client.upsert(table = "e_detail_cutting", body = cuttingDtos)
             }
 
             sesiId

@@ -2,34 +2,21 @@ package com.primaraya.inspectra.fitur.checksheet.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.primaraya.inspectra.core.common.AsyncData
 import com.primaraya.inspectra.fitur.checksheet.data.ChecksheetRepository
 import com.primaraya.inspectra.fitur.checksheet.data.SupabaseChecksheetRepository
 import com.primaraya.inspectra.core.network.NetworkResult
 import com.primaraya.inspectra.core.ui.UserMessageMapper
 import com.primaraya.inspectra.core.ui.KonteksOperasi
-import com.primaraya.inspectra.fitur.checksheet.domain.InputDefect
-import com.primaraya.inspectra.fitur.checksheet.domain.KategoriDefect
-import com.primaraya.inspectra.fitur.checksheet.domain.PayloadChecksheet
-import com.primaraya.inspectra.fitur.checksheet.domain.PayloadPartDiperiksa
-import com.primaraya.inspectra.fitur.checksheet.domain.RingkasanPartChecksheet
-import com.primaraya.inspectra.fitur.checksheet.domain.TipeProses
+import com.primaraya.inspectra.fitur.checksheet.domain.*
 import com.primaraya.inspectra.fitur.masterdata.data.MasterDataRepository
 import com.primaraya.inspectra.fitur.masterdata.data.SupabaseMasterDataRepository
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 /**
  * ViewModel MVI untuk E-Checksheet.
- *
- * Data part dan defect selalu bersumber dari Master Data agar modul Master Data
- * dan E-Checksheet tetap sinkron.
  */
 class ChecksheetMviViewModel(
     private val masterRepository: MasterDataRepository = SupabaseMasterDataRepository(),
@@ -44,9 +31,6 @@ class ChecksheetMviViewModel(
 
     private var loadJob: Job? = null
 
-    /**
-     * Entry point semua aksi dari UI.
-     */
     fun onIntent(intent: ChecksheetContract.Intent) {
         when (intent) {
             is ChecksheetContract.Intent.Muat -> muat(intent.tipeProses)
@@ -55,6 +39,7 @@ class ChecksheetMviViewModel(
             is ChecksheetContract.Intent.UbahJumlahDefect -> ubahJumlahDefect(intent.uniqNo, intent.idDefect, intent.jumlah)
             is ChecksheetContract.Intent.TambahDefect -> tambahKurangi(intent.uniqNo, intent.idDefect, 1)
             is ChecksheetContract.Intent.KurangiDefect -> tambahKurangi(intent.uniqNo, intent.idDefect, -1)
+            is ChecksheetContract.Intent.UbahDetailCutting -> ubahDetailCutting(intent)
             ChecksheetContract.Intent.Tinjau -> buatPreview()
             ChecksheetContract.Intent.TutupPreview -> _state.update { it.copy(preview = null) }
             ChecksheetContract.Intent.Kirim -> kirim()
@@ -62,16 +47,13 @@ class ChecksheetMviViewModel(
         }
     }
 
-    /**
-     * Memuat data checksheet dari view master data.
-     */
     private fun muat(tipeProses: TipeProses) {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             _state.update {
                 it.copy(
-                    loading = true,
                     tipeProses = tipeProses,
+                    dataChecksheet = AsyncData.Loading,
                     preview = null
                 )
             }
@@ -84,7 +66,6 @@ class ChecksheetMviViewModel(
                             nomorPart = dto.part_no,
                             namaPart = dto.nama_part,
                             komoditas = tipeProses,
-                            daftarMaterial = emptyList(),
                             daftarDefect = dto.daftar_defect.map { defect ->
                                 InputDefect(
                                     idDefect = defect.id_defect,
@@ -96,62 +77,39 @@ class ChecksheetMviViewModel(
                                 )
                             },
                             lokasiGambar = dto.lokasi_gambar,
-                            jumlahDiperiksa = 0,
-                            terbuka = false
+                            detailCutting = if (tipeProses == TipeProses.CUTTING) DetailCutting() else null
                         )
                     }
 
                     _state.update {
-                        it.copy(loading = false, daftarPart = daftar)
+                        it.copy(dataChecksheet = if (daftar.isEmpty()) AsyncData.Empty("Tidak ada data", "Silakan periksa Master Data.") else AsyncData.Success(daftar))
                     }
                 }
 
                 is NetworkResult.Error -> {
-                    tampilkanError(result.message)
+                    val msg = UserMessageMapper.fromThrowableMessage(result.message, KonteksOperasi.CHECKSHEET)
+                    _state.update { it.copy(dataChecksheet = AsyncData.Error(msg.title, msg.body)) }
                 }
-
-                NetworkResult.Loading -> Unit
+                else -> Unit
             }
         }
     }
 
     private fun togglePart(uniqNo: String) {
-        _state.update { state ->
-            state.copy(
-                daftarPart = state.daftarPart.map {
-                    if (it.uniqNo == uniqNo) it.copy(terbuka = !it.terbuka) else it
-                }
-            )
-        }
+        updateDaftarPart(uniqNo) { it.copy(terbuka = !it.terbuka) }
     }
 
     private fun ubahJumlahDiperiksa(uniqNo: String, jumlah: Int) {
-        _state.update { state ->
-            state.copy(
-                preview = null,
-                daftarPart = state.daftarPart.map {
-                    if (it.uniqNo == uniqNo) it.copy(jumlahDiperiksa = jumlah.coerceAtLeast(0)) else it
-                }
-            )
-        }
+        _state.update { it.copy(preview = null) }
+        updateDaftarPart(uniqNo) { it.copy(jumlahDiperiksa = jumlah.coerceAtLeast(0)) }
     }
 
     private fun ubahJumlahDefect(uniqNo: String, idDefect: String, jumlah: Int) {
-        _state.update { state ->
-            state.copy(
-                preview = null,
-                daftarPart = state.daftarPart.map { part ->
-                    if (part.uniqNo != uniqNo) return@map part
-
-                    part.copy(
-                        daftarDefect = part.daftarDefect.map { defect ->
-                            if (defect.idDefect == idDefect) {
-                                defect.copy(jumlahNg = jumlah.coerceAtLeast(0))
-                            } else {
-                                defect
-                            }
-                        }
-                    )
+        _state.update { it.copy(preview = null) }
+        updateDaftarPart(uniqNo) { part ->
+            part.copy(
+                daftarDefect = part.daftarDefect.map { defect ->
+                    if (defect.idDefect == idDefect) defect.copy(jumlahNg = jumlah.coerceAtLeast(0)) else defect
                 }
             )
         }
@@ -161,6 +119,32 @@ class ChecksheetMviViewModel(
         val part = _state.value.daftarPart.firstOrNull { it.uniqNo == uniqNo } ?: return
         val defect = part.daftarDefect.firstOrNull { it.idDefect == idDefect } ?: return
         ubahJumlahDefect(uniqNo, idDefect, defect.jumlahNg + delta)
+    }
+
+    private fun ubahDetailCutting(intent: ChecksheetContract.Intent.UbahDetailCutting) {
+        _state.update { it.copy(preview = null) }
+        updateDaftarPart(intent.uniqNo) { part ->
+            val current = part.detailCutting ?: DetailCutting()
+            part.copy(
+                detailCutting = current.copy(
+                    noLot = intent.lot ?: current.noLot,
+                    noRoll = intent.roll ?: current.noRoll,
+                    sizeCuttingCm = intent.size ?: current.sizeCuttingCm,
+                    waste = intent.waste ?: current.waste,
+                    pic = intent.pic ?: current.pic
+                )
+            )
+        }
+    }
+
+    private fun updateDaftarPart(targetUniqNo: String? = null, transform: (RingkasanPartChecksheet) -> RingkasanPartChecksheet) {
+        val current = _state.value.dataChecksheet
+        if (current is AsyncData.Success) {
+            val updated = current.data.map { 
+                if (targetUniqNo == null || it.uniqNo == targetUniqNo) transform(it) else it
+            }
+            _state.update { it.copy(dataChecksheet = AsyncData.Success(updated)) }
+        }
     }
 
     private fun buatPreview() {
@@ -179,7 +163,6 @@ class ChecksheetMviViewModel(
         val aktif = state.daftarPart.filter { it.jumlahDiperiksa > 0 || it.jumlahNg > 0 }
 
         val payload = PayloadChecksheet(
-            versiPayload = "fase-mvi-supabase",
             tipeProses = state.tipeProses.name,
             dibuatPadaMillis = System.currentTimeMillis(),
             totalDiperiksa = state.totalDiperiksa,
@@ -196,8 +179,8 @@ class ChecksheetMviViewModel(
                     jumlahOk = part.jumlahOk,
                     jumlahNg = part.jumlahNg,
                     rasioNg = part.rasioNgSatuDesimal,
-                    daftarMaterial = emptyList(),
-                    daftarDefectNg = part.daftarDefect.filter { it.jumlahNg > 0 }
+                    daftarDefectNg = part.daftarDefect.filter { it.jumlahNg > 0 },
+                    detailCutting = part.detailCutting
                 )
             }
         )
@@ -217,15 +200,16 @@ class ChecksheetMviViewModel(
                         it.copy(
                             mengirim = false,
                             preview = null,
-                            daftarPart = it.daftarPart.map { part ->
+                            dataChecksheet = AsyncData.Success(it.daftarPart.map { part ->
                                 part.copy(
                                     jumlahDiperiksa = 0,
                                     terbuka = false,
                                     daftarDefect = part.daftarDefect.map { defect ->
                                         defect.copy(jumlahNg = 0)
-                                    }
+                                    },
+                                    detailCutting = if (part.komoditas == TipeProses.CUTTING) DetailCutting() else null
                                 )
-                            }
+                            })
                         )
                     }
 
@@ -233,23 +217,13 @@ class ChecksheetMviViewModel(
                     _effect.emit(ChecksheetContract.Effect.PesanSukses("Checksheet berhasil dikirim."))
                 }
 
-                is NetworkResult.Error -> tampilkanError(result.message)
-                NetworkResult.Loading -> Unit
+                is NetworkResult.Error -> {
+                    val message = UserMessageMapper.fromThrowableMessage(result.message, KonteksOperasi.CHECKSHEET)
+                    _state.update { it.copy(mengirim = false) }
+                    _effect.emit(ChecksheetContract.Effect.PesanError(message.title, message.body))
+                }
+                else -> Unit
             }
-        }
-    }
-
-    private fun tampilkanError(raw: String?) {
-        val message = UserMessageMapper.fromThrowableMessage(raw, KonteksOperasi.CHECKSHEET)
-        _state.update { it.copy(loading = false, mengirim = false) }
-
-        viewModelScope.launch {
-            _effect.emit(
-                ChecksheetContract.Effect.PesanError(
-                    judul = message.title,
-                    pesan = message.body
-                )
-            )
         }
     }
 

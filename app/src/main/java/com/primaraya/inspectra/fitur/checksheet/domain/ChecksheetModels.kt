@@ -32,34 +32,6 @@ data class PartAcuan(
 )
 
 @Serializable
-data class MaterialAcuan(
-    val no: Int,
-    val namaSupplier: String,
-    val namaMaterial: String,
-    val spec: String?,
-    val satuan: String?
-)
-
-@Serializable
-data class MaterialPartAcuan(
-    val barisExcel: Int,
-    val uniqNo: String,
-    val nomorPart: String?,
-    val namaPart: String,
-    val komoditas: TipeProses,
-    val materialDigunakan: String,
-    val namaSupplier: String?,
-    val potensiDefectMaterial: List<String>,
-    val lebar: Double? = null,
-    val panjang: Double? = null,
-    val tebalMm: Double? = null,
-    val beratGsmGr: Double? = null,
-    val qty: Double? = null,
-    val satuan: String? = null,
-    val specAsli: String? = null
-)
-
-@Serializable
 data class InputDefect(
     val idDefect: String,
     val namaDefect: String,
@@ -68,32 +40,44 @@ data class InputDefect(
 )
 
 @Serializable
+data class DetailCutting(
+    val noLot: String? = null,
+    val noRoll: String? = null,
+    val sizeCuttingCm: String? = null,
+    val waste: Double? = null,
+    val pic: String? = null
+)
+
+@Serializable
 data class RingkasanPartChecksheet(
     val uniqNo: String,
     val nomorPart: String?,
     val namaPart: String,
     val komoditas: TipeProses,
-    val daftarMaterial: List<MaterialPartAcuan>,
+    val daftarMaterial: List<String> = emptyList(), // Not used for now
     val daftarDefect: List<InputDefect>,
     val lokasiGambar: String? = null,
     val jumlahDiperiksa: Int = 0,
-    val terbuka: Boolean = false
+    val terbuka: Boolean = false,
+    val detailCutting: DetailCutting? = null
 ) {
     val jumlahNg: Int
         get() = daftarDefect.sumOf { it.jumlahNg }
 
     val jumlahOk: Int
-        get() = jumlahDiperiksa - jumlahNg
+        get() = (jumlahDiperiksa - jumlahNg).coerceAtLeast(0)
 
     val kuantitasTidakValid: Boolean
         get() = jumlahDiperiksa < 0 || jumlahNg > jumlahDiperiksa
 
     val rasioNg: Float
-        get() = if (jumlahDiperiksa > 0) {
+        get() = if (totalDiperiksa > 0) {
             (jumlahNg.toFloat() / jumlahDiperiksa.toFloat()) * 100f
         } else {
             0f
         }
+
+    private val totalDiperiksa: Int get() = jumlahDiperiksa
 
     val rasioNgSatuDesimal: Float
         get() = (rasioNg * 10f).roundToInt() / 10f
@@ -101,7 +85,7 @@ data class RingkasanPartChecksheet(
 
 @Serializable
 data class PayloadChecksheet(
-    val versiPayload: String = "fase-1-validasi-lokal",
+    val versiPayload: String = "fase-mvi-supabase-cutting",
     val tipeProses: String,
     val dibuatPadaMillis: Long,
     val totalDiperiksa: Int,
@@ -121,6 +105,7 @@ data class PayloadPartDiperiksa(
     val jumlahOk: Int,
     val jumlahNg: Int,
     val rasioNg: Float,
-    val daftarMaterial: List<MaterialPartAcuan>,
-    val daftarDefectNg: List<InputDefect>
+    val daftarMaterial: List<String> = emptyList(),
+    val daftarDefectNg: List<InputDefect>,
+    val detailCutting: DetailCutting? = null
 )

@@ -23,8 +23,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.primaraya.inspectra.core.common.AsyncData
 import com.primaraya.inspectra.core.ui.component.AppEmptyState
 import com.primaraya.inspectra.core.ui.component.AppFriendlyDialog
+import com.primaraya.inspectra.core.ui.component.AppListSkeleton
 import com.primaraya.inspectra.core.ui.component.AppLoading
 import com.primaraya.inspectra.core.ui.component.KonfirmasiKirimChecksheetDialog
 import com.primaraya.inspectra.core.ui.component.RingkasanAtas
@@ -134,19 +136,11 @@ fun ChecksheetScreen(
                     adaKuantitasTidakValid = state.adaQtyTidakValid
                 )
 
-                when {
-                    state.loading -> {
-                        AppLoading()
-                    }
-
-                    state.daftarPart.isEmpty() -> {
-                        AppEmptyState(
-                            title = "Belum ada data part",
-                            message = "Data acuan untuk proses ini belum tersedia."
-                        )
-                    }
-
-                    else -> {
+                when (val data = state.dataChecksheet) {
+                    is AsyncData.Loading -> AppListSkeleton()
+                    is AsyncData.Empty -> AppEmptyState(title = data.title, message = data.message)
+                    is AsyncData.Error -> AppEmptyState(title = data.title, message = data.message)
+                    is AsyncData.Success -> {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(
@@ -157,11 +151,12 @@ fun ChecksheetScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(
-                                items = state.daftarPart,
+                                items = data.data,
                                 key = { it.uniqNo }
                             ) { part ->
                                 KartuPartChecksheetRingkas(
                                     part = part,
+                                    tipeProses = tipeProses,
                                     onBukaTutup = { viewModel.onIntent(ChecksheetContract.Intent.TogglePart(part.uniqNo)) },
                                     onJumlahDiperiksaUbah = {
                                         viewModel.onIntent(ChecksheetContract.Intent.UbahJumlahDiperiksa(part.uniqNo, it))
@@ -175,11 +170,15 @@ fun ChecksheetScreen(
                                     },
                                     onDefectInputManual = { idDefect, qty ->
                                         viewModel.onIntent(ChecksheetContract.Intent.UbahJumlahDefect(part.uniqNo, idDefect, qty))
+                                    },
+                                    onDetailCuttingUbah = { lot, roll, size, waste, pic ->
+                                        viewModel.onIntent(ChecksheetContract.Intent.UbahDetailCutting(part.uniqNo, lot, roll, size, waste, pic))
                                     }
                                 )
                             }
                         }
                     }
+                    else -> Unit
                 }
             }
         }
@@ -197,10 +196,12 @@ fun ChecksheetScreen(
 @Composable
 fun KartuPartChecksheetRingkas(
     part: RingkasanPartChecksheet,
+    tipeProses: TipeProses,
     onBukaTutup: () -> Unit,
     onJumlahDiperiksaUbah: (Int) -> Unit,
     onDefectTambahKurang: (String, Boolean) -> Unit,
-    onDefectInputManual: (String, Int) -> Unit
+    onDefectInputManual: (String, Int) -> Unit,
+    onDetailCuttingUbah: (String?, String?, String?, Double?, String?) -> Unit
 ) {
     ElevatedCard(
         modifier = Modifier
@@ -291,6 +292,53 @@ fun KartuPartChecksheetRingkas(
                     shape = RoundedCornerShape(16.dp),
                     singleLine = true
                 )
+
+                if (tipeProses == TipeProses.CUTTING) {
+                    Spacer(Modifier.height(16.dp))
+                    Text("Detail Cutting", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = part.detailCutting?.noLot ?: "",
+                                onValueChange = { onDetailCuttingUbah(it, null, null, null, null) },
+                                label = { Text("No. Lot") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true
+                            )
+                            OutlinedTextField(
+                                value = part.detailCutting?.noRoll ?: "",
+                                onValueChange = { onDetailCuttingUbah(null, it, null, null, null) },
+                                label = { Text("No. Roll") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = part.detailCutting?.sizeCuttingCm ?: "",
+                                onValueChange = { onDetailCuttingUbah(null, null, it, null, null) },
+                                label = { Text("Size (cm)") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true
+                            )
+                            OutlinedTextField(
+                                value = part.detailCutting?.waste?.toString() ?: "",
+                                onValueChange = { onDetailCuttingUbah(null, null, null, it.toDoubleOrNull(), null) },
+                                label = { Text("Waste") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.weight(1f),
+                                singleLine = true
+                            )
+                        }
+                        OutlinedTextField(
+                            value = part.detailCutting?.pic ?: "",
+                            onValueChange = { onDetailCuttingUbah(null, null, null, null, it) },
+                            label = { Text("PIC / Operator") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                }
 
                 Spacer(Modifier.height(16.dp))
 
