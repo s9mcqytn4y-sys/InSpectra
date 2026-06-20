@@ -4,6 +4,8 @@ import com.primaraya.inspectra.core.network.NetworkResult
 import com.primaraya.inspectra.fitur.masterdata.domain.*
 
 interface MasterDataRepository {
+    suspend fun healthCheck(): NetworkResult<Unit>
+
     suspend fun getChecksheetData(komoditas: String): NetworkResult<List<ChecksheetPartDefectViewDto>>
 
     suspend fun getSuppliers(): NetworkResult<List<MasterSupplierDto>>

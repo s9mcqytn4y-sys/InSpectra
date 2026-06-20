@@ -11,6 +11,16 @@ class SupabaseMasterDataRepository(
     private val client: SupabaseRestClient = SupabaseRestClient()
 ) : MasterDataRepository {
 
+    override suspend fun healthCheck(): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+        runNetworkCatching {
+            client.getList<List<MasterPartDto>>(
+                table = "m_part",
+                query = "select=id&limit=1"
+            )
+            Unit
+        }
+    }
+
     override suspend fun getChecksheetData(
         komoditas: String
     ): NetworkResult<List<ChecksheetPartDefectViewDto>> = withContext(Dispatchers.IO) {

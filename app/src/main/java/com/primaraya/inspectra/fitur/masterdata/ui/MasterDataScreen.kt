@@ -519,6 +519,7 @@ fun MaterialFormSheet(
     var namaMaterial by remember { mutableStateOf(initialData?.nama_material ?: "") }
     var supplier by remember { mutableStateOf(initialData?.supplier ?: "") }
     var spec by remember { mutableStateOf(initialData?.spec ?: "") }
+    var satuan by remember { mutableStateOf(initialData?.satuan ?: "") }
     var sudahDisubmit by remember { mutableStateOf(false) }
 
     val nameError = if (sudahDisubmit) Validator.validateRequired(namaMaterial, "Nama Material") else null
@@ -528,10 +529,17 @@ fun MaterialFormSheet(
             Text(if (initialData == null) "Tambah Material" else "Edit Material", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
             OutlinedTextField(value = namaMaterial, onValueChange = { namaMaterial = it.uppercase() }, label = { Text("Nama Material") }, isError = nameError != null, supportingText = nameError?.let { { Text(it) } }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(value = supplier, onValueChange = { supplier = it.uppercase() }, label = { Text("Supplier") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = spec, onValueChange = { spec = it.uppercase() }, label = { Text("Spec") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = spec, onValueChange = { spec = it.uppercase() }, label = { Text("Spec / Deskripsi") }, modifier = Modifier.fillMaxWidth())
+            
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("ROLL", "PCS", "MTR", "KG").forEach {
+                    FilterChip(selected = satuan == it, onClick = { satuan = it }, label = { Text(it) })
+                }
+            }
+
             Button(onClick = { 
                 sudahDisubmit = true
-                if (nameError == null) onSave(MasterMaterialDto(initialData?.id, supplier, namaMaterial, spec, null, true)) 
+                if (nameError == null) onSave(MasterMaterialDto(initialData?.id, supplier, namaMaterial, spec, satuan, true))
             }, enabled = !saving, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                 if (saving) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Simpan")
             }
