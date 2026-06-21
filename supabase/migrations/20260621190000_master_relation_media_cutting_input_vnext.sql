@@ -210,8 +210,15 @@ create table if not exists public.m_material_komposisi (
     sumber_data text not null default 'MANUAL',
     dibuat_pada timestamptz not null default now(),
     diperbarui_pada timestamptz not null default now(),
-    check (parent_material_id <> child_material_id),
-    unique (parent_material_id, child_material_id, coalesce(child_material_spec_id, '00000000-0000-0000-0000-000000000000'::uuid), peran_material)
+    check (parent_material_id <> child_material_id)
+);
+
+create unique index if not exists ux_material_komposisi_parent_child_role
+on public.m_material_komposisi (
+    parent_material_id,
+    child_material_id,
+    coalesce(child_material_spec_id, '00000000-0000-0000-0000-000000000000'::uuid),
+    peran_material
 );
 
 create index if not exists idx_material_komposisi_parent
