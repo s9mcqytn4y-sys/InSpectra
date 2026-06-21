@@ -35,4 +35,8 @@ interface MasterDataRepository {
     suspend fun getPartMaterials(uniqNo: String): NetworkResult<List<MasterPartMaterialDto>>
     suspend fun upsertPartMaterial(data: MasterPartMaterialDto): NetworkResult<Unit>
     suspend fun deletePartMaterial(id: String): NetworkResult<Unit>
+
+    suspend fun getMaterialDefects(materialId: String): NetworkResult<List<MasterMaterialDefectDto>>
+    suspend fun upsertMaterialDefect(data: MasterMaterialDefectDto): NetworkResult<Unit>
+    suspend fun deleteMaterialDefect(id: String): NetworkResult<Unit>
 }

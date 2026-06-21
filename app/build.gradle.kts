@@ -118,4 +118,6 @@ dependencies {
     runtimeOnly("org.slf4j:slf4j-nop:2.0.13")
 
     implementation("io.coil-kt:coil-compose:2.6.0")
+
+    testImplementation("junit:junit:4.13.2")
 }

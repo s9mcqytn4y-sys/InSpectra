@@ -65,14 +65,15 @@ PowerShell:
 
 ```powershell
 cd C:\Users\Acer\AndroidStudioProjects\InSpectra
-.\gradlew build --stacktrace --warning-mode all
+$env:JAVA_HOME='C:\Program Files\Java\jdk-17'
+.\gradlew build --stacktrace --warning-mode all --no-daemon --no-parallel
 ```
 
 Install ke device:
 
 ```powershell
 adb devices -l
-.\gradlew installDebug --stacktrace
+.\gradlew installDebug --stacktrace --no-daemon --no-parallel
 ```
 
 Ambil Logcat aplikasi:
@@ -110,6 +111,7 @@ Komponen utama:
 - `core/data/SupabasePgRestDriver.kt`: driver PostgREST generik.
 - `fitur/masterdata/data/SupabaseMasterDataRepository.kt`: data induk.
 - `fitur/checksheet/data/SupabaseChecksheetRepository.kt`: submit lembar periksa.
+- `fitur/cutting/data/SupabaseCuttingRepository.kt`: batch Cutting berbasis material dan lot/roll.
 
 Prinsip:
 
@@ -118,6 +120,25 @@ Prinsip:
 - Composable tidak memanggil repository atau API langsung.
 - Response error harus dipetakan menjadi pesan yang ramah pengguna.
 - Header sensitif wajib disamarkan di Logcat.
+- Android hanya boleh memakai publishable/anon key dengan RLS yang diaudit; jangan gunakan service-role key.
+
+### Migration Produksi
+
+Migration Next-Phase bersifat additive dan berada di
+`supabase/migrations/20260621000003_cutting_data_induk_dan_seed_partlist.sql`.
+Workbook sumber tidak disimpan di repository; seed SQL statis dapat diaudit.
+
+Jalankan hanya setelah project Supabase telah ditautkan dan `SUPABASE_DB_URL`
+disediakan oleh lingkungan yang aman:
+
+```powershell
+$env:INSPECTRA_IZINKAN_PRODUKSI='YA'
+powershell -ExecutionPolicy Bypass -File .\scripts\dorong_supabase.ps1
+```
+
+Skrip menolak eksekusi tanpa flag, membuat backup schema `public` pada folder
+`cadangan/` yang di-ignore Git, memeriksa operasi destruktif pada migration
+baru, mendorong migration, lalu menjalankan query integritas dan view.
 
 ## Standar UI
 

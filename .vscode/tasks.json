@@ -4,14 +4,14 @@
     {
       "label": "Gradle: test",
       "type": "shell",
-      "command": ".\\gradlew test --stacktrace",
+      "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; .\\gradlew test --stacktrace --no-daemon --no-parallel",
       "group": "test",
       "problemMatcher": []
     },
     {
       "label": "Gradle: build",
       "type": "shell",
-      "command": ".\\gradlew build --stacktrace --warning-mode all",
+      "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; .\\gradlew build --stacktrace --warning-mode all --no-daemon --no-parallel",
       "group": "build",
       "problemMatcher": []
     },
@@ -24,7 +24,7 @@
     {
       "label": "Android: pasang debug ke tablet",
       "type": "shell",
-      "command": ".\\gradlew installDebug --stacktrace",
+      "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; .\\gradlew installDebug --stacktrace --no-daemon --no-parallel",
       "dependsOn": "Android: daftar perangkat ADB",
       "problemMatcher": []
     },
@@ -38,6 +38,12 @@
       "label": "Android: bersihkan Logcat",
       "type": "shell",
       "command": "adb logcat -c",
+      "problemMatcher": []
+    },
+    {
+      "label": "Supabase: dorong migration production",
+      "type": "shell",
+      "command": "powershell -ExecutionPolicy Bypass -File .\\scripts\\dorong_supabase.ps1",
       "problemMatcher": []
     }
   ]

@@ -214,4 +214,33 @@ class SupabaseMasterDataRepository(
             driver.softDelete(table = RemoteTable.PartMaterial, idColumn = "id", id = id)
         }
     }
+
+    override suspend fun getMaterialDefects(
+        materialId: String
+    ): NetworkResult<List<MasterMaterialDefectDto>> = withContext(Dispatchers.IO) {
+        runNetworkCatching {
+            driver.getList(
+                table = RemoteTable.MaterialDefect,
+                query = "select=*&material_id=eq.$materialId&aktif=eq.true&order=urutan.asc",
+                decode = { json.decodeFromString(ListSerializer(MasterMaterialDefectDto.serializer()), it) }
+            )
+        }
+    }
+
+    override suspend fun upsertMaterialDefect(data: MasterMaterialDefectDto): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+        runNetworkCatching {
+            driver.upsert(
+                table = RemoteTable.MaterialDefect,
+                body = data,
+                encode = { json.encodeToString(MasterMaterialDefectDto.serializer(), it) },
+                onConflict = "material_id,id_defect"
+            )
+        }
+    }
+
+    override suspend fun deleteMaterialDefect(id: String): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+        runNetworkCatching {
+            driver.softDelete(table = RemoteTable.MaterialDefect, idColumn = "id", id = id)
+        }
+    }
 }

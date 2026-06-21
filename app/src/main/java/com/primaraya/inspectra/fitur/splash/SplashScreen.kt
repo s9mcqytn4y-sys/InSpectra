@@ -2,7 +2,9 @@ package com.primaraya.inspectra.fitur.splash
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import android.app.Application
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -11,41 +13,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.primaraya.inspectra.core.network.NetworkResult
-import com.primaraya.inspectra.fitur.masterdata.data.SupabaseMasterDataRepository
-import kotlinx.coroutines.delay
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.primaraya.inspectra.core.network.StatusKoneksi
+import com.primaraya.inspectra.core.ui.viewmodel.pabrikViewModelAplikasi
 
 @Composable
-fun SplashScreen(onHealthCheckPassed: () -> Unit) {
-    var statusText by remember { mutableStateOf("Menyiapkan modul inti InSpectra...") }
-    var progress by remember { mutableStateOf(0.1f) }
-    var errorOccurred by remember { mutableStateOf<String?>(null) }
-    var retryTrigger by remember { mutableStateOf(0) }
+fun SplashScreen(
+    onSelesai: (StatusKoneksi) -> Unit,
+    viewModel: SplashViewModel = viewModel(
+        factory = pabrikViewModelAplikasi(
+            application = LocalContext.current.applicationContext as Application,
+            pembuat = { SplashViewModel(it) }
+        )
+    )
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
-    val repository = remember { SupabaseMasterDataRepository() }
+    LaunchedEffect(Unit) {
+        viewModel.periksaKoneksi()
+    }
 
-    LaunchedEffect(retryTrigger) {
-        errorOccurred = null
-        progress = 0.1f
-        statusText = "Menyiapkan koneksi jaringan aman..."
-        delay(500)
-        
-        progress = 0.4f
-        statusText = "Memvalidasi koneksi Supabase..."
-        
-        when (val result = repository.healthCheck()) {
-            is NetworkResult.Success -> {
-                progress = 1.0f
-                statusText = "Sistem siap. Sinkronisasi aktif."
-                delay(600)
-                onHealthCheckPassed()
-            }
-            is NetworkResult.Error -> {
-                errorOccurred = result.message
-                statusText = "Koneksi gagal."
-            }
-            else -> Unit
-        }
+    LaunchedEffect(state.status) {
+        if (state.status == StatusKoneksi.ONLINE) onSelesai(StatusKoneksi.ONLINE)
     }
 
     Box(
@@ -62,30 +53,32 @@ fun SplashScreen(onHealthCheckPassed: () -> Unit) {
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            if (errorOccurred != null) {
+            if (state.status == StatusKoneksi.OFFLINE) {
+                Icon(Icons.Default.CloudOff, contentDescription = null, tint = Color(0xFFFBBF24))
                 Text(
-                    text = "Gagal terhubung ke server:\n$errorOccurred", 
-                    color = Color(0xFFF87171), 
+                    text = "Koneksi belum tersedia\nPerangkat belum bisa terhubung ke server. Data tetap dapat disiapkan sebagai draft.",
+                    color = Color.White,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
-                Button(
-                    onClick = { retryTrigger++ },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706))
-                ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Coba Lagi")
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedButton(onClick = { onSelesai(StatusKoneksi.OFFLINE) }) {
+                        Text("Mode Offline")
+                    }
+                    Button(onClick = viewModel::periksaKoneksi, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706))) {
+                        Icon(Icons.Default.Refresh, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Coba Lagi")
+                    }
                 }
             } else {
                 LinearProgressIndicator(
-                    progress = { progress },
                     modifier = Modifier.fillMaxWidth().height(4.dp),
                     color = Color(0xFFD97706),
                     trackColor = Color.White.copy(alpha = 0.1f)
                 )
-                Text(statusText, color = Color.White, style = MaterialTheme.typography.labelMedium)
+                Text(state.pesan, color = Color.White, style = MaterialTheme.typography.labelMedium)
             }
         }
     }

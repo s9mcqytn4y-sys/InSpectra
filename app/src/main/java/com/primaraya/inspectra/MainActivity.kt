@@ -14,7 +14,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ContentCut
+import androidx.compose.material.icons.filled.Dataset
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.PrecisionManufacturing
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -28,8 +33,10 @@ import com.primaraya.inspectra.core.ui.theme.InSpectraTheme
 import com.primaraya.inspectra.fitur.checksheet.domain.TipeProses
 import com.primaraya.inspectra.fitur.checksheet.ui.ChecksheetScreen
 import com.primaraya.inspectra.fitur.checksheet.ui.labelIndonesia
+import com.primaraya.inspectra.fitur.cutting.ui.CuttingScreen
 import com.primaraya.inspectra.fitur.masterdata.ui.MasterDataScreen
 import com.primaraya.inspectra.fitur.splash.SplashScreen
+import com.primaraya.inspectra.core.network.StatusKoneksi
 
 enum class NavState { 
     SPLASH, 
@@ -46,14 +53,19 @@ class MainActivity : ComponentActivity() {
         setContent {
             var currentScreen by rememberSaveable { mutableStateOf(NavState.SPLASH) }
             var prosesTerpilih by rememberSaveable { mutableStateOf(TipeProses.PRESS) }
+            var statusKoneksi by rememberSaveable { mutableStateOf(StatusKoneksi.MEMERIKSA) }
 
             InSpectraTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF8FAFC)) {
                     when (currentScreen) {
-                        NavState.SPLASH -> SplashScreen {
-                            currentScreen = NavState.DASHBOARD
-                        }
+                        NavState.SPLASH -> SplashScreen(
+                            onSelesai = { status ->
+                                statusKoneksi = status
+                                currentScreen = NavState.DASHBOARD
+                            }
+                        )
                         NavState.DASHBOARD -> MainDashboard(
+                            statusKoneksi = statusKoneksi,
                             onChecksheetClick = {
                                 currentScreen = NavState.MENU_CHECKSHEET
                             },
@@ -68,10 +80,14 @@ class MainActivity : ComponentActivity() {
                             },
                             onBack = { currentScreen = NavState.DASHBOARD }
                         )
-                        NavState.FORM_CHECKSHEET -> ChecksheetScreen(
-                            tipeProses = prosesTerpilih,
-                            onBackClick = { currentScreen = NavState.MENU_CHECKSHEET }
-                        )
+                        NavState.FORM_CHECKSHEET -> if (prosesTerpilih == TipeProses.CUTTING) {
+                            CuttingScreen(onBackClick = { currentScreen = NavState.MENU_CHECKSHEET })
+                        } else {
+                            ChecksheetScreen(
+                                tipeProses = prosesTerpilih,
+                                onBackClick = { currentScreen = NavState.MENU_CHECKSHEET }
+                            )
+                        }
                         NavState.MASTER_DATA -> MasterDataScreen(
                             onBackClick = { currentScreen = NavState.DASHBOARD }
                         )
@@ -84,6 +100,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainDashboard(
+    statusKoneksi: StatusKoneksi,
     onChecksheetClick: () -> Unit,
     onMasterDataClick: () -> Unit
 ) {
@@ -97,6 +114,22 @@ fun MainDashboard(
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Black,
                 color = Color(0xFF16365F)
+            )
+
+            AssistChip(
+                onClick = {},
+                label = {
+                    Text(
+                        if (statusKoneksi == StatusKoneksi.OFFLINE) {
+                            "Mode Offline - draft lokal aktif"
+                        } else {
+                            "Sinkronisasi server aktif"
+                        }
+                    )
+                },
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = if (statusKoneksi == StatusKoneksi.OFFLINE) Color(0xFFFFF7ED) else Color(0xFFF0FDF4)
+                )
             )
 
             if (isTablet) {
@@ -206,11 +239,12 @@ fun MenuChecksheet(
     onProcessSelect: (TipeProses) -> Unit,
     onBack: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-    ) {
+    AppResponsiveContent { isTablet, contentModifier ->
+        Column(
+            modifier = contentModifier
+                .fillMaxSize()
+                .padding(top = 24.dp)
+        ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -230,7 +264,7 @@ fun MenuChecksheet(
         Spacer(modifier = Modifier.height(24.dp))
 
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+            columns = GridCells.Fixed(if (isTablet) 3 else 2),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -241,6 +275,7 @@ fun MenuChecksheet(
                 )
             }
         }
+    }
     }
 }
 

@@ -12,7 +12,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddLink
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
@@ -87,7 +94,7 @@ fun MasterDataScreen(
                         containerColor = Color(0xFFD97706),
                         contentColor = Color.White
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Tambah")
+                        Icon(Icons.Filled.Add, contentDescription = "Tambah data")
                     }
                 }
             }
@@ -117,6 +124,16 @@ fun MasterDataScreen(
                         }
                     }
 
+                    OutlinedTextField(
+                        value = state.kataKunci,
+                        onValueChange = { viewModel.onIntent(MasterDataContract.Intent.Cari(it)) },
+                        label = { Text("Cari ${state.tabAktif.labelIndonesia().lowercase()}") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                    )
+
                     Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8FAFC))) {
                         when (state.tabAktif) {
                             MasterDataContract.TabMasterData.PART -> AsyncList(
@@ -143,7 +160,17 @@ fun MasterDataScreen(
                                 canLoadMore = state.canLoadMore,
                                 loadingMore = state.loadingMore,
                                 onLoadMore = { viewModel.onIntent(MasterDataContract.Intent.MuatLebihBanyak) },
-                                content = { list -> MaterialList(list, onEdit = { d -> viewModel.onIntent(MasterDataContract.Intent.EditMaterial(d)) }, onDelete = { d -> viewModel.onIntent(MasterDataContract.Intent.HapusMaterial(d)) }) }
+                                content = { list ->
+                                    MaterialList(
+                                        materials = list,
+                                        relationState = state.materialDetails,
+                                        onEdit = { d -> viewModel.onIntent(MasterDataContract.Intent.EditMaterial(d)) },
+                                        onDelete = { d -> viewModel.onIntent(MasterDataContract.Intent.HapusMaterial(d)) },
+                                        onToggleDetail = { id -> viewModel.onIntent(MasterDataContract.Intent.ToggleMaterialDetail(id)) },
+                                        onAddDefect = { id -> viewModel.onIntent(MasterDataContract.Intent.BukaPilihDefectUntukMaterial(id)) },
+                                        onRemoveDefect = { id, relationId -> viewModel.onIntent(MasterDataContract.Intent.HapusDefectDariMaterial(id, relationId)) }
+                                    )
+                                }
                             )
                             MasterDataContract.TabMasterData.SUPPLIER -> AsyncList(
                                 data = state.suppliers,
@@ -249,6 +276,15 @@ fun MasterDataFormContent(
                 onSelect = { matId, label -> viewModel.onIntent(MasterDataContract.Intent.TambahMaterialKePart(form.uniqNo, matId, label)) }
             )
         }
+        is MasterDataContract.DialogForm.PilihDefectUntukMaterial -> {
+            PilihDefectDialog(
+                availableDefects = (state.defects as? AsyncData.Success)?.data ?: emptyList(),
+                onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
+                onSelect = { idDefect ->
+                    viewModel.onIntent(MasterDataContract.Intent.TambahDefectKeMaterial(form.materialId, idDefect))
+                }
+            )
+        }
         is MasterDataContract.DialogForm.KonfirmasiHapus -> {
             AlertDialog(
                 onDismissRequest = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
@@ -348,11 +384,11 @@ fun PartList(
                             Text(part.uniq_no, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
                             Text(part.nama_part, style = MaterialTheme.typography.bodyLarge)
                         }
-                        IconButton(onClick = { onEdit(part) }) { Icon(Icons.Default.Edit, contentDescription = "Ubah part") }
-                        IconButton(onClick = { onDelete(part) }) { Icon(Icons.Default.Delete, contentDescription = "Hapus part", tint = Color.Red) }
+                        IconButton(onClick = { onEdit(part) }) { Icon(Icons.Filled.Edit, contentDescription = "Ubah part") }
+                        IconButton(onClick = { onDelete(part) }) { Icon(Icons.Filled.Delete, contentDescription = "Nonaktifkan part", tint = Color.Red) }
                         Icon(
-                            imageVector = if (detail.expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = null,
+                            imageVector = if (detail.expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                            contentDescription = if (detail.expanded) "Tutup detail part" else "Buka detail part",
                             tint = Color.Gray
                         )
                     }
@@ -372,12 +408,12 @@ fun PartList(
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Text("- ${rel.id_defect}", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
                                                 IconButton(onClick = { onRemoveDefect(part.uniq_no, rel.id ?: "") }) {
-                                                    Icon(Icons.Default.LinkOff, contentDescription = "Hapus", tint = Color.LightGray, modifier = Modifier.size(16.dp))
+                                                    Icon(Icons.Filled.LinkOff, contentDescription = "Hapus tautan defect", tint = Color.LightGray, modifier = Modifier.size(16.dp))
                                                 }
                                             }
                                         }
                                         TextButton(onClick = { onAddDefect(part.uniq_no) }) {
-                                            Icon(Icons.Default.AddLink, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Icon(Icons.Filled.AddLink, contentDescription = "Tambah defect", modifier = Modifier.size(16.dp))
                                             Spacer(Modifier.width(4.dp))
                                             Text("Tambah", style = MaterialTheme.typography.labelSmall)
                                         }
@@ -394,12 +430,12 @@ fun PartList(
                                                     Text(rel.material_id.take(8), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                                                 }
                                                 IconButton(onClick = { onRemoveMaterial(part.uniq_no, rel.id ?: "") }) {
-                                                    Icon(Icons.Default.LinkOff, contentDescription = "Hapus", tint = Color.LightGray, modifier = Modifier.size(16.dp))
+                                                    Icon(Icons.Filled.LinkOff, contentDescription = "Hapus tautan material", tint = Color.LightGray, modifier = Modifier.size(16.dp))
                                                 }
                                             }
                                         }
                                         TextButton(onClick = { onAddMaterial(part.uniq_no) }) {
-                                            Icon(Icons.Default.AddLink, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Icon(Icons.Filled.AddLink, contentDescription = "Tambah material", modifier = Modifier.size(16.dp))
                                             Spacer(Modifier.width(4.dp))
                                             Text("Tambah", style = MaterialTheme.typography.labelSmall)
                                         }
@@ -439,8 +475,8 @@ fun SupplierList(
                             Text(supplier.nama_supplier, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text("Kode: ${supplier.kode_supplier ?: "-"}", style = MaterialTheme.typography.bodyMedium)
                         }
-                        IconButton(onClick = { onEdit(supplier) }) { Icon(Icons.Default.Edit, contentDescription = "Ubah supplier") }
-                        IconButton(onClick = { onDelete(supplier) }) { Icon(Icons.Default.Delete, contentDescription = "Hapus supplier", tint = Color.Red) }
+                        IconButton(onClick = { onEdit(supplier) }) { Icon(Icons.Filled.Edit, contentDescription = "Ubah supplier") }
+                        IconButton(onClick = { onDelete(supplier) }) { Icon(Icons.Filled.Delete, contentDescription = "Nonaktifkan supplier", tint = Color.Red) }
                     }
                     Text("Kategori: ${supplier.kategori ?: "-"}", style = MaterialTheme.typography.bodySmall)
                 }
@@ -452,22 +488,60 @@ fun SupplierList(
 @Composable
 fun MaterialList(
     materials: List<MasterMaterialDto>,
+    relationState: Map<String, MasterDataContract.MaterialRelationState>,
     onEdit: (MasterMaterialDto) -> Unit,
-    onDelete: (MasterMaterialDto) -> Unit
+    onDelete: (MasterMaterialDto) -> Unit,
+    onToggleDetail: (String) -> Unit,
+    onAddDefect: (String) -> Unit,
+    onRemoveDefect: (String, String) -> Unit
 ) {
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         items(materials, key = { it.id ?: it.nama_material }) { material ->
+            val materialId = material.id ?: return@items
+            val detail = relationState[materialId] ?: MasterDataContract.MaterialRelationState()
             ElevatedCard(shape = RoundedCornerShape(16.dp)) {
-                Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.padding(16.dp).fillMaxWidth().animateContentSize()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { onToggleDetail(materialId) }
+                    ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(material.nama_material, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text("Supplier: ${material.supplier ?: "-"}", style = MaterialTheme.typography.bodyMedium)
                         }
-                        IconButton(onClick = { onEdit(material) }) { Icon(Icons.Default.Edit, contentDescription = "Ubah material") }
-                        IconButton(onClick = { onDelete(material) }) { Icon(Icons.Default.Delete, contentDescription = "Hapus material", tint = Color.Red) }
+                        IconButton(onClick = { onEdit(material) }) { Icon(Icons.Filled.Edit, contentDescription = "Ubah material") }
+                        IconButton(onClick = { onDelete(material) }) { Icon(Icons.Filled.Delete, contentDescription = "Nonaktifkan material", tint = Color.Red) }
+                        Icon(
+                            imageVector = if (detail.expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                            contentDescription = if (detail.expanded) "Tutup defect bawaan" else "Buka defect bawaan",
+                            tint = Color.Gray
+                        )
                     }
                     Text("Spesifikasi: ${material.spec ?: "-"}", style = MaterialTheme.typography.bodySmall)
+                    if (detail.expanded) {
+                        HorizontalDivider(modifier = Modifier.padding(top = 12.dp, bottom = 8.dp))
+                        Text("Defect Bawaan Material", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                        AsyncRelationList(detail.defects) { relations ->
+                            relations.forEach { relation ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(relation.id_defect, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                                    IconButton(onClick = { onRemoveDefect(materialId, relation.id.orEmpty()) }) {
+                                        Icon(
+                                            Icons.Filled.LinkOff,
+                                            contentDescription = "Hapus tautan defect material",
+                                            tint = Color.LightGray,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                            TextButton(onClick = { onAddDefect(materialId) }) {
+                                Icon(Icons.Filled.AddLink, contentDescription = "Tambah defect bawaan", modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Tambah defect")
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -489,8 +563,8 @@ fun DefectList(
                         Text("ID: ${defect.id_defect}", style = MaterialTheme.typography.bodySmall)
                     }
                     SuggestionChip(onClick = {}, label = { Text(defect.kategori) })
-                    IconButton(onClick = { onEdit(defect) }) { Icon(Icons.Default.Edit, contentDescription = "Ubah defect") }
-                    IconButton(onClick = { onDelete(defect) }) { Icon(Icons.Default.Delete, contentDescription = "Hapus defect", tint = Color.Red) }
+                    IconButton(onClick = { onEdit(defect) }) { Icon(Icons.Filled.Edit, contentDescription = "Ubah defect") }
+                    IconButton(onClick = { onDelete(defect) }) { Icon(Icons.Filled.Delete, contentDescription = "Nonaktifkan defect", tint = Color.Red) }
                 }
             }
         }
@@ -543,7 +617,7 @@ fun PilihMaterialDialog(
                         ListItem(
                             headlineContent = { Text(mat.nama_material) },
                             supportingContent = { Text(mat.supplier ?: "-") },
-                            trailingContent = { if (selectedMatId == mat.id) Icon(Icons.Default.Check, null, tint = Color.Green) },
+                            trailingContent = { if (selectedMatId == mat.id) Icon(Icons.Filled.Check, "Material dipilih", tint = Color.Green) },
                             modifier = Modifier.clickable { selectedMatId = mat.id }
                         )
                     }
