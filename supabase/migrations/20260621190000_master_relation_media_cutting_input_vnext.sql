@@ -312,13 +312,13 @@ create table if not exists public.m_part_defect_override (
 update public.m_defect
 set
     satuan_input = case
-        when upper(coalesce(proses_default, '')) = 'CUTTING' then 'CM'
+        when proses_default = 'CUTTING' then 'CM'
         when upper(coalesce(nama_defect, '')) like '%LAMINAT%' then 'CM'
         when upper(coalesce(nama_defect, '')) like '%SOBEK%' then 'CM'
         else satuan_input
     end,
     metode_pengukuran = case
-        when upper(coalesce(proses_default, '')) = 'CUTTING' then 'LENGTH_CM'
+        when proses_default = 'CUTTING' then 'LENGTH_CM'
         when upper(coalesce(nama_defect, '')) like '%LAMINAT%' then 'LENGTH_CM'
         when upper(coalesce(nama_defect, '')) like '%SOBEK%' then 'LENGTH_CM'
         else metode_pengukuran
