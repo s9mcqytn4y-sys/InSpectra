@@ -9,6 +9,7 @@ import com.primaraya.inspectra.core.network.runNetworkCatching
 import com.primaraya.inspectra.fitur.cutting.domain.InputBatchCutting
 import com.primaraya.inspectra.fitur.cutting.domain.InputDefectCutting
 import com.primaraya.inspectra.fitur.cutting.domain.OpsiMaterialCutting
+import com.primaraya.inspectra.fitur.cutting.domain.OpsiPartUkuranCutting
 import com.primaraya.inspectra.fitur.cutting.domain.RingkasanHarianCutting
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -31,6 +32,16 @@ class SupabaseCuttingRepository(
         }
     }
 
+    override suspend fun bacaOpsiPartUkuran(): NetworkResult<List<OpsiPartUkuranCutting>> = withContext(Dispatchers.IO) {
+        runNetworkCatching {
+            driver.getList(
+                table = RemoteTable.ViewCuttingPartSizeOption,
+                query = "select=*&order=uniq_no.asc&limit=100",
+                decode = { json.decodeFromString(ListSerializer(OpsiPartUkuranCutting.serializer()), it) }
+            )
+        }
+    }
+
     override suspend fun simpanBatch(input: InputBatchCutting): NetworkResult<String> = withContext(Dispatchers.IO) {
         runNetworkCatching {
             val totalLayer = input.totalLayer
@@ -47,6 +58,9 @@ class SupabaseCuttingRepository(
                 material_id = input.materialId,
                 nama_material_snapshot = input.namaMaterial,
                 spec_material_snapshot = input.spesifikasiMaterial.ifBlank { null },
+                uniq_no_part = input.uniqNoPart.ifBlank { null },
+                nama_part_snapshot = input.namaPart.ifBlank { null },
+                part_size_reference_id = input.idReferensiUkuranPart,
                 no_lot_roll = input.nomorLotRoll.ifBlank { null },
                 no_roll = input.nomorRoll.ifBlank { null },
                 size_cutting_cm = ukuran,
@@ -105,6 +119,9 @@ private data class RpcCuttingBatchPayload(
     val material_id: String,
     val nama_material_snapshot: String,
     val spec_material_snapshot: String? = null,
+    val uniq_no_part: String? = null,
+    val nama_part_snapshot: String? = null,
+    val part_size_reference_id: String? = null,
     val no_lot_roll: String? = null,
     val no_roll: String? = null,
     val size_cutting_cm: Double,

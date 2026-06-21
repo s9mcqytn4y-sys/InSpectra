@@ -10,7 +10,7 @@ InSpectra harus terasa seperti workspace SaaS operasional untuk Quality Control 
 - Padat tetapi tidak sesak.
 - Stabil pada tablet.
 - Aman untuk input data berulang.
-- Jujur saat data kosong, offline, atau gagal dimuat.
+- Jujur saat data kosong atau gagal dimuat.
 
 Desain bukan landing page. Layar pertama setelah splash harus membantu pengguna bekerja.
 
@@ -19,7 +19,7 @@ Desain bukan landing page. Layar pertama setelah splash harus membantu pengguna 
 Alur utama:
 
 ```text
-Splash -> Dashboard -> Lembar Periksa -> Draft Lokal -> Kirim -> Riwayat -> Analytics -> Action Plan
+Splash -> Workspace -> Lembar Periksa -> Kirim -> Riwayat -> Analytics -> Action Plan
 ```
 
 Prinsip manufacturing yang didukung:
@@ -144,7 +144,6 @@ Setiap screen harus punya state:
 - Success.
 - Empty.
 - Error.
-- Offline/cache bila tersedia.
 - Saving/sending.
 
 Empty state harus menjelaskan kondisi nyata:
@@ -182,4 +181,3 @@ Sebelum menyebut UI polished:
 - Warna konsisten dengan theme.
 - Logcat bebas crash aplikasi.
 - Tidak ada credential di log.
-

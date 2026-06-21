@@ -19,6 +19,10 @@ Target utama adalah aplikasi tablet yang stabil, rapi, dan siap tumbuh menjadi w
 - Jangan menjalankan health check atau retry jaringan dari Splash. Splash hanya inisialisasi visual.
 - Workbook sumber tidak boleh di-commit atau dibaca runtime. Ekstrak data menjadi migration SQL
   statis yang dapat diaudit; hanya buat relasi jika master part dan identitas material lengkap.
+- Referensi ukuran Cutting dari FM-QA-026 ber-grain `UNIQ NO`/part. Jangan memindahkan ukuran
+  tersebut ke master material atau membuat relasi part-material baru hanya berdasarkan nama material.
+- Jangan menjalankan rancangan schema besar secara utuh tanpa audit drift. Hindari `drop ... cascade`,
+  RPC soft-delete generik, cache revision, atau media upload sampai kontrak aplikasi dan RLS siap.
 - Jangan mengubah file generated, build output, atau personal IDE state.
 - Jangan melakukan hard reset.
 - Jangan mengganti stack utama tanpa alasan teknis yang kuat.
@@ -81,6 +85,10 @@ git diff --check
 .\gradlew test --stacktrace
 .\gradlew build --stacktrace --warning-mode all
 ```
+
+Saat cache Kotlin atau memori host bermasalah, gunakan JDK 17 serta
+`GRADLE_OPTS='-Xmx1536m -Dfile.encoding=UTF-8'` bersama
+`--no-daemon --no-parallel --max-workers=1 -Dkotlin.compiler.execution.strategy=in-process`.
 
 Untuk device:
 

@@ -17,7 +17,25 @@ data class OpsiMaterialCutting(
     val spec_ringkas: String = "",
     val satuan: String,
     val daftar_ukuran_cutting: List<UkuranCuttingAcuan> = emptyList()
-)
+) {
+    val labelPilihan: String
+        get() = listOf(nama_material, spec_ringkas.takeIf(String::isNotBlank), satuan.takeIf(String::isNotBlank))
+            .filterNotNull()
+            .joinToString(" - ")
+}
+
+@Serializable
+data class OpsiPartUkuranCutting(
+    val uniq_no: String,
+    val part_no: String? = null,
+    val nama_part: String,
+    val model: String? = null,
+    val komoditas: String,
+    val daftar_ukuran_cutting: List<UkuranCuttingAcuan> = emptyList()
+) {
+    val labelPilihan: String
+        get() = listOf(uniq_no, part_no, nama_part).filterNotNull().filter(String::isNotBlank).joinToString(" - ")
+}
 
 @Serializable
 data class InputDefectCutting(
@@ -35,6 +53,9 @@ data class InputBatchCutting(
     val materialId: String = "",
     val namaMaterial: String = "",
     val spesifikasiMaterial: String = "",
+    val uniqNoPart: String = "",
+    val namaPart: String = "",
+    val idReferensiUkuranPart: String? = null,
     val nomorLotRoll: String = "",
     val nomorRoll: String = "",
     val ukuranCuttingCm: String = "",

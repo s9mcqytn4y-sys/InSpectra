@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -40,10 +41,20 @@ class CuttingViewModel(
                 _state.value.input.copy(
                     materialId = intent.material.material_id,
                     namaMaterial = intent.material.nama_material,
-                    spesifikasiMaterial = intent.material.spec_ringkas,
-                    ukuranCuttingCm = intent.material.daftar_ukuran_cutting.firstOrNull()?.ukuran_cutting_cm?.toString().orEmpty()
+                    spesifikasiMaterial = intent.material.spec_ringkas
                 )
             )
+            is CuttingContract.Intent.PilihPartAcuanUkuran -> {
+                val ukuran = intent.part.daftar_ukuran_cutting.firstOrNull()
+                ubahInput(
+                    _state.value.input.copy(
+                        uniqNoPart = intent.part.uniq_no,
+                        namaPart = intent.part.nama_part,
+                        idReferensiUkuranPart = ukuran?.id,
+                        ukuranCuttingCm = ukuran?.ukuran_cutting_cm?.toString().orEmpty()
+                    )
+                )
+            }
             is CuttingContract.Intent.TambahDefect -> tambahDefect(intent)
             is CuttingContract.Intent.UbahJumlahDefect -> ubahDefect(intent.idDefect) {
                 it.copy(jumlahLayerTerdampak = intent.jumlah.toIntOrNull() ?: 0)
@@ -66,14 +77,20 @@ class CuttingViewModel(
 
     private fun muat() {
         viewModelScope.launch {
-            _state.update { it.copy(material = AsyncData.Loading, defect = AsyncData.Loading) }
-            val material = repository.bacaOpsiMaterial()
-            val defect = masterRepository.getDefectsPage(PageRequest(cursorColumn = "nama_defect", limit = 100))
-            val slot = masterRepository.getSlotWaktu("CUTTING")
+            _state.update { it.copy(material = AsyncData.Loading, partUkuran = AsyncData.Loading, defect = AsyncData.Loading) }
+            val materialTertunda = async { repository.bacaOpsiMaterial() }
+            val partUkuranTertunda = async { repository.bacaOpsiPartUkuran() }
+            val defectTertunda = async { masterRepository.getDefectsPage(PageRequest(cursorColumn = "nama_defect", limit = 100)) }
+            val slotTertunda = async { masterRepository.getSlotWaktu("CUTTING") }
+            val material = materialTertunda.await()
+            val partUkuran = partUkuranTertunda.await()
+            val defect = defectTertunda.await()
+            val slot = slotTertunda.await()
 
             _state.update {
                 it.copy(
                     material = material.toAsyncData("Material Cutting belum tersedia."),
+                    partUkuran = partUkuran.toAsyncData("Referensi ukuran part belum tersedia."),
                     defect = defect.toAsyncData("Defect belum tersedia."),
                     slotWaktu = (slot as? NetworkResult.Success)?.data?.map { data ->
                         SlotNg(data.id, data.label_waktu)

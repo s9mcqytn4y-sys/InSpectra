@@ -12,7 +12,6 @@ Tujuan produk: menyediakan workspace QC yang rapi, operasional, dan bisa berkemb
 - Material 3.
 - Ktor Client.
 - kotlinx.serialization.
-- DataStore Preferences untuk draft lokal.
 - Supabase PostgREST sebagai backend saat ini.
 - Gradle wrapper.
 - ADB untuk tablet/emulator lokal.
@@ -24,7 +23,6 @@ app/src/main/java/com/primaraya/inspectra
 +-- core
 |   +-- common
 |   +-- data
-|   +-- draft
 |   +-- network
 |   +-- ui
 +-- fitur
@@ -66,14 +64,17 @@ PowerShell:
 ```powershell
 cd C:\Users\Acer\AndroidStudioProjects\InSpectra
 $env:JAVA_HOME='C:\Program Files\Java\jdk-17'
-.\gradlew build --stacktrace --warning-mode all --no-daemon --no-parallel
+$env:GRADLE_OPTS='-Xmx1536m -Dfile.encoding=UTF-8'
+.\gradlew :app:testDebugUnitTest --stacktrace --no-daemon --no-parallel --max-workers=1 '-Dkotlin.compiler.execution.strategy=in-process'
+.\gradlew :app:assembleDebug --stacktrace --no-daemon --no-parallel --max-workers=1 '-Dkotlin.compiler.execution.strategy=in-process'
 ```
 
 Install ke device:
 
 ```powershell
 adb devices -l
-.\gradlew installDebug --stacktrace --no-daemon --no-parallel
+$env:GRADLE_OPTS='-Xmx1536m -Dfile.encoding=UTF-8'
+.\gradlew :app:installDebug --stacktrace --no-daemon --no-parallel --max-workers=1 '-Dkotlin.compiler.execution.strategy=in-process'
 ```
 
 Ambil Logcat aplikasi:
@@ -124,21 +125,24 @@ Prinsip:
 
 ### Migration Produksi
 
-Migration Next-Phase bersifat additive dan berada di
-`supabase/migrations/20260621000003_cutting_data_induk_dan_seed_partlist.sql`.
+Migration Next-Phase bersifat additive dan berada di `supabase/migrations/`.
 Workbook sumber tidak disimpan di repository; seed SQL statis dapat diaudit.
+Ukuran Cutting dari FM-QA-026 dicatat per `UNIQ NO` pada
+`m_part_cutting_size_reference`, bukan disamakan per material. Sumber yang belum
+memiliki part induk tidak dibuatkan part atau relasi sintetis.
 
-Jalankan hanya setelah project Supabase telah ditautkan dan `SUPABASE_DB_URL`
-disediakan oleh lingkungan yang aman:
+Sebelum mendorong migration, tautkan project Supabase dan jalankan:
 
 ```powershell
 $env:INSPECTRA_IZINKAN_PRODUKSI='YA'
-powershell -ExecutionPolicy Bypass -File .\scripts\dorong_supabase.ps1
+supabase db lint --linked --level warning
+supabase migration list
+supabase db push
 ```
 
-Skrip menolak eksekusi tanpa flag, membuat backup schema `public` pada folder
-`cadangan/` yang di-ignore Git, memeriksa operasi destruktif pada migration
-baru, mendorong migration, lalu menjalankan query integritas dan view.
+`INSPECTRA_IZINKAN_PRODUKSI` adalah gate operasional untuk prosedur tim. CLI
+tidak membacanya secara otomatis. Jangan mendorong production tanpa backup yang
+diverifikasi, review migration, dan query integritas yang sesuai perubahan.
 
 ## Standar UI
 

@@ -54,6 +54,18 @@ class ValidatorBatchCuttingTest {
         assertEquals(1.961, input.rasioWastePanjang, 0.001)
     }
 
+    @Test
+    fun `label part acuan memuat identitas yang dapat dibedakan operator`() {
+        val opsi = OpsiPartUkuranCutting(
+            uniq_no = "CB9",
+            part_no = "58815-KK010-00",
+            nama_part = "CARPET CONSOLE BOX",
+            komoditas = "PRESS"
+        )
+
+        assertEquals("CB9 - 58815-KK010-00 - CARPET CONSOLE BOX", opsi.labelPilihan)
+    }
+
     private fun inputDasar(): InputBatchCutting = InputBatchCutting(
         tanggalPemeriksaan = "2026-06-21",
         materialId = "material-1",

@@ -48,9 +48,12 @@ import com.primaraya.inspectra.core.common.AsyncData
 import com.primaraya.inspectra.core.ui.component.AppDropdownField
 import com.primaraya.inspectra.core.ui.component.AppEmptyState
 import com.primaraya.inspectra.core.ui.component.AppListSkeleton
+import com.primaraya.inspectra.core.ui.component.AppResponsiveContent
 import com.primaraya.inspectra.core.ui.viewmodel.pabrikViewModelAplikasi
 import com.primaraya.inspectra.fitur.cutting.domain.InputBatchCutting
 import com.primaraya.inspectra.fitur.cutting.domain.InputDefectCutting
+import com.primaraya.inspectra.fitur.cutting.domain.OpsiMaterialCutting
+import com.primaraya.inspectra.fitur.cutting.domain.OpsiPartUkuranCutting
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,24 +105,28 @@ fun CuttingScreen(
             is AsyncData.Loading -> AppListSkeleton()
             is AsyncData.Error -> AppEmptyState("Material Cutting gagal dimuat", statusMaterial.message)
             else -> {
-                FormBatchCutting(
-                    input = state.input,
-                    material = (state.material as? AsyncData.Success)?.data.orEmpty(),
-                    defect = (state.defect as? AsyncData.Success)?.data.orEmpty(),
-                    slotWaktu = state.slotWaktu,
-                    ringkasan = state.ringkasan,
-                    daftarPesanValidasi = state.daftarPesanValidasi,
-                    menyimpan = state.menyimpan,
-                    onUbah = { viewModel.onIntent(CuttingContract.Intent.UbahInput(it)) },
-                    onPilihMaterial = { viewModel.onIntent(CuttingContract.Intent.PilihMaterial(it)) },
-                    onTambahDefect = { viewModel.onIntent(CuttingContract.Intent.TambahDefect(it)) },
-                    onUbahJumlahDefect = { id, jumlah -> viewModel.onIntent(CuttingContract.Intent.UbahJumlahDefect(id, jumlah)) },
-                    onUbahPanjangDefect = { id, panjang -> viewModel.onIntent(CuttingContract.Intent.UbahPanjangDefect(id, panjang)) },
-                    onUbahSlotDefect = { id, slot -> viewModel.onIntent(CuttingContract.Intent.UbahSlotDefect(id, slot)) },
-                    onHapusDefect = { viewModel.onIntent(CuttingContract.Intent.HapusDefect(it)) },
-                    onSimpan = { viewModel.onIntent(CuttingContract.Intent.BukaPreview) },
-                    modifier = Modifier.padding(padding)
-                )
+                AppResponsiveContent(modifier = Modifier.padding(padding)) { _, contentModifier ->
+                    FormBatchCutting(
+                        input = state.input,
+                        material = (state.material as? AsyncData.Success)?.data.orEmpty(),
+                        partUkuran = (state.partUkuran as? AsyncData.Success)?.data.orEmpty(),
+                        defect = (state.defect as? AsyncData.Success)?.data.orEmpty(),
+                        slotWaktu = state.slotWaktu,
+                        ringkasan = state.ringkasan,
+                        daftarPesanValidasi = state.daftarPesanValidasi,
+                        menyimpan = state.menyimpan,
+                        onUbah = { viewModel.onIntent(CuttingContract.Intent.UbahInput(it)) },
+                        onPilihMaterial = { viewModel.onIntent(CuttingContract.Intent.PilihMaterial(it)) },
+                        onPilihPartUkuran = { viewModel.onIntent(CuttingContract.Intent.PilihPartAcuanUkuran(it)) },
+                        onTambahDefect = { viewModel.onIntent(CuttingContract.Intent.TambahDefect(it)) },
+                        onUbahJumlahDefect = { id, jumlah -> viewModel.onIntent(CuttingContract.Intent.UbahJumlahDefect(id, jumlah)) },
+                        onUbahPanjangDefect = { id, panjang -> viewModel.onIntent(CuttingContract.Intent.UbahPanjangDefect(id, panjang)) },
+                        onUbahSlotDefect = { id, slot -> viewModel.onIntent(CuttingContract.Intent.UbahSlotDefect(id, slot)) },
+                        onHapusDefect = { viewModel.onIntent(CuttingContract.Intent.HapusDefect(it)) },
+                        onSimpan = { viewModel.onIntent(CuttingContract.Intent.BukaPreview) },
+                        modifier = contentModifier
+                    )
+                }
 
                 if (state.menampilkanPreview) {
                     DialogPreviewCutting(
@@ -137,14 +144,16 @@ fun CuttingScreen(
 @Composable
 private fun FormBatchCutting(
     input: InputBatchCutting,
-    material: List<com.primaraya.inspectra.fitur.cutting.domain.OpsiMaterialCutting>,
+    material: List<OpsiMaterialCutting>,
+    partUkuran: List<OpsiPartUkuranCutting>,
     defect: List<com.primaraya.inspectra.fitur.masterdata.domain.MasterDefectDto>,
     slotWaktu: List<com.primaraya.inspectra.fitur.checksheet.domain.SlotNg>,
     ringkasan: AsyncData<List<com.primaraya.inspectra.fitur.cutting.domain.RingkasanHarianCutting>>,
     daftarPesanValidasi: List<String>,
     menyimpan: Boolean,
     onUbah: (InputBatchCutting) -> Unit,
-    onPilihMaterial: (com.primaraya.inspectra.fitur.cutting.domain.OpsiMaterialCutting) -> Unit,
+    onPilihMaterial: (OpsiMaterialCutting) -> Unit,
+    onPilihPartUkuran: (OpsiPartUkuranCutting) -> Unit,
     onTambahDefect: (com.primaraya.inspectra.fitur.masterdata.domain.MasterDefectDto) -> Unit,
     onUbahJumlahDefect: (String, String) -> Unit,
     onUbahPanjangDefect: (String, String) -> Unit,
@@ -153,7 +162,7 @@ private fun FormBatchCutting(
     onSimpan: () -> Unit,
     modifier: Modifier
 ) {
-    val materialTerpilih = material.firstOrNull { it.material_id == input.materialId }
+    val partTerpilih = partUkuran.firstOrNull { it.uniq_no == input.uniqNoPart }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -178,8 +187,8 @@ private fun FormBatchCutting(
             AppDropdownField(
                 label = "Material",
                 value = input.namaMaterial,
-                options = material.map { it.nama_material },
-                onSelected = { nama -> material.firstOrNull { it.nama_material == nama }?.let(onPilihMaterial) }
+                options = material.map { it.labelPilihan },
+                onSelected = { label -> material.firstOrNull { it.labelPilihan == label }?.let(onPilihMaterial) }
             )
         }
         item {
@@ -212,14 +221,33 @@ private fun FormBatchCutting(
         }
         item {
             AppDropdownField(
+                label = "Part acuan ukuran",
+                value = partTerpilih?.labelPilihan.orEmpty(),
+                options = partUkuran.map { it.labelPilihan },
+                onSelected = { label -> partUkuran.firstOrNull { it.labelPilihan == label }?.let(onPilihPartUkuran) }
+            )
+        }
+        item {
+            AppDropdownField(
                 label = "Ukuran cutting (cm)",
                 value = input.ukuranCuttingCm,
-                options = materialTerpilih?.daftar_ukuran_cutting?.map { it.ukuran_cutting_cm.toString() }.orEmpty(),
-                onSelected = { onUbah(input.copy(ukuranCuttingCm = it)) }
+                options = partTerpilih?.daftar_ukuran_cutting?.map { "${it.ukuran_cutting_cm} cm" }.orEmpty(),
+                onSelected = { label ->
+                    partTerpilih?.daftar_ukuran_cutting
+                        ?.firstOrNull { "${it.ukuran_cutting_cm} cm" == label }
+                        ?.let { ukuran ->
+                            onUbah(
+                                input.copy(
+                                    ukuranCuttingCm = ukuran.ukuran_cutting_cm.toString(),
+                                    idReferensiUkuranPart = ukuran.id
+                                )
+                            )
+                        }
+                }
             )
             OutlinedTextField(
                 value = input.ukuranCuttingCm,
-                onValueChange = { onUbah(input.copy(ukuranCuttingCm = it)) },
+                onValueChange = { onUbah(input.copy(ukuranCuttingCm = it, idReferensiUkuranPart = null)) },
                 label = { Text("Atau isi ukuran manual (cm)") },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -323,6 +351,7 @@ private fun DialogPreviewCutting(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Tanggal: ${input.tanggalPemeriksaan}")
                 Text("Material: ${input.namaMaterial}")
+                if (input.uniqNoPart.isNotBlank()) Text("Part acuan ukuran: ${input.uniqNoPart} - ${input.namaPart}")
                 Text("Lot/Roll: ${input.nomorLotRoll} / ${input.nomorRoll}")
                 Text("OK: ${input.qtyLayerOk} | NG: ${input.qtyLayerNg}")
                 Text("Waste: ${input.wastePanjangCm} cm")

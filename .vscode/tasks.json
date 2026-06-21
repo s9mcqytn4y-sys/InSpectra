@@ -2,16 +2,23 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Gradle: test",
+      "label": "Gradle: uji unit Debug",
       "type": "shell",
-      "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; .\\gradlew test --stacktrace --no-daemon --no-parallel",
+      "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; $env:GRADLE_OPTS='-Xmx1536m -Dfile.encoding=UTF-8'; .\\gradlew :app:testDebugUnitTest --stacktrace --no-daemon --no-parallel --max-workers=1 '-Dkotlin.compiler.execution.strategy=in-process'",
       "group": "test",
       "problemMatcher": []
     },
     {
-      "label": "Gradle: build",
+      "label": "Gradle: rakit Debug",
       "type": "shell",
-      "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; .\\gradlew build --stacktrace --warning-mode all --no-daemon --no-parallel",
+      "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; $env:GRADLE_OPTS='-Xmx1536m -Dfile.encoding=UTF-8'; .\\gradlew :app:assembleDebug --stacktrace --no-daemon --no-parallel --max-workers=1 '-Dkotlin.compiler.execution.strategy=in-process'",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle: build lengkap",
+      "type": "shell",
+      "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; $env:GRADLE_OPTS='-Xmx1536m -Dfile.encoding=UTF-8'; .\\gradlew build --stacktrace --warning-mode all --no-daemon --no-parallel --max-workers=1 '-Dkotlin.compiler.execution.strategy=in-process'",
       "group": "build",
       "problemMatcher": []
     },
@@ -24,14 +31,14 @@
     {
       "label": "Android: pasang debug ke tablet",
       "type": "shell",
-      "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; .\\gradlew installDebug --stacktrace --no-daemon --no-parallel",
+      "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; $env:GRADLE_OPTS='-Xmx1536m -Dfile.encoding=UTF-8'; .\\gradlew :app:installDebug --stacktrace --no-daemon --no-parallel --max-workers=1 '-Dkotlin.compiler.execution.strategy=in-process'",
       "dependsOn": "Android: daftar perangkat ADB",
       "problemMatcher": []
     },
     {
       "label": "Android: Logcat InSpectra",
       "type": "shell",
-      "command": "adb logcat | Select-String \"com.primaraya.inspectra|AndroidRuntime|FATAL EXCEPTION|InspectraNetwork\"",
+      "command": "adb logcat -v color | Select-String \"com.primaraya.inspectra|AndroidRuntime|FATAL EXCEPTION|InspectraNetwork|System.err\"",
       "problemMatcher": []
     },
     {
@@ -41,9 +48,15 @@
       "problemMatcher": []
     },
     {
-      "label": "Supabase: dorong migration production",
+      "label": "Supabase: lint schema tertaut",
       "type": "shell",
-      "command": "powershell -ExecutionPolicy Bypass -File .\\scripts\\dorong_supabase.ps1",
+      "command": "supabase db lint --linked --level warning",
+      "problemMatcher": []
+    },
+    {
+      "label": "Supabase: status migration tertaut",
+      "type": "shell",
+      "command": "supabase migration list",
       "problemMatcher": []
     }
   ]
