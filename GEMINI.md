@@ -4,7 +4,7 @@ Panduan untuk Gemini atau agent lain yang bekerja di repository InSpectra.
 
 ## Ringkasan
 
-InSpectra adalah aplikasi Android Kotlin untuk Quality Control. Aplikasi memakai Jetpack Compose, Material 3, Ktor Client, DataStore, dan Supabase PostgREST.
+InSpectra adalah aplikasi Android Kotlin untuk Quality Control. Aplikasi memakai Jetpack Compose, Material 3, Ktor Client, dan Supabase PostgREST.
 
 Target utama adalah aplikasi tablet yang stabil, rapi, dan siap tumbuh menjadi workspace SaaS internal QC.
 
@@ -14,6 +14,11 @@ Target utama adalah aplikasi tablet yang stabil, rapi, dan siap tumbuh menjadi w
 - Gunakan current working directory sebagai root repository.
 - Jangan membaca atau menampilkan credential dari `local.properties`.
 - Jangan hardcode Supabase URL atau key.
+- Fase aktif bersifat online-only: jangan menambah draft lokal, mode offline, DataStore draft,
+  atau antrean sinkronisasi tanpa persetujuan eksplisit.
+- Jangan menjalankan health check atau retry jaringan dari Splash. Splash hanya inisialisasi visual.
+- Workbook sumber tidak boleh di-commit atau dibaca runtime. Ekstrak data menjadi migration SQL
+  statis yang dapat diaudit; hanya buat relasi jika master part dan identitas material lengkap.
 - Jangan mengubah file generated, build output, atau personal IDE state.
 - Jangan melakukan hard reset.
 - Jangan mengganti stack utama tanpa alasan teknis yang kuat.
@@ -100,4 +105,3 @@ Gunakan format singkat:
 8. Validation command results.
 9. Remaining risks.
 10. Next recommended scope.
-

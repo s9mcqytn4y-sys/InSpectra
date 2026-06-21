@@ -103,7 +103,8 @@ class SupabaseMasterDataRepository(
             driver.upsert(
                 table = RemoteTable.Supplier,
                 body = supplier,
-                encode = { json.encodeToString(MasterSupplierDto.serializer(), it) }
+                encode = { json.encodeToString(MasterSupplierDto.serializer(), it) },
+                onConflict = "nama_supplier"
             )
         }
     }
@@ -152,7 +153,8 @@ class SupabaseMasterDataRepository(
             driver.upsert(
                 table = RemoteTable.Defect,
                 body = defect,
-                encode = { json.encodeToString(MasterDefectDto.serializer(), it) }
+                encode = { json.encodeToString(MasterDefectDto.serializer(), it) },
+                onConflict = "id_defect"
             )
         }
     }

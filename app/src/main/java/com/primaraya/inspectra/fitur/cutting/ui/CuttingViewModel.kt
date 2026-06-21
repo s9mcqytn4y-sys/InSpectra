@@ -5,7 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.primaraya.inspectra.core.common.AsyncData
 import com.primaraya.inspectra.core.data.PageRequest
-import com.primaraya.inspectra.core.draft.DraftStore
 import com.primaraya.inspectra.core.network.NetworkResult
 import com.primaraya.inspectra.core.ui.KonteksOperasi
 import com.primaraya.inspectra.core.ui.UserMessageMapper
@@ -20,17 +19,14 @@ import com.primaraya.inspectra.fitur.masterdata.data.SupabaseMasterDataRepositor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.serialization.serializer
 import java.time.LocalDate
 
 class CuttingViewModel(
     application: Application,
     private val repository: CuttingRepository = SupabaseCuttingRepository(),
-    private val masterRepository: MasterDataRepository = SupabaseMasterDataRepository(),
-    private val draftStore: DraftStore = DraftStore(application)
+    private val masterRepository: MasterDataRepository = SupabaseMasterDataRepository()
 ) : AndroidViewModel(application) {
 
     private val _state = MutableStateFlow(CuttingContract.State(input = inputAwal()))
@@ -70,9 +66,6 @@ class CuttingViewModel(
 
     private fun muat() {
         viewModelScope.launch {
-            val draft = draftStore.readDraft(KUNCI_DRAFT, serializer<InputBatchCutting>()).first()
-            if (draft != null) _state.update { it.copy(input = draft) }
-
             _state.update { it.copy(material = AsyncData.Loading, defect = AsyncData.Loading) }
             val material = repository.bacaOpsiMaterial()
             val defect = masterRepository.getDefectsPage(PageRequest(cursorColumn = "nama_defect", limit = 100))
@@ -126,7 +119,6 @@ class CuttingViewModel(
 
     private fun ubahInput(input: InputBatchCutting) {
         _state.update { it.copy(input = input, daftarPesanValidasi = emptyList()) }
-        viewModelScope.launch { draftStore.saveDraft(KUNCI_DRAFT, serializer<InputBatchCutting>(), input) }
     }
 
     private fun bukaPreview() {
@@ -146,7 +138,6 @@ class CuttingViewModel(
             _state.update { it.copy(menyimpan = true) }
             when (val hasil = repository.simpanBatch(input)) {
                 is NetworkResult.Success -> {
-                    draftStore.clearDraft(KUNCI_DRAFT)
                     _state.update {
                         it.copy(
                             input = inputAwal(),
@@ -175,9 +166,5 @@ class CuttingViewModel(
             is NetworkResult.Error -> AsyncData.Error("Gagal memuat", message)
             else -> AsyncData.Loading
         }
-    }
-
-    private companion object {
-        const val KUNCI_DRAFT = "cutting_batch_draft"
     }
 }

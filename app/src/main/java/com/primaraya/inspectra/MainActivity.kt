@@ -36,7 +36,6 @@ import com.primaraya.inspectra.fitur.checksheet.ui.labelIndonesia
 import com.primaraya.inspectra.fitur.cutting.ui.CuttingScreen
 import com.primaraya.inspectra.fitur.masterdata.ui.MasterDataScreen
 import com.primaraya.inspectra.fitur.splash.SplashScreen
-import com.primaraya.inspectra.core.network.StatusKoneksi
 
 enum class NavState { 
     SPLASH, 
@@ -53,19 +52,16 @@ class MainActivity : ComponentActivity() {
         setContent {
             var currentScreen by rememberSaveable { mutableStateOf(NavState.SPLASH) }
             var prosesTerpilih by rememberSaveable { mutableStateOf(TipeProses.PRESS) }
-            var statusKoneksi by rememberSaveable { mutableStateOf(StatusKoneksi.MEMERIKSA) }
 
             InSpectraTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF8FAFC)) {
                     when (currentScreen) {
                         NavState.SPLASH -> SplashScreen(
-                            onSelesai = { status ->
-                                statusKoneksi = status
+                            onSelesai = {
                                 currentScreen = NavState.DASHBOARD
                             }
                         )
                         NavState.DASHBOARD -> MainDashboard(
-                            statusKoneksi = statusKoneksi,
                             onChecksheetClick = {
                                 currentScreen = NavState.MENU_CHECKSHEET
                             },
@@ -100,7 +96,6 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainDashboard(
-    statusKoneksi: StatusKoneksi,
     onChecksheetClick: () -> Unit,
     onMasterDataClick: () -> Unit
 ) {
@@ -118,18 +113,8 @@ fun MainDashboard(
 
             AssistChip(
                 onClick = {},
-                label = {
-                    Text(
-                        if (statusKoneksi == StatusKoneksi.OFFLINE) {
-                            "Mode Offline - draft lokal aktif"
-                        } else {
-                            "Sinkronisasi server aktif"
-                        }
-                    )
-                },
-                colors = AssistChipDefaults.assistChipColors(
-                    containerColor = if (statusKoneksi == StatusKoneksi.OFFLINE) Color(0xFFFFF7ED) else Color(0xFFF0FDF4)
-                )
+                label = { Text("Data diproses langsung ke server") },
+                colors = AssistChipDefaults.assistChipColors(containerColor = Color(0xFFF0FDF4))
             )
 
             if (isTablet) {

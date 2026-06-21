@@ -4,7 +4,6 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.primaraya.inspectra.core.common.AsyncData
-import com.primaraya.inspectra.core.draft.DraftStore
 import com.primaraya.inspectra.fitur.checksheet.data.ChecksheetRepository
 import com.primaraya.inspectra.fitur.checksheet.data.SupabaseChecksheetRepository
 import com.primaraya.inspectra.core.network.NetworkResult
@@ -16,7 +15,6 @@ import com.primaraya.inspectra.fitur.masterdata.data.SupabaseMasterDataRepositor
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.serialization.builtins.ListSerializer
 
 /**
  * ViewModel MVI untuk E-Checksheet.
@@ -24,8 +22,7 @@ import kotlinx.serialization.builtins.ListSerializer
 class ChecksheetMviViewModel(
     application: Application,
     private val masterRepository: MasterDataRepository = SupabaseMasterDataRepository(),
-    private val checksheetRepository: ChecksheetRepository = SupabaseChecksheetRepository(),
-    private val draftStore: DraftStore = DraftStore(application)
+    private val checksheetRepository: ChecksheetRepository = SupabaseChecksheetRepository()
 ) : AndroidViewModel(application) {
 
     private val _state = MutableStateFlow(ChecksheetContract.State())
@@ -63,26 +60,14 @@ class ChecksheetMviViewModel(
                 )
             }
 
-            // 1. Cek Draft Dulu
-            val draftKey = "checksheet_draft_${tipeProses.name}"
-            val draft = draftStore.readDraft(draftKey, ListSerializer(RingkasanPartChecksheet.serializer())).first()
-            
-            if (draft != null) {
-                // Pastikan draft lama yang corrupt tidak dimuat (hanya sesuai komoditas)
-                val filteredDraft = draft.filter { it.komoditas == tipeProses }
-                if (filteredDraft.isNotEmpty()) {
-                    _state.update { it.copy(dataChecksheet = AsyncData.Success(filteredDraft)) }
-                    return@launch
-                }
-            }
-
-            // 2. Jika tidak ada draft, muat dari remote
             val slotsRes = masterRepository.getSlotWaktu(tipeProses.name)
             val slots = (slotsRes as? NetworkResult.Success)?.data ?: emptyList()
 
             when (val result = masterRepository.getChecksheetData(tipeProses.name)) {
                 is NetworkResult.Success -> {
-                    val daftar = result.data.map { dto ->
+                    val daftar = result.data
+                        .filter { dto -> dto.komoditas.equals(tipeProses.name, ignoreCase = true) }
+                        .map { dto ->
                         RingkasanPartChecksheet(
                             uniqNo = dto.uniq_no,
                             nomorPart = dto.part_no,
@@ -168,11 +153,6 @@ class ChecksheetMviViewModel(
             }
             _state.update { it.copy(dataChecksheet = AsyncData.Success(updated)) }
             
-            // Simpan ke draft
-            viewModelScope.launch {
-                val draftKey = "checksheet_draft_${_state.value.tipeProses.name}"
-                draftStore.saveDraft(draftKey, ListSerializer(RingkasanPartChecksheet.serializer()), updated)
-            }
         }
     }
 
@@ -246,10 +226,6 @@ class ChecksheetMviViewModel(
                             dataChecksheet = AsyncData.Success(clearedList)
                         )
                     }
-
-                    // Hapus draft setelah berhasil kirim
-                    val draftKey = "checksheet_draft_${_state.value.tipeProses.name}"
-                    draftStore.clearDraft(draftKey)
 
                     _effect.emit(ChecksheetContract.Effect.KirimBerhasil(result.data))
                     _effect.emit(ChecksheetContract.Effect.PesanSukses("Checksheet berhasil dikirim."))

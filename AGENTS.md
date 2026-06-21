@@ -30,7 +30,7 @@ Fokus utama:
 
 Layer yang harus dijaga:
 
-- `core`: common utility, network, data driver, draft store, UI component, theme.
+- `core`: common utility, network, data driver, UI component, theme.
 - `fitur/<nama>/domain`: model domain dan kontrak data fitur.
 - `fitur/<nama>/data`: repository, mapper, dan akses Supabase/PostgREST.
 - `fitur/<nama>/ui`: Compose screen, contract, state, ViewModel.
@@ -39,7 +39,7 @@ Aturan:
 
 - Composable tidak boleh memanggil API langsung.
 - Composable hanya membaca state, mengirim intent/event, dan merender UI.
-- ViewModel mengorkestrasi use case, repository, draft, dan state.
+- ViewModel mengorkestrasi use case, repository, dan state.
 - Repository menangani akses Supabase atau sumber data remote.
 - Semua state UI harus immutable.
 - Network call tidak boleh dipicu berulang karena recomposition.
@@ -61,6 +61,14 @@ Aturan:
 - Jangan menampilkan key di Logcat.
 - Gunakan PostgREST secara eksplisit dan audit query sebelum menambah endpoint/tabel.
 - Jika contract Supabase berubah, update migration dan repository bersama-sama.
+- Fase aktif menggunakan alur online-only. Jangan menambah `DraftStore`, DataStore draft,
+  mode offline, atau antrean sinkronisasi tanpa persetujuan eksplisit.
+- Splash hanya untuk inisialisasi visual singkat. Jangan menjalankan health check atau retry
+  jaringan dari Splash; repository menampilkan kesalahan koneksi yang ramah pengguna.
+- Seed dari workbook wajib diekstrak menjadi SQL statis yang dapat direview. Jangan meng-commit
+  workbook dan jangan membaca workbook saat aplikasi berjalan.
+- Relasi part-material hanya boleh dibuat bila `UNIQ NO` ada di `m_part` dan material,
+  supplier, serta spesifikasi dapat diidentifikasi.
 
 Contoh `local.properties`:
 
@@ -82,8 +90,7 @@ Istilah utama:
 - Komposisi Material berarti BOM.
 - Material Utama berarti parent material.
 - Bahan Penyusun berarti child material.
-- Draft Lokal berarti unsent local draft.
-- Antrean Sinkronisasi berarti offline queue.
+- Data diproses langsung ke server. Jangan menjanjikan Draft Lokal atau Mode Offline di UI.
 
 Material 3:
 
@@ -166,4 +173,3 @@ Contoh:
 fix(checksheet): perbaiki factory ViewModel Android
 docs(proyek): tambah panduan agent dan desain
 ```
-

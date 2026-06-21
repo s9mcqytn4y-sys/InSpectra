@@ -5,7 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.primaraya.inspectra.core.common.AsyncData
 import com.primaraya.inspectra.core.data.PageRequest
-import com.primaraya.inspectra.core.draft.DraftStore
 import com.primaraya.inspectra.core.network.NetworkResult
 import com.primaraya.inspectra.core.ui.UserMessageMapper
 import com.primaraya.inspectra.core.ui.KonteksOperasi
@@ -19,8 +18,7 @@ import kotlinx.coroutines.FlowPreview
 
 class MasterDataViewModel(
     application: Application,
-    private val repository: MasterDataRepository = SupabaseMasterDataRepository(),
-    private val draftStore: DraftStore = DraftStore(application)
+    private val repository: MasterDataRepository = SupabaseMasterDataRepository()
 ) : AndroidViewModel(application) {
 
     private val _state = MutableStateFlow(MasterDataContract.State())
@@ -37,21 +35,6 @@ class MasterDataViewModel(
         onIntent(MasterDataContract.Intent.MuatAwal)
         setupSearchDebounce()
 
-        viewModelScope.launch {
-            combine(
-                draftStore.readDraft("part_form_draft", PartFormState.serializer()),
-                draftStore.readDraft("material_form_draft", MaterialFormState.serializer()),
-                draftStore.readDraft("supplier_form_draft", SupplierFormState.serializer()),
-                draftStore.readDraft("defect_form_draft", DefectFormState.serializer())
-            ) { part, mat, sup, def ->
-                _state.update { it.copy(
-                    partFormDraft = part ?: it.partFormDraft,
-                    materialFormDraft = mat ?: it.materialFormDraft,
-                    supplierFormDraft = sup ?: it.supplierFormDraft,
-                    defectFormDraft = def ?: it.defectFormDraft
-                ) }
-            }.collect()
-        }
     }
 
     @OptIn(FlowPreview::class)
@@ -97,7 +80,6 @@ class MasterDataViewModel(
             }
             is MasterDataContract.Intent.UbahFormPart -> {
                 _state.update { it.copy(partFormDraft = intent.data) }
-                viewModelScope.launch { draftStore.saveDraft("part_form_draft", PartFormState.serializer(), intent.data) }
             }
             is MasterDataContract.Intent.SimpanPart -> simpanPart(intent.data)
             is MasterDataContract.Intent.HapusPart -> confirmHapus("Hapus Part", "Part akan dinonaktifkan.") { hapusPart(intent.data) }
@@ -117,7 +99,6 @@ class MasterDataViewModel(
             }
             is MasterDataContract.Intent.UbahFormMaterial -> {
                 _state.update { it.copy(materialFormDraft = intent.data) }
-                viewModelScope.launch { draftStore.saveDraft("material_form_draft", MaterialFormState.serializer(), intent.data) }
             }
             is MasterDataContract.Intent.SimpanMaterial -> simpanMaterial(intent.data)
             is MasterDataContract.Intent.HapusMaterial -> confirmHapus("Nonaktifkan Material", "Data tidak dihapus permanen. Material akan dinonaktifkan.") { hapusMaterial(intent.data) }
@@ -136,7 +117,6 @@ class MasterDataViewModel(
             }
             is MasterDataContract.Intent.UbahFormSupplier -> {
                 _state.update { it.copy(supplierFormDraft = intent.data) }
-                viewModelScope.launch { draftStore.saveDraft("supplier_form_draft", SupplierFormState.serializer(), intent.data) }
             }
             is MasterDataContract.Intent.SimpanSupplier -> simpanSupplier(intent.data)
             is MasterDataContract.Intent.HapusSupplier -> confirmHapus("Hapus Supplier", "Supplier akan dinonaktifkan.") { hapusSupplier(intent.data) }
@@ -153,7 +133,6 @@ class MasterDataViewModel(
             }
             is MasterDataContract.Intent.UbahFormDefect -> {
                 _state.update { it.copy(defectFormDraft = intent.data) }
-                viewModelScope.launch { draftStore.saveDraft("defect_form_draft", DefectFormState.serializer(), intent.data) }
             }
             is MasterDataContract.Intent.SimpanDefect -> simpanDefect(intent.data)
             is MasterDataContract.Intent.HapusDefect -> confirmHapus("Hapus Defect", "Defect akan dinonaktifkan.") { hapusDefect(intent.data) }
@@ -374,7 +353,6 @@ class MasterDataViewModel(
             if (repository.upsertPart(dto) is NetworkResult.Success) {
                 _state.update { it.copy(menyimpan = false, dialogForm = null) }
                 _effect.emit(MasterDataContract.Effect.TampilPesan("Part disimpan."))
-                draftStore.clearDraft("part_form_draft")
                 muatDataTabAktif(reset = true)
             } else tampilkanError("Gagal simpan part")
         }
@@ -387,7 +365,6 @@ class MasterDataViewModel(
             if (repository.upsertMaterial(dto) is NetworkResult.Success) {
                 _state.update { it.copy(menyimpan = false, dialogForm = null) }
                 _effect.emit(MasterDataContract.Effect.TampilPesan("Material disimpan."))
-                draftStore.clearDraft("material_form_draft")
                 muatDataTabAktif(reset = true)
             } else tampilkanError("Gagal simpan material")
         }
@@ -400,7 +377,6 @@ class MasterDataViewModel(
             if (repository.upsertSupplier(dto) is NetworkResult.Success) {
                 _state.update { it.copy(menyimpan = false, dialogForm = null) }
                 _effect.emit(MasterDataContract.Effect.TampilPesan("Supplier disimpan."))
-                draftStore.clearDraft("supplier_form_draft")
                 muatDataTabAktif(reset = true)
             } else tampilkanError("Gagal simpan supplier")
         }
@@ -413,7 +389,6 @@ class MasterDataViewModel(
             if (repository.upsertDefect(dto) is NetworkResult.Success) {
                 _state.update { it.copy(menyimpan = false, dialogForm = null) }
                 _effect.emit(MasterDataContract.Effect.TampilPesan("Defect disimpan."))
-                draftStore.clearDraft("defect_form_draft")
                 muatDataTabAktif(reset = true)
             } else tampilkanError("Gagal simpan defect")
         }
