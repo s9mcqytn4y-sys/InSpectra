@@ -39,8 +39,6 @@ class SupabaseCuttingRepository(
             val payload = RpcCuttingBatchPayload(
                 tanggal_pemeriksaan = input.tanggalPemeriksaan,
                 nama_shift = input.namaShift,
-                nama_operator = input.namaOperator.ifBlank { null },
-                nama_line = input.namaLine.ifBlank { null },
                 total_diperiksa = totalLayer,
                 total_ok = input.qtyLayerOkAngka,
                 total_ng = input.qtyLayerNgAngka,

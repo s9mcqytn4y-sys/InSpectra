@@ -411,6 +411,7 @@ group by
     m.spec,
     m.satuan;
 
+drop view if exists public.v_cutting_daily_summary cascade;
 create or replace view public.v_cutting_daily_summary as
 with batch_normalized as (
     select
@@ -825,7 +826,8 @@ left join public.m_supplier supplier on supplier.nama_supplier = nullif(trim(rel
 join public.m_material material
     on material.nama_normalisasi = upper(trim(regexp_replace(relasi.nama_material, '\s+', ' ', 'g')))
    and material.supplier_id is not distinct from supplier.id
-   and material.spec_ringkas is not distinct from nullif(trim(relasi.spec_asli), '');
+   and material.spec_ringkas is not distinct from nullif(trim(relasi.spec_asli), '')
+on conflict (material_id, spec_asli) do nothing;
 
 insert into public.m_defect (id_defect, nama_defect, kategori, aktif)
 select id_defect, nama_defect, 'MATERIAL'::public.kategori_defect_inspectra, true

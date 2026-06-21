@@ -15,6 +15,7 @@ object CuttingContract {
         val slotWaktu: List<SlotNg> = emptyList(),
         val ringkasan: AsyncData<List<RingkasanHarianCutting>> = AsyncData.Idle,
         val daftarPesanValidasi: List<String> = emptyList(),
+        val menampilkanPreview: Boolean = false,
         val menyimpan: Boolean = false,
         val pesan: String? = null
     )
@@ -28,6 +29,8 @@ object CuttingContract {
         data class UbahPanjangDefect(val idDefect: String, val panjang: String) : Intent
         data class UbahSlotDefect(val idDefect: String, val idSlot: String?) : Intent
         data class HapusDefect(val idDefect: String) : Intent
+        data object BukaPreview : Intent
+        data object TutupPreview : Intent
         data object Simpan : Intent
         data object HapusPesan : Intent
     }

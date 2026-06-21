@@ -107,6 +107,7 @@ group by
 
 drop view if exists public.v_cutting_daily_summary cascade;
 
+drop view if exists public.v_cutting_daily_summary cascade;
 create or replace view public.v_cutting_daily_summary as
 with batch_normalized as (
     select

@@ -268,14 +268,14 @@ baris_excel	UNIQ	PART NO.	PART NAME	KOMODITAS	MATERIAL USED	SUPPLIER	MATERIAL DE
         cachedPartAcuan = SafeTsv.parseRows(MASTER_PART_TSV, expectedColumns = 8)
             .map { c ->
                 PartAcuan(
-                    no = c[0].toIntOrNull() ?: 0,
-                    nomorPart = c[1].blankToNull(),
-                    uniqNo = c[2],
-                    namaPart = c[3],
-                    model = c[4].blankToNull(),
-                    customer = c[5].blankToNull(),
-                    komoditas = c[6].toTipeProses(),
-                    lokasiGambar = c[7].blankToNull()
+                    no = SafeTsv.get(c, 0).toIntOrNull() ?: 0,
+                    nomorPart = SafeTsv.get(c, 1).blankToNull(),
+                    uniqNo = SafeTsv.get(c, 2),
+                    namaPart = SafeTsv.get(c, 3),
+                    model = SafeTsv.get(c, 4).blankToNull(),
+                    customer = SafeTsv.get(c, 5).blankToNull(),
+                    komoditas = SafeTsv.get(c, 6).toTipeProses(),
+                    lokasiGambar = SafeTsv.get(c, 7).blankToNull()
                 )
             }
         return cachedPartAcuan!!
@@ -287,11 +287,11 @@ baris_excel	UNIQ	PART NO.	PART NAME	KOMODITAS	MATERIAL USED	SUPPLIER	MATERIAL DE
         cachedMaterialAcuan = SafeTsv.parseRows(MATERIAL_ACUAN_TSV, expectedColumns = 5)
             .map { c ->
                 MaterialAcuan(
-                    no = c[0].toIntOrNull() ?: 0,
-                    namaSupplier = c[1],
-                    namaMaterial = c[2],
-                    spec = c[3].blankToNull(),
-                    satuan = c[4].blankToNull()
+                    no = SafeTsv.get(c, 0).toIntOrNull() ?: 0,
+                    namaSupplier = SafeTsv.get(c, 1),
+                    namaMaterial = SafeTsv.get(c, 2),
+                    spec = SafeTsv.get(c, 3).blankToNull(),
+                    satuan = SafeTsv.get(c, 4).blankToNull()
                 )
             }
         return cachedMaterialAcuan!!
@@ -303,21 +303,21 @@ baris_excel	UNIQ	PART NO.	PART NAME	KOMODITAS	MATERIAL USED	SUPPLIER	MATERIAL DE
         cachedRelasiPartMaterial = SafeTsv.parseRows(RELASI_PART_MATERIAL_TSV, expectedColumns = 15)
             .map { c ->
                 MaterialPartAcuan(
-                    barisExcel = c[0].toIntOrNull() ?: 0,
-                    uniqNo = c[1],
-                    nomorPart = c[2].blankToNull(),
-                    namaPart = c[3],
-                    komoditas = c[4].toTipeProses(),
-                    materialDigunakan = c[5],
-                    namaSupplier = c[6].blankToNull(),
-                    potensiDefectMaterial = c[7].splitDefect(),
-                    lebar = c[8].toNullableDouble(),
-                    panjang = c[9].toNullableDouble(),
-                    tebalMm = c[10].toNullableDouble(),
-                    beratGsmGr = c[11].toNullableDouble(),
-                    qty = c[12].toNullableDouble(),
-                    satuan = c[13].blankToNull(),
-                    specAsli = c[14].blankToNull()
+                    barisExcel = SafeTsv.get(c, 0).toIntOrNull() ?: 0,
+                    uniqNo = SafeTsv.get(c, 1),
+                    nomorPart = SafeTsv.get(c, 2).blankToNull(),
+                    namaPart = SafeTsv.get(c, 3),
+                    komoditas = SafeTsv.get(c, 4).toTipeProses(),
+                    materialDigunakan = SafeTsv.get(c, 5),
+                    namaSupplier = SafeTsv.get(c, 6).blankToNull(),
+                    potensiDefectMaterial = SafeTsv.get(c, 7).splitDefect(),
+                    lebar = SafeTsv.get(c, 8).toNullableDouble(),
+                    panjang = SafeTsv.get(c, 9).toNullableDouble(),
+                    tebalMm = SafeTsv.get(c, 10).toNullableDouble(),
+                    beratGsmGr = SafeTsv.get(c, 11).toNullableDouble(),
+                    qty = SafeTsv.get(c, 12).toNullableDouble(),
+                    satuan = SafeTsv.get(c, 13).blankToNull(),
+                    specAsli = SafeTsv.get(c, 14).blankToNull()
                 )
             }
         return cachedRelasiPartMaterial!!

@@ -32,8 +32,6 @@ data class InputDefectCutting(
 data class InputBatchCutting(
     val tanggalPemeriksaan: String,
     val namaShift: String = "SHIFT_1",
-    val namaLine: String = "",
-    val namaOperator: String = "",
     val materialId: String = "",
     val namaMaterial: String = "",
     val spesifikasiMaterial: String = "",

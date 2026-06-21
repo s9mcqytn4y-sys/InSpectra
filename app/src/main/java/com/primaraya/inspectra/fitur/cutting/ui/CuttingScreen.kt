@@ -101,24 +101,35 @@ fun CuttingScreen(
         when (statusMaterial) {
             is AsyncData.Loading -> AppListSkeleton()
             is AsyncData.Error -> AppEmptyState("Material Cutting gagal dimuat", statusMaterial.message)
-            else -> FormBatchCutting(
-                input = state.input,
-                material = (state.material as? AsyncData.Success)?.data.orEmpty(),
-                defect = (state.defect as? AsyncData.Success)?.data.orEmpty(),
-                slotWaktu = state.slotWaktu,
-                ringkasan = state.ringkasan,
-                daftarPesanValidasi = state.daftarPesanValidasi,
-                menyimpan = state.menyimpan,
-                onUbah = { viewModel.onIntent(CuttingContract.Intent.UbahInput(it)) },
-                onPilihMaterial = { viewModel.onIntent(CuttingContract.Intent.PilihMaterial(it)) },
-                onTambahDefect = { viewModel.onIntent(CuttingContract.Intent.TambahDefect(it)) },
-                onUbahJumlahDefect = { id, jumlah -> viewModel.onIntent(CuttingContract.Intent.UbahJumlahDefect(id, jumlah)) },
-                onUbahPanjangDefect = { id, panjang -> viewModel.onIntent(CuttingContract.Intent.UbahPanjangDefect(id, panjang)) },
-                onUbahSlotDefect = { id, slot -> viewModel.onIntent(CuttingContract.Intent.UbahSlotDefect(id, slot)) },
-                onHapusDefect = { viewModel.onIntent(CuttingContract.Intent.HapusDefect(it)) },
-                onSimpan = { viewModel.onIntent(CuttingContract.Intent.Simpan) },
-                modifier = Modifier.padding(padding)
-            )
+            else -> {
+                FormBatchCutting(
+                    input = state.input,
+                    material = (state.material as? AsyncData.Success)?.data.orEmpty(),
+                    defect = (state.defect as? AsyncData.Success)?.data.orEmpty(),
+                    slotWaktu = state.slotWaktu,
+                    ringkasan = state.ringkasan,
+                    daftarPesanValidasi = state.daftarPesanValidasi,
+                    menyimpan = state.menyimpan,
+                    onUbah = { viewModel.onIntent(CuttingContract.Intent.UbahInput(it)) },
+                    onPilihMaterial = { viewModel.onIntent(CuttingContract.Intent.PilihMaterial(it)) },
+                    onTambahDefect = { viewModel.onIntent(CuttingContract.Intent.TambahDefect(it)) },
+                    onUbahJumlahDefect = { id, jumlah -> viewModel.onIntent(CuttingContract.Intent.UbahJumlahDefect(id, jumlah)) },
+                    onUbahPanjangDefect = { id, panjang -> viewModel.onIntent(CuttingContract.Intent.UbahPanjangDefect(id, panjang)) },
+                    onUbahSlotDefect = { id, slot -> viewModel.onIntent(CuttingContract.Intent.UbahSlotDefect(id, slot)) },
+                    onHapusDefect = { viewModel.onIntent(CuttingContract.Intent.HapusDefect(it)) },
+                    onSimpan = { viewModel.onIntent(CuttingContract.Intent.BukaPreview) },
+                    modifier = Modifier.padding(padding)
+                )
+
+                if (state.menampilkanPreview) {
+                    DialogPreviewCutting(
+                        input = state.input,
+                        menyimpan = state.menyimpan,
+                        onBatal = { viewModel.onIntent(CuttingContract.Intent.TutupPreview) },
+                        onSimpan = { viewModel.onIntent(CuttingContract.Intent.Simpan) }
+                    )
+                }
+            }
         }
     }
 }
@@ -160,24 +171,7 @@ private fun FormBatchCutting(
                 singleLine = true
             )
         }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = input.namaLine,
-                    onValueChange = { onUbah(input.copy(namaLine = it)) },
-                    label = { Text("Line") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = input.namaOperator,
-                    onValueChange = { onUbah(input.copy(namaOperator = it)) },
-                    label = { Text("Operator") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
-                )
-            }
-        }
+
         item { HorizontalDivider() }
         item { Text("Batch Pemotongan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
         item {
@@ -309,10 +303,55 @@ private fun FormBatchCutting(
         item {
             Button(onClick = onSimpan, enabled = !menyimpan, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                 if (menyimpan) CircularProgressIndicator(modifier = Modifier.width(20.dp), color = Color.White)
-                else Text("Simpan Batch")
+                else Text("Lanjut Preview")
             }
         }
     }
+}
+
+@Composable
+private fun DialogPreviewCutting(
+    input: InputBatchCutting,
+    menyimpan: Boolean,
+    onBatal: () -> Unit,
+    onSimpan: () -> Unit
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { if (!menyimpan) onBatal() },
+        title = { Text("Preview Batch", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Tanggal: ${input.tanggalPemeriksaan}")
+                Text("Material: ${input.namaMaterial}")
+                Text("Lot/Roll: ${input.nomorLotRoll} / ${input.nomorRoll}")
+                Text("OK: ${input.qtyLayerOk} | NG: ${input.qtyLayerNg}")
+                Text("Waste: ${input.wastePanjangCm} cm")
+                HorizontalDivider()
+                Text("Defect:", fontWeight = FontWeight.Bold)
+                if (input.daftarDefect.isEmpty()) {
+                    Text("- Tidak ada")
+                } else {
+                    input.daftarDefect.forEach {
+                        Text("- ${it.namaDefect} (${it.jumlahLayerTerdampak} layer, ${it.panjangDefectCm} cm)")
+                    }
+                }
+                HorizontalDivider()
+                Text("Rasio NG: ${input.rasioNgLayer}%")
+                Text("Rasio Waste: ${input.rasioWastePanjang}%")
+            }
+        },
+        confirmButton = {
+            Button(onClick = onSimpan, enabled = !menyimpan) {
+                if (menyimpan) CircularProgressIndicator(modifier = Modifier.width(16.dp), color = Color.White)
+                else Text("Kirim Data")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onBatal, enabled = !menyimpan) {
+                Text("Batal")
+            }
+        }
+    )
 }
 
 @Composable

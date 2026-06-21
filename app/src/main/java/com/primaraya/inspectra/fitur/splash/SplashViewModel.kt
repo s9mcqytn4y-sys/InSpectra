@@ -36,7 +36,12 @@ class SplashViewModel(
     fun periksaKoneksi() {
         viewModelScope.launch {
             _state.value = SplashState(StatusKoneksi.MEMERIKSA, "Memeriksa koneksi server...")
-            val hasil = withTimeoutOrNull(7_000) { repository.healthCheck() }
+            var hasil: NetworkResult<Unit>? = null
+            for (i in 1..3) {
+                hasil = withTimeoutOrNull(15_000) { repository.healthCheck() }
+                if (hasil is NetworkResult.Success) break
+                if (i < 3) kotlinx.coroutines.delay(2000)
+            }
             _state.value = statusDariHasil(hasil)
         }
     }

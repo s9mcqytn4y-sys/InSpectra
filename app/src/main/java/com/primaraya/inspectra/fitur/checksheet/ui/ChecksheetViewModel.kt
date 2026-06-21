@@ -68,8 +68,12 @@ class ChecksheetMviViewModel(
             val draft = draftStore.readDraft(draftKey, ListSerializer(RingkasanPartChecksheet.serializer())).first()
             
             if (draft != null) {
-                _state.update { it.copy(dataChecksheet = AsyncData.Success(draft)) }
-                return@launch
+                // Pastikan draft lama yang corrupt tidak dimuat (hanya sesuai komoditas)
+                val filteredDraft = draft.filter { it.komoditas == tipeProses }
+                if (filteredDraft.isNotEmpty()) {
+                    _state.update { it.copy(dataChecksheet = AsyncData.Success(filteredDraft)) }
+                    return@launch
+                }
             }
 
             // 2. Jika tidak ada draft, muat dari remote

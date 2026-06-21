@@ -61,6 +61,8 @@ class CuttingViewModel(
             is CuttingContract.Intent.HapusDefect -> ubahInput(
                 _state.value.input.copy(daftarDefect = _state.value.input.daftarDefect.filterNot { it.idDefect == intent.idDefect })
             )
+            CuttingContract.Intent.BukaPreview -> bukaPreview()
+            CuttingContract.Intent.TutupPreview -> _state.update { it.copy(menampilkanPreview = false) }
             CuttingContract.Intent.Simpan -> simpan()
             CuttingContract.Intent.HapusPesan -> _state.update { it.copy(pesan = null) }
         }
@@ -127,13 +129,18 @@ class CuttingViewModel(
         viewModelScope.launch { draftStore.saveDraft(KUNCI_DRAFT, serializer<InputBatchCutting>(), input) }
     }
 
-    private fun simpan() {
+    private fun bukaPreview() {
         val input = _state.value.input
         val pesanValidasi = ValidatorBatchCutting.validasi(input)
         if (pesanValidasi.isNotEmpty()) {
             _state.update { it.copy(daftarPesanValidasi = pesanValidasi) }
             return
         }
+        _state.update { it.copy(menampilkanPreview = true, daftarPesanValidasi = emptyList()) }
+    }
+
+    private fun simpan() {
+        val input = _state.value.input
 
         viewModelScope.launch {
             _state.update { it.copy(menyimpan = true) }
@@ -143,6 +150,7 @@ class CuttingViewModel(
                     _state.update {
                         it.copy(
                             input = inputAwal(),
+                            menampilkanPreview = false,
                             menyimpan = false,
                             daftarPesanValidasi = emptyList(),
                             pesan = "Batch Cutting berhasil disimpan."
