@@ -1,5 +1,7 @@
 package com.primaraya.inspectra.core.data
 
+import java.net.URLEncoder
+
 /**
  * Parameter pagination berbasis limit + cursor.
  *
@@ -20,19 +22,22 @@ data class PageRequest(
     fun toPostgrestQuery(select: String = "*"): String {
         val order = if (ascending) "asc" else "desc"
         val parts = mutableListOf(
-            "select=$select",
-            "order=$cursorColumn.$order",
+            "select=${select.url()}",
+            "order=${"$cursorColumn.$order".url()}",
             "limit=$limit"
         )
 
         if (!cursorValue.isNullOrBlank()) {
-            parts += "$cursorColumn=gt.$cursorValue"
+            parts += "$cursorColumn=gt.${cursorValue.url()}"
         }
 
         if (!searchColumn.isNullOrBlank() && !searchKeyword.isNullOrBlank()) {
-            parts += "$searchColumn=ilike.*${searchKeyword.trim()}*"
+            parts += "$searchColumn=ilike.${"*${searchKeyword.trim()}*".url()}"
         }
 
         return parts.joinToString("&")
     }
+
+    private fun String.url(): String =
+        URLEncoder.encode(this, Charsets.UTF_8.name())
 }

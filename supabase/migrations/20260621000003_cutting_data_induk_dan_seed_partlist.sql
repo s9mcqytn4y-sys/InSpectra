@@ -1,7 +1,348 @@
-﻿-- Next-phase MVP InSpectra.
+-- Next-phase MVP InSpectra.
 -- Sumber seed: Google Drive Part list.xlsx, diperbarui 2025-11-26.
 -- Workbook tidak disimpan di repository. Komoditas yang tidak ada pada sumber
 -- dicatat sebagai PASS_THROUGH agar tidak masuk checksheet aktif tanpa validasi.
+
+-- =========================================================
+-- INSPECTRA MIGRATION HARDENING PATCH
+-- Menjaga migration additive dan kompatibel dengan Android DTO saat ini.
+-- =========================================================
+
+create extension if not exists pgcrypto;
+
+-- ---------------------------------------------------------
+-- Compatibility columns: m_part
+-- ---------------------------------------------------------
+
+create table if not exists public.m_part (
+    id uuid primary key default gen_random_uuid(),
+    part_no text,
+    uniq_no text not null unique,
+    nama_part text not null,
+    model text,
+    customer text,
+    komoditas text not null,
+    lokasi_gambar text,
+    aktif boolean not null default true,
+    dibuat_pada timestamptz not null default now(),
+    diperbarui_pada timestamptz not null default now()
+);
+
+alter table public.m_part
+    add column if not exists total_item_per_kanban int,
+    add column if not exists sample_item_per_kanban int,
+    add column if not exists sample_cycle_note text,
+    add column if not exists catatan text;
+
+do $$
+begin
+    if not exists (
+        select 1 from pg_constraint where conname = 'chk_m_part_komoditas'
+    ) then
+        alter table public.m_part
+            add constraint chk_m_part_komoditas
+            check (komoditas in ('PRESS','SEWING','CUTTING','MATERIAL','PASS_THROUGH','CONSUMABLE'));
+    end if;
+end $$;
+
+-- ---------------------------------------------------------
+-- Compatibility columns: m_supplier
+-- ---------------------------------------------------------
+
+create table if not exists public.m_supplier (
+    id uuid primary key default gen_random_uuid(),
+    kode_supplier text unique,
+    nama_supplier text not null unique,
+    kategori text,
+    aktif boolean not null default true,
+    dibuat_pada timestamptz not null default now(),
+    diperbarui_pada timestamptz not null default now()
+);
+
+alter table public.m_supplier
+    add column if not exists alamat text,
+    add column if not exists kontak text,
+    add column if not exists catatan text;
+
+-- ---------------------------------------------------------
+-- Compatibility columns: m_material
+-- Android DTO saat ini butuh supplier, nama_material, spec, satuan.
+-- ---------------------------------------------------------
+
+create table if not exists public.m_material (
+    id uuid primary key default gen_random_uuid(),
+    supplier text,
+    nama_material text not null,
+    spec text,
+    satuan text,
+    aktif boolean not null default true,
+    dibuat_pada timestamptz not null default now(),
+    diperbarui_pada timestamptz not null default now()
+);
+
+alter table public.m_material
+    add column if not exists kode_material text unique,
+    add column if not exists supplier_id uuid references public.m_supplier(id) on delete restrict,
+    add column if not exists supplier_manual text,
+    add column if not exists jenis_material text,
+    add column if not exists spec_ringkas text;
+
+alter table public.m_material
+    add column if not exists nama_normalisasi text;
+
+-- Hapus update manual karena jika nama_normalisasi adalah generated column,
+-- PostgreSQL akan mengisinya secara otomatis.
+
+-- ---------------------------------------------------------
+-- Compatibility columns: m_material_spec
+-- Android DTO saat ini butuh *_value.
+-- ---------------------------------------------------------
+
+create table if not exists public.m_material_spec (
+    id uuid primary key default gen_random_uuid(),
+    material_id uuid not null references public.m_material(id) on delete cascade,
+    spec_asli text,
+    satuan text,
+    lebar_value numeric(12, 3),
+    panjang_value numeric(12, 3),
+    tebal_value numeric(12, 3),
+    berat_value numeric(12, 3),
+    qty_value numeric(12, 3),
+    warna text,
+    grade text,
+    aktif boolean not null default true,
+    dibuat_pada timestamptz not null default now()
+);
+
+alter table public.m_material_spec
+    add column if not exists lebar_unit text not null default 'CM',
+    add column if not exists panjang_unit text not null default 'CM',
+    add column if not exists tebal_unit text not null default 'MM',
+    add column if not exists berat_unit text default 'GSM',
+    add column if not exists keterangan text,
+    add column if not exists diperbarui_pada timestamptz not null default now();
+
+-- ---------------------------------------------------------
+-- Relasi part-material
+-- ---------------------------------------------------------
+
+create table if not exists public.m_part_material (
+    id uuid primary key default gen_random_uuid(),
+    uniq_no text not null references public.m_part(uniq_no) on delete cascade,
+    material_id uuid not null references public.m_material(id) on delete restrict,
+    material_spec_id uuid references public.m_material_spec(id) on delete restrict,
+    urutan int not null default 1 check (urutan > 0),
+    label_material text not null,
+    aktif boolean not null default true,
+    dibuat_pada timestamptz not null default now()
+);
+
+alter table public.m_part_material
+    add column if not exists qty_per_part numeric(12, 4),
+    add column if not exists wajib_check boolean not null default true,
+    add column if not exists diperbarui_pada timestamptz not null default now();
+
+-- ---------------------------------------------------------
+-- Defect master
+-- ---------------------------------------------------------
+
+create table if not exists public.m_defect (
+    id_defect text primary key,
+    nama_defect text not null,
+    kategori text not null check (kategori in ('MATERIAL','PROSES')),
+    aktif boolean not null default true,
+    dibuat_pada timestamptz not null default now()
+);
+
+alter table public.m_defect
+    add column if not exists proses_default text,
+    add column if not exists deskripsi text,
+    add column if not exists severity_default int,
+    add column if not exists diperbarui_pada timestamptz not null default now();
+
+-- ---------------------------------------------------------
+-- Relasi material-defect
+-- WAJIB punya urutan karena repository query order=urutan.asc.
+-- ---------------------------------------------------------
+
+create table if not exists public.m_material_defect (
+    id uuid primary key default gen_random_uuid(),
+    material_id uuid not null references public.m_material(id) on delete cascade,
+    id_defect text not null references public.m_defect(id_defect) on delete restrict,
+    urutan int not null default 1 check (urutan > 0),
+    wajib_check boolean not null default true,
+    aktif boolean not null default true,
+    dibuat_pada timestamptz not null default now(),
+    diperbarui_pada timestamptz not null default now(),
+    unique (material_id, id_defect)
+);
+
+-- ---------------------------------------------------------
+-- Relasi part-defect
+-- ---------------------------------------------------------
+
+create table if not exists public.m_part_defect (
+    id uuid primary key default gen_random_uuid(),
+    uniq_no text not null references public.m_part(uniq_no) on delete cascade,
+    id_defect text not null references public.m_defect(id_defect) on delete restrict,
+    urutan int not null default 1 check (urutan > 0),
+    wajib_check boolean not null default true,
+    aktif boolean not null default true,
+    dibuat_pada timestamptz not null default now(),
+    unique (uniq_no, id_defect)
+);
+
+alter table public.m_part_defect
+    add column if not exists sumber text not null default 'MANUAL',
+    add column if not exists diperbarui_pada timestamptz not null default now();
+
+-- ---------------------------------------------------------
+-- Slot waktu
+-- ---------------------------------------------------------
+
+create table if not exists public.m_slot_waktu (
+    id uuid primary key default gen_random_uuid(),
+    kode_slot text not null unique,
+    tipe_proses text not null,
+    nama_shift text not null default 'SHIFT_1',
+    label_waktu text not null,
+    urutan int not null,
+    aktif boolean not null default true
+);
+
+alter table public.m_slot_waktu
+    add column if not exists jam_mulai time,
+    add column if not exists jam_selesai time,
+    add column if not exists dibuat_pada timestamptz not null default now(),
+    add column if not exists diperbarui_pada timestamptz not null default now();
+
+-- ---------------------------------------------------------
+-- E-checksheet compatibility
+-- ---------------------------------------------------------
+
+create table if not exists public.e_sesi_checksheet (
+    id uuid primary key default gen_random_uuid(),
+    tipe_proses text not null,
+    total_diperiksa int not null default 0,
+    total_ok int not null default 0,
+    total_ng int not null default 0,
+    rasio_ng_global numeric(8, 3) not null default 0,
+    created_at timestamptz not null default now()
+);
+
+alter table public.e_sesi_checksheet
+    add column if not exists kode_sesi text unique,
+    add column if not exists tanggal_pemeriksaan date not null default current_date,
+    add column if not exists nama_shift text not null default 'SHIFT_1',
+    add column if not exists nama_operator text,
+    add column if not exists nama_line text,
+    add column if not exists device_id text,
+    add column if not exists app_version text,
+    add column if not exists status text not null default 'TERKIRIM',
+    add column if not exists catatan text,
+    add column if not exists dibuat_pada timestamptz not null default now(),
+    add column if not exists diperbarui_pada timestamptz not null default now();
+
+create table if not exists public.e_item_checksheet (
+    id uuid primary key default gen_random_uuid(),
+    id_sesi uuid not null references public.e_sesi_checksheet(id) on delete cascade,
+    uniq_no text not null references public.m_part(uniq_no) on delete restrict,
+    jumlah_diperiksa int not null default 0,
+    jumlah_ok int not null default 0,
+    jumlah_ng int not null default 0,
+    rasio_ng numeric(8, 3) not null default 0,
+    created_at timestamptz not null default now()
+);
+
+alter table public.e_item_checksheet
+    add column if not exists catatan text,
+    add column if not exists dibuat_pada timestamptz not null default now(),
+    add column if not exists diperbarui_pada timestamptz not null default now();
+
+create table if not exists public.e_defect_checksheet (
+    id uuid primary key default gen_random_uuid(),
+    id_item uuid not null references public.e_item_checksheet(id) on delete cascade,
+    id_defect text not null references public.m_defect(id_defect) on delete restrict,
+    nama_defect text,
+    kategori text not null default 'PROSES',
+    jumlah int not null default 0,
+    created_at timestamptz not null default now()
+);
+
+alter table public.e_defect_checksheet
+    add column if not exists nama_defect_snapshot text,
+    add column if not exists dibuat_pada timestamptz not null default now(),
+    add column if not exists diperbarui_pada timestamptz not null default now();
+
+update public.e_defect_checksheet
+set nama_defect_snapshot = coalesce(nama_defect_snapshot, nama_defect, id_defect)
+where nama_defect_snapshot is null;
+
+create table if not exists public.e_defect_slot_checksheet (
+    id uuid primary key default gen_random_uuid(),
+    id_defect_checksheet uuid not null references public.e_defect_checksheet(id) on delete cascade,
+    slot_waktu_id uuid references public.m_slot_waktu(id) on delete restrict,
+    jumlah int not null default 0 check (jumlah >= 0),
+    dibuat_pada timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------
+-- Cutting MVP
+-- ---------------------------------------------------------
+
+create table if not exists public.e_cutting_batch (
+    id uuid primary key default gen_random_uuid(),
+    id_sesi uuid not null references public.e_sesi_checksheet(id) on delete cascade,
+    material_id uuid not null references public.m_material(id) on delete restrict,
+    material_spec_id uuid references public.m_material_spec(id) on delete restrict,
+    tanggal date not null default current_date,
+    no_lot_roll text,
+    no_roll text,
+    size_cutting_cm numeric(12, 3) not null check (size_cutting_cm > 0),
+    roll_width_cm_snapshot numeric(12, 3),
+    roll_length_cm_snapshot numeric(12, 3),
+    qty_layer_ok int not null default 0 check (qty_layer_ok >= 0),
+    qty_layer_ng int not null default 0 check (qty_layer_ng >= 0),
+    waste_panjang_cm numeric(12, 3) not null default 0 check (waste_panjang_cm >= 0),
+    pic text,
+    catatan text,
+    dibuat_pada timestamptz not null default now(),
+    diperbarui_pada timestamptz not null default now()
+);
+
+alter table public.e_cutting_batch
+    add column if not exists total_layer int generated always as (qty_layer_ok + qty_layer_ng) stored,
+    add column if not exists output_ok_panjang_cm numeric(14, 3) generated always as (size_cutting_cm * qty_layer_ok) stored,
+    add column if not exists output_ng_panjang_cm numeric(14, 3) generated always as (size_cutting_cm * qty_layer_ng) stored,
+    add column if not exists output_total_panjang_cm numeric(14, 3) generated always as (size_cutting_cm * (qty_layer_ok + qty_layer_ng)) stored,
+    add column if not exists input_estimasi_panjang_cm numeric(14, 3) generated always as ((size_cutting_cm * (qty_layer_ok + qty_layer_ng)) + waste_panjang_cm) stored,
+    add column if not exists rasio_ng_layer numeric(8, 3) generated always as (
+        case
+            when (qty_layer_ok + qty_layer_ng) > 0
+                then round((qty_layer_ng::numeric / (qty_layer_ok + qty_layer_ng)::numeric) * 100, 3)
+            else 0
+        end
+    ) stored,
+    add column if not exists rasio_waste_panjang numeric(8, 3) generated always as (
+        case
+            when ((size_cutting_cm * (qty_layer_ok + qty_layer_ng)) + waste_panjang_cm) > 0
+                then round((waste_panjang_cm / ((size_cutting_cm * (qty_layer_ok + qty_layer_ng)) + waste_panjang_cm)) * 100, 3)
+            else 0
+        end
+    ) stored;
+
+create table if not exists public.e_cutting_defect_detail (
+    id uuid primary key default gen_random_uuid(),
+    id_cutting_batch uuid not null references public.e_cutting_batch(id) on delete cascade,
+    id_defect text not null references public.m_defect(id_defect) on delete restrict,
+    nama_defect_snapshot text,
+    jumlah_layer int not null default 0 check (jumlah_layer >= 0),
+    panjang_defect_cm numeric(12, 3) not null default 0 check (panjang_defect_cm >= 0),
+    slot_waktu_id uuid references public.m_slot_waktu(id) on delete restrict,
+    catatan text,
+    dibuat_pada timestamptz not null default now(),
+    diperbarui_pada timestamptz not null default now()
+);
 
 begin;
 
