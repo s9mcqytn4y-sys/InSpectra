@@ -502,17 +502,7 @@ left join public.m_supplier supplier on supplier.nama_supplier = nullif(trim(rel
 join public.m_material material
     on material.nama_normalisasi = upper(trim(regexp_replace(relasi.nama_material, '\s+', ' ', 'g')))
    and material.supplier_id is not distinct from supplier.id
-   and material.spec_ringkas is not distinct from nullif(trim(relasi.spec_asli), '')
-where nullif(trim(relasi.spec_asli), '') is not null
-on conflict (material_id, spec_asli) do update set
-    lebar_value = excluded.lebar_value,
-    panjang_value = excluded.panjang_value,
-    tebal_value = excluded.tebal_value,
-    berat_value = excluded.berat_value,
-    qty_value = excluded.qty_value,
-    qty_unit = excluded.qty_unit,
-    keterangan = excluded.keterangan,
-    aktif = true;
+   and material.spec_ringkas is not distinct from nullif(trim(relasi.spec_asli), '');
 
 insert into public.m_defect (id_defect, nama_defect, kategori, aktif)
 select id_defect, nama_defect, 'MATERIAL'::public.kategori_defect_inspectra, true
@@ -577,4 +567,3 @@ on conflict (material_id, id_defect) do update set aktif = true;
 select pg_notify('pgrst', 'reload schema');
 
 commit;
-
