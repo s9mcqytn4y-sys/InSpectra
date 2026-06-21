@@ -37,21 +37,25 @@ class CuttingViewModel(
         when (intent) {
             CuttingContract.Intent.Muat -> muat()
             is CuttingContract.Intent.UbahInput -> ubahInput(intent.input)
-            is CuttingContract.Intent.PilihMaterial -> ubahInput(
-                _state.value.input.copy(
-                    materialId = intent.material.material_id,
-                    namaMaterial = intent.material.nama_material,
-                    spesifikasiMaterial = intent.material.spec_ringkas
+            is CuttingContract.Intent.PilihMaterial -> {
+                val ukuran = intent.material.daftar_ukuran_cutting.firstOrNull { it.is_default }
+                    ?: intent.material.daftar_ukuran_cutting.firstOrNull()
+                ubahInput(
+                    _state.value.input.copy(
+                        materialId = intent.material.material_id,
+                        namaMaterial = intent.material.nama_material,
+                        spesifikasiMaterial = intent.material.spec_ringkas,
+                        idReferensiUkuranMaterial = ukuran?.id,
+                        ukuranCuttingCm = ukuran?.ukuranEfektif?.toString().orEmpty()
+                    )
                 )
-            )
+            }
             is CuttingContract.Intent.PilihPartAcuanUkuran -> {
                 val ukuran = intent.part.daftar_ukuran_cutting.firstOrNull()
                 ubahInput(
                     _state.value.input.copy(
-                        uniqNoPart = intent.part.uniq_no,
-                        namaPart = intent.part.nama_part,
-                        idReferensiUkuranPart = ukuran?.id,
-                        ukuranCuttingCm = ukuran?.ukuran_cutting_cm?.toString().orEmpty()
+                        idReferensiUkuranMaterial = ukuran?.id,
+                        ukuranCuttingCm = ukuran?.ukuranEfektif?.toString().orEmpty()
                     )
                 )
             }

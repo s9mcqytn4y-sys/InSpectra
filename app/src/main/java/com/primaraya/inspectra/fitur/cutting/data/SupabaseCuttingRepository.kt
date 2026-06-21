@@ -35,8 +35,8 @@ class SupabaseCuttingRepository(
     override suspend fun bacaOpsiPartUkuran(): NetworkResult<List<OpsiPartUkuranCutting>> = withContext(Dispatchers.IO) {
         runNetworkCatching {
             driver.getList(
-                table = RemoteTable.ViewCuttingPartSizeOption,
-                query = "select=*&order=uniq_no.asc&limit=100",
+                table = RemoteTable.ViewChecksheetPartPicker,
+                query = "komoditas=eq.CUTTING&order=uniq_no.asc&limit=100",
                 decode = { json.decodeFromString(ListSerializer(OpsiPartUkuranCutting.serializer()), it) }
             )
         }
@@ -50,24 +50,25 @@ class SupabaseCuttingRepository(
             val payload = RpcCuttingBatchPayload(
                 tanggal_pemeriksaan = input.tanggalPemeriksaan,
                 nama_shift = input.namaShift,
+                nama_operator = input.namaOperator,
+                nama_line = input.namaLine,
                 total_diperiksa = totalLayer,
                 total_ok = input.qtyLayerOkAngka,
                 total_ng = input.qtyLayerNgAngka,
                 rasio_ng_global = input.rasioNgLayer,
 
                 material_id = input.materialId,
+                size_reference_id = input.idReferensiUkuranMaterial,
                 nama_material_snapshot = input.namaMaterial,
                 spec_material_snapshot = input.spesifikasiMaterial.ifBlank { null },
-                uniq_no_part = input.uniqNoPart.ifBlank { null },
-                nama_part_snapshot = input.namaPart.ifBlank { null },
-                part_size_reference_id = input.idReferensiUkuranPart,
                 no_lot_roll = input.nomorLotRoll.ifBlank { null },
+                nomor_lot_roll = input.nomorLotRoll.ifBlank { null },
                 no_roll = input.nomorRoll.ifBlank { null },
                 size_cutting_cm = ukuran,
                 ukuran_cutting_cm = ukuran,
                 qty_layer_ok = input.qtyLayerOkAngka,
                 qty_layer_ng = input.qtyLayerNgAngka,
-                waste_panjang_cm = input.wastePanjangAngka,
+                panjang_roll_awal_cm = input.panjangRollAwalAngka,
                 catatan = input.catatan.ifBlank { null },
 
                 daftar_defect = input.daftarDefect.map { it.toRpcDto() }
@@ -117,18 +118,17 @@ private data class RpcCuttingBatchPayload(
     val rasio_ng_global: Double,
 
     val material_id: String,
+    val size_reference_id: String? = null,
     val nama_material_snapshot: String,
     val spec_material_snapshot: String? = null,
-    val uniq_no_part: String? = null,
-    val nama_part_snapshot: String? = null,
-    val part_size_reference_id: String? = null,
     val no_lot_roll: String? = null,
+    val nomor_lot_roll: String? = null,
     val no_roll: String? = null,
     val size_cutting_cm: Double,
     val ukuran_cutting_cm: Double,
     val qty_layer_ok: Int,
     val qty_layer_ng: Int,
-    val waste_panjang_cm: Double,
+    val panjang_roll_awal_cm: Double? = null,
     val catatan: String? = null,
 
     val daftar_defect: List<RpcCuttingDefectDetail> = emptyList()

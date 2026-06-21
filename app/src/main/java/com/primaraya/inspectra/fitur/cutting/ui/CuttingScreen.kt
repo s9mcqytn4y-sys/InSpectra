@@ -162,7 +162,7 @@ private fun FormBatchCutting(
     onSimpan: () -> Unit,
     modifier: Modifier
 ) {
-    val partTerpilih = partUkuran.firstOrNull { it.uniq_no == input.uniqNoPart }
+    val materialTerpilih = material.firstOrNull { it.material_id == input.materialId }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -172,13 +172,22 @@ private fun FormBatchCutting(
             Text("Setup Sesi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         }
         item {
-            OutlinedTextField(
-                value = input.tanggalPemeriksaan,
-                onValueChange = { onUbah(input.copy(tanggalPemeriksaan = it)) },
-                label = { Text("Tanggal pemeriksaan") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = input.tanggalPemeriksaan,
+                    onValueChange = { onUbah(input.copy(tanggalPemeriksaan = it)) },
+                    label = { Text("Tanggal") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = input.namaOperator.orEmpty(),
+                    onValueChange = { onUbah(input.copy(namaOperator = it)) },
+                    label = { Text("Nama Operator") },
+                    modifier = Modifier.weight(1.5f),
+                    singleLine = true
+                )
+            }
         }
 
         item { HorizontalDivider() }
@@ -221,25 +230,17 @@ private fun FormBatchCutting(
         }
         item {
             AppDropdownField(
-                label = "Part acuan ukuran",
-                value = partTerpilih?.labelPilihan.orEmpty(),
-                options = partUkuran.map { it.labelPilihan },
-                onSelected = { label -> partUkuran.firstOrNull { it.labelPilihan == label }?.let(onPilihPartUkuran) }
-            )
-        }
-        item {
-            AppDropdownField(
                 label = "Ukuran cutting (cm)",
                 value = input.ukuranCuttingCm,
-                options = partTerpilih?.daftar_ukuran_cutting?.map { "${it.ukuran_cutting_cm} cm" }.orEmpty(),
+                options = materialTerpilih?.daftar_ukuran_cutting?.map { "${it.ukuranEfektif} cm" }.orEmpty(),
                 onSelected = { label ->
-                    partTerpilih?.daftar_ukuran_cutting
-                        ?.firstOrNull { "${it.ukuran_cutting_cm} cm" == label }
+                    materialTerpilih?.daftar_ukuran_cutting
+                        ?.firstOrNull { "${it.ukuranEfektif} cm" == label }
                         ?.let { ukuran ->
                             onUbah(
                                 input.copy(
-                                    ukuranCuttingCm = ukuran.ukuran_cutting_cm.toString(),
-                                    idReferensiUkuranPart = ukuran.id
+                                    ukuranCuttingCm = ukuran.ukuranEfektif.toString(),
+                                    idReferensiUkuranMaterial = ukuran.id
                                 )
                             )
                         }
@@ -247,7 +248,7 @@ private fun FormBatchCutting(
             )
             OutlinedTextField(
                 value = input.ukuranCuttingCm,
-                onValueChange = { onUbah(input.copy(ukuranCuttingCm = it, idReferensiUkuranPart = null)) },
+                onValueChange = { onUbah(input.copy(ukuranCuttingCm = it, idReferensiUkuranMaterial = null)) },
                 label = { Text("Atau isi ukuran manual (cm)") },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -350,8 +351,8 @@ private fun DialogPreviewCutting(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Tanggal: ${input.tanggalPemeriksaan}")
+                Text("Operator: ${input.namaOperator ?: "-"}")
                 Text("Material: ${input.namaMaterial}")
-                if (input.uniqNoPart.isNotBlank()) Text("Part acuan ukuran: ${input.uniqNoPart} - ${input.namaPart}")
                 Text("Lot/Roll: ${input.nomorLotRoll} / ${input.nomorRoll}")
                 Text("OK: ${input.qtyLayerOk} | NG: ${input.qtyLayerNg}")
                 Text("Waste: ${input.wastePanjangCm} cm")

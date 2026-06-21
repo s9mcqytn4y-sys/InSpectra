@@ -115,6 +115,21 @@ data class RingkasanPartChecksheet(
 }
 
 @Serializable
+data class PartPickerItem(
+    val uniq_no: String,
+    val part_no: String? = null,
+    val nama_part: String,
+    val model: String? = null,
+    val customer: String? = null,
+    val komoditas: String,
+    val image_url: String? = null,
+    val menggunakan_default: Boolean = true,
+    val jumlah_material: Int = 0,
+    val jumlah_defect: Int = 0,
+    val status_input: String = "BELUM_SIAP"
+)
+
+@Serializable
 data class PayloadChecksheet(
     val versiPayload: String = "fase-mvi-supabase",
     val tipeProses: String,

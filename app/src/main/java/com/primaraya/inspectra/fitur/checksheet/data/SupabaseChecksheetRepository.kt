@@ -1,6 +1,7 @@
 package com.primaraya.inspectra.fitur.checksheet.data
 
 import com.primaraya.inspectra.core.data.DatabaseDriver
+import com.primaraya.inspectra.core.data.RemoteTable
 import com.primaraya.inspectra.core.data.SupabasePgRestDriver
 import com.primaraya.inspectra.core.network.NetworkResult
 import com.primaraya.inspectra.core.network.runNetworkCatching
@@ -37,6 +38,16 @@ class SupabaseChecksheetRepository(
             )
 
             resultId
+        }
+    }
+
+    suspend fun getPartPickerItems(tipeProses: String): NetworkResult<List<PartPickerItem>> = withContext(Dispatchers.IO) {
+        runNetworkCatching {
+            driver.getList(
+                table = RemoteTable.ViewChecksheetPartPicker,
+                query = "komoditas=eq.$tipeProses&order=uniq_no.asc",
+                decode = { json.decodeFromString(ListSerializer(PartPickerItem.serializer()), it) }
+            )
         }
     }
 }

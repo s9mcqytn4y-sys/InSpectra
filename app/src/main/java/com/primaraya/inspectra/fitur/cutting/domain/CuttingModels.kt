@@ -6,8 +6,27 @@ import kotlin.math.round
 @Serializable
 data class UkuranCuttingAcuan(
     val id: String,
-    val ukuran_cutting_cm: Double,
-    val urutan: Int
+    val size_cutting_cm: Double? = null,
+    val ukuran_cutting_cm: Double? = null,
+    val lebar_roll_cm: Double? = null,
+    val panjang_roll_cm: Double? = null,
+    val berat_gsm: Double? = null,
+    val tebal_mm: Double? = null,
+    val label_ukuran: String? = null,
+    val is_default: Boolean = false,
+    val urutan: Int = 1
+) {
+    val ukuranEfektif: Double
+        get() = size_cutting_cm ?: ukuran_cutting_cm ?: 0.0
+}
+
+@Serializable
+data class DefectCuttingAcuan(
+    val id_defect: String,
+    val nama_defect: String,
+    val satuan_input: String? = "CM",
+    val metode_pengukuran: String? = "LENGTH_CM",
+    val urutan: Int = 1
 )
 
 @Serializable
@@ -16,7 +35,8 @@ data class OpsiMaterialCutting(
     val nama_material: String,
     val spec_ringkas: String = "",
     val satuan: String,
-    val daftar_ukuran_cutting: List<UkuranCuttingAcuan> = emptyList()
+    val daftar_ukuran_cutting: List<UkuranCuttingAcuan> = emptyList(),
+    val daftar_defect_cutting: List<DefectCuttingAcuan> = emptyList()
 ) {
     val labelPilihan: String
         get() = listOf(nama_material, spec_ringkas.takeIf(String::isNotBlank), satuan.takeIf(String::isNotBlank))
@@ -50,18 +70,19 @@ data class InputDefectCutting(
 data class InputBatchCutting(
     val tanggalPemeriksaan: String,
     val namaShift: String = "SHIFT_1",
+    val namaOperator: String? = null,
+    val namaLine: String? = null,
     val materialId: String = "",
     val namaMaterial: String = "",
     val spesifikasiMaterial: String = "",
-    val uniqNoPart: String = "",
-    val namaPart: String = "",
-    val idReferensiUkuranPart: String? = null,
+    val idReferensiUkuranMaterial: String? = null,
     val nomorLotRoll: String = "",
     val nomorRoll: String = "",
     val ukuranCuttingCm: String = "",
     val qtyLayerOk: String = "",
     val qtyLayerNg: String = "",
     val wastePanjangCm: String = "",
+    val panjangRollAwalCm: String = "",
     val catatan: String = "",
     val daftarDefect: List<InputDefectCutting> = emptyList()
 ) {
@@ -69,6 +90,7 @@ data class InputBatchCutting(
     val qtyLayerOkAngka: Int get() = qtyLayerOk.toIntOrNull() ?: 0
     val qtyLayerNgAngka: Int get() = qtyLayerNg.toIntOrNull() ?: 0
     val wastePanjangAngka: Double get() = wastePanjangCm.toDoubleOrNull() ?: 0.0
+    val panjangRollAwalAngka: Double? get() = panjangRollAwalCm.toDoubleOrNull()
     val totalLayer: Int get() = qtyLayerOkAngka + qtyLayerNgAngka
     val totalLayerDefect: Int get() = daftarDefect.sumOf { it.jumlahLayerTerdampak }
     val rasioNgLayer: Double get() = if (totalLayer == 0) 0.0 else pembulatan(qtyLayerNgAngka.toDouble() / totalLayer * 100)
@@ -94,8 +116,8 @@ data class RingkasanHarianCutting(
     val total_panjang_ok_cm: Double,
     val total_panjang_ng_cm: Double,
     val total_waste_cm: Double,
-    val rasio_ng_layer: Double,
-    val rasio_waste_panjang: Double
+    val rasio_ng_panjang: Double = 0.0,
+    val rasio_waste_panjang: Double = 0.0
 )
 
 object ValidatorBatchCutting {
