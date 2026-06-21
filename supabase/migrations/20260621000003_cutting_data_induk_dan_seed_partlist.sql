@@ -274,8 +274,10 @@ alter table public.e_defect_checksheet
     add column if not exists dibuat_pada timestamptz not null default now(),
     add column if not exists diperbarui_pada timestamptz not null default now();
 
+-- Hapus update yang merujuk ke nama_defect jika kolom tersebut tidak ada di table e_defect_checksheet.
+-- Snapshot akan diisi dari id_defect sebagai fallback teraman.
 update public.e_defect_checksheet
-set nama_defect_snapshot = coalesce(nama_defect_snapshot, nama_defect, id_defect)
+set nama_defect_snapshot = coalesce(nama_defect_snapshot, id_defect)
 where nama_defect_snapshot is null;
 
 create table if not exists public.e_defect_slot_checksheet (
