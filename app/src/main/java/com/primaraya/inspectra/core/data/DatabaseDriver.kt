@@ -33,6 +33,13 @@ interface DatabaseDriver {
         idColumn: String,
         id: String
     )
+
+    suspend fun <TBody, TResponse> rpc(
+        functionName: String,
+        body: TBody,
+        encode: (TBody) -> String,
+        decode: (String) -> TResponse
+    ): TResponse
 }
 
 /**
@@ -51,11 +58,11 @@ enum class RemoteTable(val value: String) {
     ViewChecksheetPartDefect("v_checksheet_part_defect"),
     ViewCuttingMaterialOption("v_cutting_material_option"),
     ViewCuttingDailySummary("v_cutting_daily_summary"),
+    ViewMasterDataHealth("v_masterdata_health"),
     SesiChecksheet("e_sesi_checksheet"),
     ItemChecksheet("e_item_checksheet"),
     DefectChecksheet("e_defect_checksheet"),
     DefectSlotChecksheet("e_defect_slot_checksheet"),
-    DetailCutting("e_detail_cutting"),
     CuttingBatch("e_cutting_batch"),
     CuttingDefectDetail("e_cutting_defect_detail")
 }

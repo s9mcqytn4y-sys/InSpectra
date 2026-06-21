@@ -50,14 +50,7 @@ data class InputDefect(
     val slotMatch: Boolean get() = detailSlot.isEmpty() || totalNgDariSlot == jumlahNg
 }
 
-@Serializable
-data class DetailCutting(
-    val noLot: String? = null,
-    val noRoll: String? = null,
-    val sizeCuttingCm: String? = null,
-    val waste: Double? = null,
-    val pic: String? = null
-)
+
 
 @Serializable
 data class MaterialAcuan(
@@ -97,8 +90,7 @@ data class RingkasanPartChecksheet(
     val daftarDefect: List<InputDefect>,
     val lokasiGambar: String? = null,
     val jumlahDiperiksa: Int = 0,
-    val terbuka: Boolean = false,
-    val detailCutting: DetailCutting? = null
+    val terbuka: Boolean = false
 ) {
     val jumlahNg: Int
         get() = daftarDefect.sumOf { it.jumlahNg }
@@ -124,7 +116,7 @@ data class RingkasanPartChecksheet(
 
 @Serializable
 data class PayloadChecksheet(
-    val versiPayload: String = "fase-mvi-supabase-cutting",
+    val versiPayload: String = "fase-mvi-supabase",
     val tipeProses: String,
     val dibuatPadaMillis: Long,
     val totalDiperiksa: Int,
@@ -145,6 +137,5 @@ data class PayloadPartDiperiksa(
     val jumlahNg: Int,
     val rasioNg: Float,
     val daftarMaterial: List<String> = emptyList(),
-    val daftarDefectNg: List<InputDefect>,
-    val detailCutting: DetailCutting? = null
+    val daftarDefectNg: List<InputDefect>
 )

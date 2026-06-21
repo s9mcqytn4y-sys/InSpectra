@@ -61,7 +61,7 @@ fun MasterDataScreen(
         }
     }
 
-    AppResponsiveContent { isTablet, contentModifier ->
+    AppResponsiveContent { isTablet, _ ->
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
@@ -133,6 +133,22 @@ fun MasterDataScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 12.dp)
                     )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        MasterDataContract.FilterMasterData.entries.forEach { filter ->
+                            FilterChip(
+                                selected = state.filterAktif == filter,
+                                onClick = { viewModel.onIntent(MasterDataContract.Intent.PilihFilter(filter)) },
+                                label = { Text(filter.labelIndonesia(), style = MaterialTheme.typography.labelSmall) }
+                            )
+                        }
+                    }
 
                     Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8FAFC))) {
                         when (state.tabAktif) {
@@ -264,21 +280,21 @@ fun MasterDataFormContent(
         )
         is MasterDataContract.DialogForm.PilihDefectUntukPart -> {
             PilihDefectDialog(
-                availableDefects = (state.defects as? AsyncData.Success)?.data ?: emptyList(),
+                availableDefects = (state.defects as? AsyncData.Success<List<MasterDefectDto>>)?.data ?: emptyList(),
                 onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
                 onSelect = { idDefect -> viewModel.onIntent(MasterDataContract.Intent.TambahDefectKePart(form.uniqNo, idDefect)) }
             )
         }
         is MasterDataContract.DialogForm.PilihMaterialUntukPart -> {
             PilihMaterialDialog(
-                availableMaterials = (state.materials as? AsyncData.Success)?.data ?: emptyList(),
+                availableMaterials = (state.materials as? AsyncData.Success<List<MasterMaterialDto>>)?.data ?: emptyList(),
                 onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
                 onSelect = { matId, label -> viewModel.onIntent(MasterDataContract.Intent.TambahMaterialKePart(form.uniqNo, matId, label)) }
             )
         }
         is MasterDataContract.DialogForm.PilihDefectUntukMaterial -> {
             PilihDefectDialog(
-                availableDefects = (state.defects as? AsyncData.Success)?.data ?: emptyList(),
+                availableDefects = (state.defects as? AsyncData.Success<List<MasterDefectDto>>)?.data ?: emptyList(),
                 onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
                 onSelect = { idDefect ->
                     viewModel.onIntent(MasterDataContract.Intent.TambahDefectKeMaterial(form.materialId, idDefect))
@@ -308,11 +324,11 @@ fun MasterDataFormContent(
 
 @Composable
 fun <T> AsyncList(
-    data: AsyncData<T>,
+    data: AsyncData<List<T>>,
     canLoadMore: Boolean,
     loadingMore: Boolean,
     onLoadMore: () -> Unit,
-    content: @Composable (T) -> Unit
+    content: @Composable (List<T>) -> Unit
 ) {
     when (data) {
         is AsyncData.Loading -> AppListSkeleton()
@@ -352,6 +368,15 @@ private fun MasterDataContract.TabMasterData.labelIndonesia(): String {
         MasterDataContract.TabMasterData.MATERIAL -> "Material"
         MasterDataContract.TabMasterData.SUPPLIER -> "Supplier"
         MasterDataContract.TabMasterData.DEFECT -> "Defect"
+    }
+}
+
+private fun MasterDataContract.FilterMasterData.labelIndonesia(): String {
+    return when (this) {
+        MasterDataContract.FilterMasterData.SEMUA -> "Semua"
+        MasterDataContract.FilterMasterData.TANPA_MATERIAL -> "Tanpa Material"
+        MasterDataContract.FilterMasterData.TANPA_DEFECT -> "Tanpa Defect"
+        MasterDataContract.FilterMasterData.NONAKTIF -> "Nonaktif"
     }
 }
 

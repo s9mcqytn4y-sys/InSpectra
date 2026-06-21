@@ -34,8 +34,9 @@ class SupabaseCuttingRepository(
     override suspend fun simpanBatch(input: InputBatchCutting): NetworkResult<String> = withContext(Dispatchers.IO) {
         runNetworkCatching {
             val totalLayer = input.totalLayer
-            val sesi = SesiCuttingDto(
-                tipe_proses = "CUTTING",
+            val ukuran = requireNotNull(input.ukuranCuttingAngka)
+
+            val payload = RpcCuttingBatchPayload(
                 tanggal_pemeriksaan = input.tanggalPemeriksaan,
                 nama_shift = input.namaShift,
                 nama_operator = input.namaOperator.ifBlank { null },
@@ -43,46 +44,29 @@ class SupabaseCuttingRepository(
                 total_diperiksa = totalLayer,
                 total_ok = input.qtyLayerOkAngka,
                 total_ng = input.qtyLayerNgAngka,
-                rasio_ng_global = input.rasioNgLayer
-            )
-            val sesiTersimpan = driver.insertReturning(
-                table = RemoteTable.SesiChecksheet,
-                body = sesi,
-                encode = { json.encodeToString(SesiCuttingDto.serializer(), it) },
-                decode = { json.decodeFromString(ListSerializer(SesiCuttingDto.serializer()), it).first() }
-            )
-            val idSesi = requireNotNull(sesiTersimpan.id) { "Server tidak mengembalikan ID sesi Cutting." }
+                rasio_ng_global = input.rasioNgLayer,
 
-            val batch = BatchCuttingDto(
-                id_sesi = idSesi,
                 material_id = input.materialId,
                 nama_material_snapshot = input.namaMaterial,
                 spec_material_snapshot = input.spesifikasiMaterial.ifBlank { null },
                 no_lot_roll = input.nomorLotRoll.ifBlank { null },
                 no_roll = input.nomorRoll.ifBlank { null },
-                ukuran_cutting_cm = requireNotNull(input.ukuranCuttingAngka),
+                size_cutting_cm = ukuran,
+                ukuran_cutting_cm = ukuran,
                 qty_layer_ok = input.qtyLayerOkAngka,
                 qty_layer_ng = input.qtyLayerNgAngka,
                 waste_panjang_cm = input.wastePanjangAngka,
-                nama_operator = input.namaOperator.ifBlank { null },
-                catatan = input.catatan.ifBlank { null }
-            )
-            val batchTersimpan = driver.insertReturning(
-                table = RemoteTable.CuttingBatch,
-                body = batch,
-                encode = { json.encodeToString(BatchCuttingDto.serializer(), it) },
-                decode = { json.decodeFromString(ListSerializer(BatchCuttingDto.serializer()), it).first() }
-            )
-            val idBatch = requireNotNull(batchTersimpan.id) { "Server tidak mengembalikan ID batch Cutting." }
+                catatan = input.catatan.ifBlank { null },
 
-            if (input.daftarDefect.isNotEmpty()) {
-                val defect = input.daftarDefect.map { it.toDto(idBatch) }
-                driver.upsert(
-                    table = RemoteTable.CuttingDefectDetail,
-                    body = defect,
-                    encode = { json.encodeToString(ListSerializer(DefectDetailCuttingDto.serializer()), it) }
-                )
-            }
+                daftar_defect = input.daftarDefect.map { it.toRpcDto() }
+            )
+
+            val idSesi = driver.rpc(
+                functionName = "rpc_submit_cutting_batch",
+                body = payload,
+                encode = { json.encodeToString(RpcCuttingBatchPayload.serializer(), it) },
+                decode = { it.replace("\"", "") }
+            )
 
             idSesi
         }
@@ -98,9 +82,8 @@ class SupabaseCuttingRepository(
         }
     }
 
-    private fun InputDefectCutting.toDto(idBatch: String): DefectDetailCuttingDto {
-        return DefectDetailCuttingDto(
-            id_cutting_batch = idBatch,
+    private fun InputDefectCutting.toRpcDto(): RpcCuttingDefectDetail {
+        return RpcCuttingDefectDetail(
             id_defect = idDefect,
             nama_defect_snapshot = namaDefect,
             slot_waktu_id = idSlotWaktu,
@@ -111,9 +94,7 @@ class SupabaseCuttingRepository(
 }
 
 @Serializable
-private data class SesiCuttingDto(
-    val id: String? = null,
-    val tipe_proses: String,
+private data class RpcCuttingBatchPayload(
     val tanggal_pemeriksaan: String,
     val nama_shift: String,
     val nama_operator: String? = null,
@@ -121,33 +102,25 @@ private data class SesiCuttingDto(
     val total_diperiksa: Int,
     val total_ok: Int,
     val total_ng: Int,
-    val rasio_ng_global: Double
-)
+    val rasio_ng_global: Double,
 
-@Serializable
-private data class BatchCuttingDto(
-    val id: String? = null,
-    val id_sesi: String,
     val material_id: String,
     val nama_material_snapshot: String,
     val spec_material_snapshot: String? = null,
     val no_lot_roll: String? = null,
     val no_roll: String? = null,
-
-    // transitional: kirim dua-duanya
     val size_cutting_cm: Double,
-    val ukuran_cutting_cm: Double = size_cutting_cm,
-
+    val ukuran_cutting_cm: Double,
     val qty_layer_ok: Int,
     val qty_layer_ng: Int,
     val waste_panjang_cm: Double,
-    val nama_operator: String? = null,
-    val catatan: String? = null
+    val catatan: String? = null,
+
+    val daftar_defect: List<RpcCuttingDefectDetail> = emptyList()
 )
 
 @Serializable
-private data class DefectDetailCuttingDto(
-    val id_cutting_batch: String,
+private data class RpcCuttingDefectDetail(
     val id_defect: String,
     val nama_defect_snapshot: String,
     val slot_waktu_id: String? = null,

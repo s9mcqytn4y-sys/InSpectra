@@ -16,8 +16,16 @@ object MasterDataContract {
         DEFECT
     }
 
+    enum class FilterMasterData {
+        SEMUA,
+        TANPA_MATERIAL,
+        TANPA_DEFECT,
+        NONAKTIF
+    }
+
     data class State(
         val tabAktif: TabMasterData = TabMasterData.PART,
+        val filterAktif: FilterMasterData = FilterMasterData.SEMUA,
         val parts: AsyncData<List<MasterPartDto>> = AsyncData.Idle,
         val materials: AsyncData<List<MasterMaterialDto>> = AsyncData.Idle,
         val suppliers: AsyncData<List<MasterSupplierDto>> = AsyncData.Idle,
@@ -50,6 +58,7 @@ object MasterDataContract {
     sealed interface Intent {
         data object MuatAwal : Intent
         data class PilihTab(val tab: TabMasterData) : Intent
+        data class PilihFilter(val filter: FilterMasterData) : Intent
         data class Cari(val keyword: String) : Intent
 
         data object TambahPart : Intent

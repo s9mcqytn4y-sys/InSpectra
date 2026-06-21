@@ -68,8 +68,12 @@ class MasterDataViewModel(
             MasterDataContract.Intent.MuatAwal -> muatDataTabAktif(reset = true)
             MasterDataContract.Intent.MuatLebihBanyak -> muatDataTabAktif(reset = false)
             is MasterDataContract.Intent.PilihTab -> {
-                _state.update { it.copy(tabAktif = intent.tab, kataKunci = "", canLoadMore = true) }
+                _state.update { it.copy(tabAktif = intent.tab, kataKunci = "", canLoadMore = true, filterAktif = MasterDataContract.FilterMasterData.SEMUA) }
                 keywordFlow.value = ""
+                muatDataTabAktif(reset = true)
+            }
+            is MasterDataContract.Intent.PilihFilter -> {
+                _state.update { it.copy(filterAktif = intent.filter) }
                 muatDataTabAktif(reset = true)
             }
             is MasterDataContract.Intent.Cari -> {
@@ -163,7 +167,7 @@ class MasterDataViewModel(
             is MasterDataContract.Intent.HapusMaterialDariPart -> confirmHapus("Hapus Tautan", "Material tidak lagi tertaut ke part ini.") { hapusMaterialDariPart(intent.uniqNo, intent.relationId) }
             is MasterDataContract.Intent.BukaPilihDefectUntukMaterial -> bukaPilihDefectUntukMaterial(intent.materialId)
             is MasterDataContract.Intent.TambahDefectKeMaterial -> tambahDefectKeMaterial(intent.materialId, intent.idDefect)
-            is MasterDataContract.Intent.HapusDefectDariMaterial -> confirmHapus("Hapus Tautan", "Defect tidak lagi menjadi defect bawaan material ini.") { hapusDefectDariMaterial(intent.materialId, intent.relationId) }
+            is MasterDataContract.Intent.HapusDefectDariMaterial -> confirmHapus("Hapus Tautan", "Defect tidak lagi menjadi defect bawaan material ini.") { hapusDefectDariMaterial(intent.materialId, relationId = intent.relationId) }
 
             MasterDataContract.Intent.TutupDialog -> _state.update { it.copy(dialogForm = null) }
             MasterDataContract.Intent.ClearUserMessage -> _state.update { it.copy(userMessage = null) }
@@ -184,17 +188,29 @@ class MasterDataViewModel(
             else _state.update { it.copy(loadingMore = true) }
 
             val cursorVal = if (reset) null else when (tab) {
-                MasterDataContract.TabMasterData.PART -> (s.parts as? AsyncData.Success)?.data?.lastOrNull()?.uniq_no
-                MasterDataContract.TabMasterData.MATERIAL -> (s.materials as? AsyncData.Success)?.data?.lastOrNull()?.nama_material
-                MasterDataContract.TabMasterData.SUPPLIER -> (s.suppliers as? AsyncData.Success)?.data?.lastOrNull()?.nama_supplier
-                MasterDataContract.TabMasterData.DEFECT -> (s.defects as? AsyncData.Success)?.data?.lastOrNull()?.nama_defect
+                MasterDataContract.TabMasterData.PART -> {
+                    val current = s.parts as? AsyncData.Success<List<MasterPartDto>>
+                    current?.data?.lastOrNull()?.uniq_no
+                }
+                MasterDataContract.TabMasterData.MATERIAL -> {
+                    val current = s.materials as? AsyncData.Success<List<MasterMaterialDto>>
+                    current?.data?.lastOrNull()?.id
+                }
+                MasterDataContract.TabMasterData.SUPPLIER -> {
+                    val current = s.suppliers as? AsyncData.Success<List<MasterSupplierDto>>
+                    current?.data?.lastOrNull()?.id
+                }
+                MasterDataContract.TabMasterData.DEFECT -> {
+                    val current = s.defects as? AsyncData.Success<List<MasterDefectDto>>
+                    current?.data?.lastOrNull()?.id_defect
+                }
             }
 
             val page = when (tab) {
                 MasterDataContract.TabMasterData.PART -> PageRequest(cursorColumn = "uniq_no", cursorValue = cursorVal, searchColumn = "nama_part", searchKeyword = search.ifBlank { null })
-                MasterDataContract.TabMasterData.MATERIAL -> PageRequest(cursorColumn = "nama_material", cursorValue = cursorVal, searchColumn = "nama_material", searchKeyword = search.ifBlank { null })
-                MasterDataContract.TabMasterData.SUPPLIER -> PageRequest(cursorColumn = "nama_supplier", cursorValue = cursorVal, searchColumn = "nama_supplier", searchKeyword = search.ifBlank { null })
-                MasterDataContract.TabMasterData.DEFECT -> PageRequest(cursorColumn = "nama_defect", cursorValue = cursorVal, searchColumn = "nama_defect", searchKeyword = search.ifBlank { null })
+                MasterDataContract.TabMasterData.MATERIAL -> PageRequest(cursorColumn = "id", cursorValue = cursorVal, searchColumn = "nama_material", searchKeyword = search.ifBlank { null })
+                MasterDataContract.TabMasterData.SUPPLIER -> PageRequest(cursorColumn = "id", cursorValue = cursorVal, searchColumn = "nama_supplier", searchKeyword = search.ifBlank { null })
+                MasterDataContract.TabMasterData.DEFECT -> PageRequest(cursorColumn = "id_defect", cursorValue = cursorVal, searchColumn = "nama_defect", searchKeyword = search.ifBlank { null })
             }
 
             val result = when (tab) {
@@ -229,14 +245,25 @@ class MasterDataViewModel(
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
-    private fun appendDataToTab(tab: MasterDataContract.TabMasterData, newData: List<Any>) {
+    private fun appendDataToTab(tab: MasterDataContract.TabMasterData, newData: List<*>) {
         _state.update { s ->
             when (tab) {
-                MasterDataContract.TabMasterData.PART -> s.copy(parts = AsyncData.Success((s.parts as AsyncData.Success<List<MasterPartDto>>).data + (newData as List<MasterPartDto>)))
-                MasterDataContract.TabMasterData.MATERIAL -> s.copy(materials = AsyncData.Success((s.materials as AsyncData.Success<List<MasterMaterialDto>>).data + (newData as List<MasterMaterialDto>)))
-                MasterDataContract.TabMasterData.SUPPLIER -> s.copy(suppliers = AsyncData.Success((s.suppliers as AsyncData.Success<List<MasterSupplierDto>>).data + (newData as List<MasterSupplierDto>)))
-                MasterDataContract.TabMasterData.DEFECT -> s.copy(defects = AsyncData.Success((s.defects as AsyncData.Success<List<MasterDefectDto>>).data + (newData as List<MasterDefectDto>)))
+                MasterDataContract.TabMasterData.PART -> {
+                    val currentParts = (s.parts as? AsyncData.Success<List<MasterPartDto>>)?.data ?: emptyList()
+                    s.copy(parts = AsyncData.Success(currentParts + (newData as List<MasterPartDto>)))
+                }
+                MasterDataContract.TabMasterData.MATERIAL -> {
+                    val currentMaterials = (s.materials as? AsyncData.Success<List<MasterMaterialDto>>)?.data ?: emptyList()
+                    s.copy(materials = AsyncData.Success(currentMaterials + (newData as List<MasterMaterialDto>)))
+                }
+                MasterDataContract.TabMasterData.SUPPLIER -> {
+                    val currentSuppliers = (s.suppliers as? AsyncData.Success<List<MasterSupplierDto>>)?.data ?: emptyList()
+                    s.copy(suppliers = AsyncData.Success(currentSuppliers + (newData as List<MasterSupplierDto>)))
+                }
+                MasterDataContract.TabMasterData.DEFECT -> {
+                    val currentDefects = (s.defects as? AsyncData.Success<List<MasterDefectDto>>)?.data ?: emptyList()
+                    s.copy(defects = AsyncData.Success(currentDefects + (newData as List<MasterDefectDto>)))
+                }
             }
         }
     }
@@ -323,8 +350,8 @@ class MasterDataViewModel(
         buatDialog: () -> MasterDataContract.DialogForm
     ) {
         viewModelScope.launch {
-            val existing = (_state.value.defects as? AsyncData.Success)?.data
-            if (existing != null) {
+            val success = _state.value.defects as? AsyncData.Success<List<MasterDefectDto>>
+            if (success != null) {
                 _state.update { it.copy(dialogForm = buatDialog()) }
                 return@launch
             }

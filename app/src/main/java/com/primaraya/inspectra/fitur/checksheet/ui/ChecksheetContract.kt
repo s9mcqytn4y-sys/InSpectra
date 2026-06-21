@@ -1,7 +1,6 @@
 package com.primaraya.inspectra.fitur.checksheet.ui
 
 import com.primaraya.inspectra.core.common.AsyncData
-import com.primaraya.inspectra.fitur.checksheet.domain.DetailCutting
 import com.primaraya.inspectra.fitur.checksheet.domain.PayloadChecksheet
 import com.primaraya.inspectra.fitur.checksheet.domain.RingkasanPartChecksheet
 import com.primaraya.inspectra.fitur.checksheet.domain.TipeProses
@@ -43,18 +42,6 @@ object ChecksheetContract {
         data class UbahJumlahSlotDefect(val uniqNo: String, val idDefect: String, val slotId: String, val jumlah: Int) : Intent
         data class TambahDefect(val uniqNo: String, val idDefect: String) : Intent
         data class KurangiDefect(val uniqNo: String, val idDefect: String) : Intent
-        
-        /**
-         * Mengubah detail cutting untuk part tertentu.
-         */
-        data class UbahDetailCutting(
-            val uniqNo: String,
-            val lot: String? = null,
-            val roll: String? = null,
-            val size: String? = null,
-            val waste: Double? = null,
-            val pic: String? = null
-        ) : Intent
 
         data object Tinjau : Intent
         data object TutupPreview : Intent

@@ -45,7 +45,6 @@ class ChecksheetMviViewModel(
             is ChecksheetContract.Intent.UbahJumlahSlotDefect -> ubahJumlahSlotDefect(intent)
             is ChecksheetContract.Intent.TambahDefect -> tambahKurangi(intent.uniqNo, intent.idDefect, 1)
             is ChecksheetContract.Intent.KurangiDefect -> tambahKurangi(intent.uniqNo, intent.idDefect, -1)
-            is ChecksheetContract.Intent.UbahDetailCutting -> ubahDetailCutting(intent)
             ChecksheetContract.Intent.Tinjau -> buatPreview()
             ChecksheetContract.Intent.TutupPreview -> _state.update { it.copy(preview = null) }
             ChecksheetContract.Intent.Kirim -> kirim()
@@ -96,8 +95,7 @@ class ChecksheetMviViewModel(
                                     detailSlot = slots.map { SlotNg(it.id, it.label_waktu) }
                                 )
                             },
-                            lokasiGambar = dto.lokasi_gambar,
-                            detailCutting = if (tipeProses == TipeProses.CUTTING) DetailCutting() else null
+                            lokasiGambar = dto.lokasi_gambar
                         )
                     }
 
@@ -158,22 +156,6 @@ class ChecksheetMviViewModel(
         ubahJumlahDefect(uniqNo, idDefect, defect.jumlahNg + delta)
     }
 
-    private fun ubahDetailCutting(intent: ChecksheetContract.Intent.UbahDetailCutting) {
-        _state.update { it.copy(preview = null) }
-        updateDaftarPart(intent.uniqNo) { part ->
-            val current = part.detailCutting ?: DetailCutting()
-            part.copy(
-                detailCutting = current.copy(
-                    noLot = intent.lot ?: current.noLot,
-                    noRoll = intent.roll ?: current.noRoll,
-                    sizeCuttingCm = intent.size ?: current.sizeCuttingCm,
-                    waste = intent.waste ?: current.waste,
-                    pic = intent.pic ?: current.pic
-                )
-            )
-        }
-    }
-
     private fun updateDaftarPart(targetUniqNo: String? = null, transform: (RingkasanPartChecksheet) -> RingkasanPartChecksheet) {
         val current = _state.value.dataChecksheet
         if (current is AsyncData.Success) {
@@ -227,8 +209,7 @@ class ChecksheetMviViewModel(
                     jumlahOk = part.jumlahOk,
                     jumlahNg = part.jumlahNg,
                     rasioNg = part.rasioNgSatuDesimal,
-                    daftarDefectNg = part.daftarDefect.filter { it.jumlahNg > 0 },
-                    detailCutting = part.detailCutting
+                    daftarDefectNg = part.daftarDefect.filter { it.jumlahNg > 0 }
                 )
             }
         )
@@ -250,8 +231,7 @@ class ChecksheetMviViewModel(
                             terbuka = false,
                             daftarDefect = part.daftarDefect.map { defect ->
                                 defect.copy(jumlahNg = 0)
-                            },
-                            detailCutting = if (part.komoditas == TipeProses.CUTTING) DetailCutting() else null
+                            }
                         )
                     }
                     

@@ -92,6 +92,25 @@ class SupabasePgRestDriver : DatabaseDriver {
             throw DatabaseDriverException.fromSupabase(responseText)
         }
     }
+
+    override suspend fun <TBody, TResponse> rpc(
+        functionName: String,
+        body: TBody,
+        encode: (TBody) -> String,
+        decode: (String) -> TResponse
+    ): TResponse {
+        val response = InspectraHttpClient.client.post("$baseUrl/rest/v1/rpc/$functionName") {
+            setBody(encode(body))
+        }
+
+        val responseText = response.bodyAsText()
+
+        if (!response.status.isSuccess()) {
+            throw DatabaseDriverException.fromSupabase(responseText)
+        }
+
+        return decode(responseText)
+    }
 }
 
 /**

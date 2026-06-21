@@ -178,9 +178,6 @@ fun ChecksheetScreen(
                                     },
                                     onSlotDefectUbah = { idDefect, slotId, qty ->
                                         viewModel.onIntent(ChecksheetContract.Intent.UbahJumlahSlotDefect(part.uniqNo, idDefect, slotId, qty))
-                                    },
-                                    onDetailCuttingUbah = { lot, roll, size, waste, pic ->
-                                        viewModel.onIntent(ChecksheetContract.Intent.UbahDetailCutting(part.uniqNo, lot, roll, size, waste, pic))
                                     }
                                 )
                             }
@@ -210,8 +207,7 @@ fun KartuPartChecksheetRingkas(
     onJumlahDiperiksaUbah: (Int) -> Unit,
     onDefectTambahKurang: (String, Boolean) -> Unit,
     onDefectInputManual: (String, Int) -> Unit,
-    onSlotDefectUbah: (String, String, Int) -> Unit,
-    onDetailCuttingUbah: (String?, String?, String?, Double?, String?) -> Unit
+    onSlotDefectUbah: (String, String, Int) -> Unit
 ) {
     ElevatedCard(
         modifier = Modifier
@@ -302,53 +298,6 @@ fun KartuPartChecksheetRingkas(
                     shape = RoundedCornerShape(16.dp),
                     singleLine = true
                 )
-
-                if (tipeProses == TipeProses.CUTTING) {
-                    Spacer(Modifier.height(16.dp))
-                    Text("Detail Cutting", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = part.detailCutting?.noLot ?: "",
-                                onValueChange = { onDetailCuttingUbah(it, null, null, null, null) },
-                                label = { Text("No. Lot") },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true
-                            )
-                            OutlinedTextField(
-                                value = part.detailCutting?.noRoll ?: "",
-                                onValueChange = { onDetailCuttingUbah(null, it, null, null, null) },
-                                label = { Text("No. Roll") },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = part.detailCutting?.sizeCuttingCm ?: "",
-                                onValueChange = { onDetailCuttingUbah(null, null, it, null, null) },
-                                label = { Text("Ukuran (cm)") },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true
-                            )
-                            OutlinedTextField(
-                                value = part.detailCutting?.waste?.toString() ?: "",
-                                onValueChange = { onDetailCuttingUbah(null, null, null, it.toDoubleOrNull(), null) },
-                                label = { Text("Sisa Material") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.weight(1f),
-                                singleLine = true
-                            )
-                        }
-                        OutlinedTextField(
-                            value = part.detailCutting?.pic ?: "",
-                            onValueChange = { onDetailCuttingUbah(null, null, null, null, it) },
-                            label = { Text("Operator") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                    }
-                }
 
                 Spacer(Modifier.height(16.dp))
 
