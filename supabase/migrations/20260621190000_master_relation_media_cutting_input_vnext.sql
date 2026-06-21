@@ -351,6 +351,27 @@ create table if not exists public.m_cutting_size_reference (
     diperbarui_pada timestamptz not null default now()
 );
 
+alter table public.m_cutting_size_reference
+    add column if not exists material_spec_id uuid references public.m_material_spec(id) on delete set null,
+    add column if not exists size_cutting_cm numeric(12, 3),
+    add column if not exists ukuran_cutting_cm numeric(12, 3),
+    add column if not exists lebar_roll_cm numeric(12, 3),
+    add column if not exists panjang_roll_cm numeric(14, 3),
+    add column if not exists berat_gsm numeric(12, 3),
+    add column if not exists tebal_mm numeric(12, 3),
+    add column if not exists label_ukuran text,
+    add column if not exists is_default boolean not null default false,
+    add column if not exists pemakaian_count int not null default 0,
+    add column if not exists sumber_data text not null default 'MANUAL',
+    add column if not exists diperbarui_pada timestamptz not null default now();
+
+update public.m_cutting_size_reference
+set
+    size_cutting_cm = coalesce(size_cutting_cm, ukuran_cutting_cm),
+    ukuran_cutting_cm = coalesce(ukuran_cutting_cm, size_cutting_cm)
+where size_cutting_cm is null
+   or ukuran_cutting_cm is null;
+
 -- Backfill roll dimension dari m_material_spec.
 insert into public.m_cutting_size_reference (
     material_id,
@@ -559,6 +580,15 @@ on conflict (kode) do update set
 -- 10. VIEWS FOR UI
 -- =========================================================
 
+drop view if exists public.v_app_bootstrap cascade;
+drop view if exists public.v_cutting_daily_summary cascade;
+drop view if exists public.v_cutting_material_option cascade;
+drop view if exists public.v_checksheet_part_defect cascade;
+drop view if exists public.v_checksheet_part_picker cascade;
+drop view if exists public.v_part_detail_komplet cascade;
+drop view if exists public.v_material_detail_komplet cascade;
+drop view if exists public.v_part_image_aktif cascade;
+
 create or replace view public.v_part_image_aktif as
 select
     p.uniq_no,
@@ -585,7 +615,7 @@ select
     m.nama_normalisasi,
     m.jenis_material,
     m.kategori_material,
-    coalesce(m.satuan, m.default_satuan, ms.satuan, 'UNKNOWN') as satuan,
+    coalesce(m.satuan::text, m.default_satuan, ms.satuan_qty, 'UNKNOWN') as satuan,
     m.spec,
     m.spec_ringkas,
     ms.id as material_spec_id,
@@ -647,7 +677,7 @@ group by
     m.spec,
     m.spec_ringkas,
     ms.id,
-    ms.satuan,
+    ms.satuan_qty,
     ms.spec_asli,
     ms.lebar_cm,
     ms.lebar_value,
@@ -872,9 +902,10 @@ select
     m.nama_material,
     coalesce(m.spec_ringkas, m.spec, '') as spec_ringkas,
     coalesce(m.satuan::text, m.default_satuan, 'UNKNOWN') as satuan,
-    coalesce(
-        jsonb_agg(
-            distinct jsonb_build_object(
+    (
+        select coalesce(jsonb_agg(u_obj order by (u_obj->>'urutan')::int, (u_obj->>'size_cutting_cm')::numeric), '[]'::jsonb)
+        from (
+            select jsonb_build_object(
                 'id', ukuran.id,
                 'ukuran_cutting_cm', ukuran.size_cutting_cm,
                 'size_cutting_cm', ukuran.size_cutting_cm,
@@ -885,42 +916,33 @@ select
                 'label_ukuran', ukuran.label_ukuran,
                 'is_default', ukuran.is_default,
                 'urutan', ukuran.urutan
-            )
-            order by ukuran.urutan, ukuran.size_cutting_cm
-        ) filter (where ukuran.id is not null and ukuran.size_cutting_cm is not null),
-        '[]'::jsonb
+            ) as u_obj
+            from public.m_cutting_size_reference ukuran
+            where ukuran.material_id = m.id
+              and ukuran.aktif = true
+              and ukuran.size_cutting_cm is not null
+        ) sub
     ) as daftar_ukuran_cutting,
-    coalesce(
-        jsonb_agg(
-            distinct jsonb_build_object(
+    (
+        select coalesce(jsonb_agg(d_obj order by (d_obj->>'urutan')::int, d_obj->>'nama_defect'), '[]'::jsonb)
+        from (
+            select jsonb_build_object(
                 'id_defect', d.id_defect,
                 'nama_defect', d.nama_defect,
                 'satuan_input', coalesce(md.satuan_input, d.satuan_input),
                 'metode_pengukuran', coalesce(md.metode_pengukuran, d.metode_pengukuran),
                 'urutan', md.urutan
-            )
-        ) filter (where d.id_defect is not null),
-        '[]'::jsonb
+            ) as d_obj
+            from public.m_material_defect md
+            join public.m_defect d on d.id_defect = md.id_defect
+            where md.material_id = m.id
+              and md.aktif = true
+              and d.aktif = true
+              and md.proses_scope in ('ALL','CUTTING')
+        ) sub
     ) as daftar_defect_cutting
 from public.m_material m
-left join public.m_cutting_size_reference ukuran
-    on ukuran.material_id = m.id
-   and ukuran.aktif = true
-left join public.m_material_defect md
-    on md.material_id = m.id
-   and md.aktif = true
-   and md.proses_scope in ('ALL','CUTTING')
-left join public.m_defect d
-    on d.id_defect = md.id_defect
-   and d.aktif = true
-where m.aktif = true
-group by
-    m.id,
-    m.nama_material,
-    m.spec_ringkas,
-    m.spec,
-    m.satuan,
-    m.default_satuan;
+where m.aktif = true;
 
 create or replace view public.v_cutting_daily_summary as
 with batch_normalized as (
