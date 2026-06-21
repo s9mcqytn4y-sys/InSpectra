@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit
  */
 object InspectraHttpClient {
 
-    private val json = Json {
+    val json = Json {
         ignoreUnknownKeys = true
         explicitNulls = false
         encodeDefaults = true
@@ -89,6 +89,10 @@ object InspectraHttpClient {
                 install(Logging) {
                     logger = SanitizedKtorLogger
                     level = LogLevel.INFO
+                    sanitizeHeader { header ->
+                        header.equals(HttpHeaders.Authorization, ignoreCase = true) ||
+                            header.equals("apikey", ignoreCase = true)
+                    }
                 }
             }
         }
@@ -104,6 +108,7 @@ object SanitizedKtorLogger : io.ktor.client.plugins.logging.Logger {
         val sanitized = message
             .replace(Regex("Bearer\\s+[A-Za-z0-9._\\-]+"), "Bearer ***")
             .replace(Regex("apikey=[A-Za-z0-9._\\-]+"), "apikey=***")
+            .replace(Regex("apikey:.*", RegexOption.IGNORE_CASE), "apikey: ***")
             .replace(Regex("Authorization:.*"), "Authorization: ***")
 
         android.util.Log.d("InspectraNetwork", sanitized)

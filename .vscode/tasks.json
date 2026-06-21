@@ -1,0 +1,44 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Gradle: test",
+      "type": "shell",
+      "command": ".\\gradlew test --stacktrace",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle: build",
+      "type": "shell",
+      "command": ".\\gradlew build --stacktrace --warning-mode all",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: daftar perangkat ADB",
+      "type": "shell",
+      "command": "adb devices -l",
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: pasang debug ke tablet",
+      "type": "shell",
+      "command": ".\\gradlew installDebug --stacktrace",
+      "dependsOn": "Android: daftar perangkat ADB",
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Logcat InSpectra",
+      "type": "shell",
+      "command": "adb logcat | Select-String \"com.primaraya.inspectra|AndroidRuntime|FATAL EXCEPTION|InspectraNetwork\"",
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: bersihkan Logcat",
+      "type": "shell",
+      "command": "adb logcat -c",
+      "problemMatcher": []
+    }
+  ]
+}

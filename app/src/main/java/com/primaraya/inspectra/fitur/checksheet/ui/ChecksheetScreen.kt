@@ -18,21 +18,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.app.Application
+import androidx.compose.ui.platform.LocalContext
 import com.primaraya.inspectra.core.common.AsyncData
 import com.primaraya.inspectra.core.ui.component.AppEmptyState
 import com.primaraya.inspectra.core.ui.component.AppFriendlyDialog
 import com.primaraya.inspectra.core.ui.component.AppListSkeleton
-import com.primaraya.inspectra.core.ui.component.AppLoading
 import com.primaraya.inspectra.core.ui.component.PreviewChecksheetDialog
 import com.primaraya.inspectra.core.ui.component.RingkasanAtas
+import com.primaraya.inspectra.core.ui.viewmodel.pabrikViewModelAplikasi
 import com.primaraya.inspectra.fitur.checksheet.domain.InputDefect
 import com.primaraya.inspectra.fitur.checksheet.domain.KategoriDefect
-import com.primaraya.inspectra.fitur.checksheet.domain.PayloadChecksheet
 import com.primaraya.inspectra.fitur.checksheet.domain.RingkasanPartChecksheet
 import com.primaraya.inspectra.fitur.checksheet.domain.TipeProses
 
@@ -41,7 +41,12 @@ import com.primaraya.inspectra.fitur.checksheet.domain.TipeProses
 fun ChecksheetScreen(
     tipeProses: TipeProses,
     onBackClick: () -> Unit,
-    viewModel: ChecksheetMviViewModel = viewModel()
+    viewModel: ChecksheetMviViewModel = viewModel(
+        factory = pabrikViewModelAplikasi(
+            application = LocalContext.current.applicationContext as Application,
+            pembuat = { ChecksheetMviViewModel(it) }
+        )
+    )
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -322,14 +327,14 @@ fun KartuPartChecksheetRingkas(
                             OutlinedTextField(
                                 value = part.detailCutting?.sizeCuttingCm ?: "",
                                 onValueChange = { onDetailCuttingUbah(null, null, it, null, null) },
-                                label = { Text("Size (cm)") },
+                                label = { Text("Ukuran (cm)") },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true
                             )
                             OutlinedTextField(
                                 value = part.detailCutting?.waste?.toString() ?: "",
                                 onValueChange = { onDetailCuttingUbah(null, null, null, it.toDoubleOrNull(), null) },
-                                label = { Text("Waste") },
+                                label = { Text("Sisa Material") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.weight(1f),
                                 singleLine = true
@@ -338,7 +343,7 @@ fun KartuPartChecksheetRingkas(
                         OutlinedTextField(
                             value = part.detailCutting?.pic ?: "",
                             onValueChange = { onDetailCuttingUbah(null, null, null, null, it) },
-                            label = { Text("PIC / Operator") },
+                            label = { Text("Operator") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true
                         )

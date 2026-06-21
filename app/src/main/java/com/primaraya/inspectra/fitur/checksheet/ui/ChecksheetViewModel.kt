@@ -102,7 +102,7 @@ class ChecksheetMviViewModel(
                     }
 
                     _state.update {
-                        it.copy(dataChecksheet = if (daftar.isEmpty()) AsyncData.Empty("Tidak ada data", "Silakan periksa Master Data.") else AsyncData.Success(daftar))
+                        it.copy(dataChecksheet = if (daftar.isEmpty()) AsyncData.Empty("Belum ada data", "Silakan periksa Data Induk.") else AsyncData.Success(daftar))
                     }
                 }
 

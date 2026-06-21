@@ -3,6 +3,7 @@ package com.primaraya.inspectra
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -22,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.primaraya.inspectra.core.ui.component.AppResponsiveContent
 import com.primaraya.inspectra.core.ui.theme.InSpectraTheme
 import com.primaraya.inspectra.fitur.checksheet.domain.TipeProses
@@ -42,6 +42,7 @@ enum class NavState {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
             var currentScreen by rememberSaveable { mutableStateOf(NavState.SPLASH) }
             var prosesTerpilih by rememberSaveable { mutableStateOf(TipeProses.PRESS) }
@@ -49,9 +50,9 @@ class MainActivity : ComponentActivity() {
             InSpectraTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF8FAFC)) {
                     when (currentScreen) {
-                        NavState.SPLASH -> SplashScreen(onHealthCheckPassed = {
+                        NavState.SPLASH -> SplashScreen {
                             currentScreen = NavState.DASHBOARD
-                        })
+                        }
                         NavState.DASHBOARD -> MainDashboard(
                             onChecksheetClick = {
                                 currentScreen = NavState.MENU_CHECKSHEET
@@ -92,7 +93,7 @@ fun MainDashboard(
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Text(
-                text = "InSpectra Workspace",
+                text = "Workspace QC InSpectra",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Black,
                 color = Color(0xFF16365F)
@@ -101,15 +102,15 @@ fun MainDashboard(
             if (isTablet) {
                 Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                     DashboardModuleCard(
-                        title = "E-Checksheet",
+                        title = "Lembar Periksa",
                         subtitle = "Inspeksi harian Press, Sewing, dan Cutting",
                         icon = Icons.AutoMirrored.Filled.Assignment,
                         onClick = onChecksheetClick,
                         modifier = Modifier.weight(1f)
                     )
                     DashboardModuleCard(
-                        title = "Master Data",
-                        subtitle = "Part, material, supplier, spec, dan defect",
+                        title = "Data Induk",
+                        subtitle = "Part, material, supplier, spesifikasi, dan defect",
                         icon = Icons.Default.Dataset,
                         onClick = onMasterDataClick,
                         modifier = Modifier.weight(1f)
@@ -117,14 +118,14 @@ fun MainDashboard(
                 }
             } else {
                 DashboardModuleCard(
-                    title = "E-Checksheet",
+                    title = "Lembar Periksa",
                     subtitle = "Inspeksi harian Press, Sewing, dan Cutting",
                     icon = Icons.AutoMirrored.Filled.Assignment,
                     onClick = onChecksheetClick
                 )
                 DashboardModuleCard(
-                    title = "Master Data",
-                    subtitle = "Part, material, supplier, spec, dan defect",
+                    title = "Data Induk",
+                    subtitle = "Part, material, supplier, spesifikasi, dan defect",
                     icon = Icons.Default.Dataset,
                     onClick = onMasterDataClick
                 )
@@ -258,7 +259,7 @@ private fun ProcessCard(
     val subtitle = when (proses) {
         TipeProses.PRESS -> "Part press dan carpet"
         TipeProses.SEWING -> "Felt, protector, seat cover"
-        TipeProses.CUTTING -> "Material check dan hasil cutting"
+        TipeProses.CUTTING -> "Pemeriksaan material dan hasil cutting"
         else -> ""
     }
 

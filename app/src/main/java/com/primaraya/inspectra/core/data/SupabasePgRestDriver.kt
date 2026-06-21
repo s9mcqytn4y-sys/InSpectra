@@ -20,12 +20,7 @@ class SupabasePgRestDriver : DatabaseDriver {
         .removeSurrounding("\"")
         .trimEnd('/')
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        explicitNulls = false
-        encodeDefaults = true
-        isLenient = true
-    }
+    private val json = InspectraHttpClient.json
 
     override suspend fun <T> getList(
         table: RemoteTable,

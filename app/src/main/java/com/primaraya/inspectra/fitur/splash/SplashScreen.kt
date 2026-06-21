@@ -17,7 +17,7 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(onHealthCheckPassed: () -> Unit) {
-    var statusText by remember { mutableStateOf("Booting InSpectra Core Modules...") }
+    var statusText by remember { mutableStateOf("Menyiapkan modul inti InSpectra...") }
     var progress by remember { mutableStateOf(0.1f) }
     var errorOccurred by remember { mutableStateOf<String?>(null) }
     var retryTrigger by remember { mutableStateOf(0) }
@@ -27,22 +27,22 @@ fun SplashScreen(onHealthCheckPassed: () -> Unit) {
     LaunchedEffect(retryTrigger) {
         errorOccurred = null
         progress = 0.1f
-        statusText = "Initializing secure network engine..."
+        statusText = "Menyiapkan koneksi jaringan aman..."
         delay(500)
         
         progress = 0.4f
-        statusText = "Validating Supabase connection..."
+        statusText = "Memvalidasi koneksi Supabase..."
         
         when (val result = repository.healthCheck()) {
             is NetworkResult.Success -> {
                 progress = 1.0f
-                statusText = "All systems nominal. Sync active."
+                statusText = "Sistem siap. Sinkronisasi aktif."
                 delay(600)
                 onHealthCheckPassed()
             }
             is NetworkResult.Error -> {
                 errorOccurred = result.message
-                statusText = "Connection failed."
+                statusText = "Koneksi gagal."
             }
             else -> Unit
         }

@@ -1,6 +1,6 @@
 package com.primaraya.inspectra.fitur.masterdata.ui
 
-import androidx.compose.animation.AnimatedVisibility
+import android.app.Application
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -10,7 +10,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -20,21 +19,26 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.primaraya.inspectra.core.common.AsyncData
-import com.primaraya.inspectra.core.common.Validator
 import com.primaraya.inspectra.core.ui.component.*
+import com.primaraya.inspectra.core.ui.viewmodel.pabrikViewModelAplikasi
 import com.primaraya.inspectra.fitur.masterdata.domain.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MasterDataScreen(
     onBackClick: () -> Unit,
-    viewModel: MasterDataViewModel = viewModel()
+    viewModel: MasterDataViewModel = viewModel(
+        factory = pabrikViewModelAplikasi(
+            application = LocalContext.current.applicationContext as Application,
+            pembuat = { MasterDataViewModel(it) }
+        )
+    )
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -55,7 +59,7 @@ fun MasterDataScreen(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
-                    title = { Text("Manajemen Master Data", fontWeight = FontWeight.Black) },
+                    title = { Text("Data Induk", fontWeight = FontWeight.Black) },
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
@@ -103,12 +107,12 @@ fun MasterDataScreen(
                             }
                         }
                     ) {
-                        MasterDataContract.TabMasterData.values().forEach { tab ->
+                        MasterDataContract.TabMasterData.entries.forEach { tab ->
                             Tab(
                                 selected = state.tabAktif == tab,
                                 onClick = { viewModel.onIntent(MasterDataContract.Intent.PilihTab(tab)) }
                             ) {
-                                Text(tab.name, modifier = Modifier.padding(16.dp))
+                                Text(tab.labelIndonesia(), modifier = Modifier.padding(16.dp))
                             }
                         }
                     }
@@ -277,12 +281,25 @@ fun <T> AsyncList(
     when (data) {
         is AsyncData.Loading -> AppListSkeleton()
         is AsyncData.Success -> {
-            Box {
+            Box(modifier = Modifier.fillMaxSize()) {
                 content(data.data)
                 
-                if (canLoadMore && !loadingMore) {
-                    LaunchedEffect(data.data) {
+                if (loadingMore) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(20.dp)
+                    )
+                } else if (canLoadMore) {
+                    FilledTonalButton(
+                        onClick = {
                         onLoadMore()
+                        },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(20.dp)
+                    ) {
+                        Text("Muat data berikutnya")
                     }
                 }
             }
@@ -290,6 +307,15 @@ fun <T> AsyncList(
         is AsyncData.Empty -> AppEmptyState(title = data.title, message = data.message)
         is AsyncData.Error -> AppEmptyState(title = data.title, message = data.message)
         else -> Unit
+    }
+}
+
+private fun MasterDataContract.TabMasterData.labelIndonesia(): String {
+    return when (this) {
+        MasterDataContract.TabMasterData.PART -> "Part"
+        MasterDataContract.TabMasterData.MATERIAL -> "Material"
+        MasterDataContract.TabMasterData.SUPPLIER -> "Supplier"
+        MasterDataContract.TabMasterData.DEFECT -> "Defect"
     }
 }
 
@@ -322,8 +348,8 @@ fun PartList(
                             Text(part.uniq_no, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
                             Text(part.nama_part, style = MaterialTheme.typography.bodyLarge)
                         }
-                        IconButton(onClick = { onEdit(part) }) { Icon(Icons.Default.Edit, contentDescription = "Edit") }
-                        IconButton(onClick = { onDelete(part) }) { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red) }
+                        IconButton(onClick = { onEdit(part) }) { Icon(Icons.Default.Edit, contentDescription = "Ubah part") }
+                        IconButton(onClick = { onDelete(part) }) { Icon(Icons.Default.Delete, contentDescription = "Hapus part", tint = Color.Red) }
                         Icon(
                             imageVector = if (detail.expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                             contentDescription = null,
@@ -340,11 +366,11 @@ fun PartList(
                             
                             Row(Modifier.fillMaxWidth()) {
                                 Column(Modifier.weight(1f)) {
-                                    Text("Defect Template", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                    Text("Template Defect", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                                     AsyncRelationList(detail.defects) { rels ->
                                         rels.forEach { rel ->
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text("• ${rel.id_defect}", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                                                Text("- ${rel.id_defect}", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
                                                 IconButton(onClick = { onRemoveDefect(part.uniq_no, rel.id ?: "") }) {
                                                     Icon(Icons.Default.LinkOff, contentDescription = "Hapus", tint = Color.LightGray, modifier = Modifier.size(16.dp))
                                                 }
@@ -359,7 +385,7 @@ fun PartList(
                                 }
                                 Spacer(Modifier.width(16.dp))
                                 Column(Modifier.weight(1f)) {
-                                    Text("Material Comp.", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                    Text("Komposisi Material", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                                     AsyncRelationList(detail.materials) { rels ->
                                         rels.forEach { rel ->
                                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -393,7 +419,7 @@ fun <T> AsyncRelationList(data: AsyncData<T>, content: @Composable (T) -> Unit) 
     when (data) {
         is AsyncData.Loading -> LinearProgressIndicator(Modifier.fillMaxWidth())
         is AsyncData.Success -> content(data.data)
-        is AsyncData.Error -> Text("Error: ${data.message}", color = Color.Red, style = MaterialTheme.typography.bodySmall)
+        is AsyncData.Error -> Text("Gagal: ${data.message}", color = Color.Red, style = MaterialTheme.typography.bodySmall)
         else -> Unit
     }
 }
@@ -413,8 +439,8 @@ fun SupplierList(
                             Text(supplier.nama_supplier, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text("Kode: ${supplier.kode_supplier ?: "-"}", style = MaterialTheme.typography.bodyMedium)
                         }
-                        IconButton(onClick = { onEdit(supplier) }) { Icon(Icons.Default.Edit, contentDescription = "Edit") }
-                        IconButton(onClick = { onDelete(supplier) }) { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red) }
+                        IconButton(onClick = { onEdit(supplier) }) { Icon(Icons.Default.Edit, contentDescription = "Ubah supplier") }
+                        IconButton(onClick = { onDelete(supplier) }) { Icon(Icons.Default.Delete, contentDescription = "Hapus supplier", tint = Color.Red) }
                     }
                     Text("Kategori: ${supplier.kategori ?: "-"}", style = MaterialTheme.typography.bodySmall)
                 }
@@ -438,10 +464,10 @@ fun MaterialList(
                             Text(material.nama_material, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text("Supplier: ${material.supplier ?: "-"}", style = MaterialTheme.typography.bodyMedium)
                         }
-                        IconButton(onClick = { onEdit(material) }) { Icon(Icons.Default.Edit, contentDescription = "Edit") }
-                        IconButton(onClick = { onDelete(material) }) { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red) }
+                        IconButton(onClick = { onEdit(material) }) { Icon(Icons.Default.Edit, contentDescription = "Ubah material") }
+                        IconButton(onClick = { onDelete(material) }) { Icon(Icons.Default.Delete, contentDescription = "Hapus material", tint = Color.Red) }
                     }
-                    Text("Spec: ${material.spec ?: "-"}", style = MaterialTheme.typography.bodySmall)
+                    Text("Spesifikasi: ${material.spec ?: "-"}", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -463,8 +489,8 @@ fun DefectList(
                         Text("ID: ${defect.id_defect}", style = MaterialTheme.typography.bodySmall)
                     }
                     SuggestionChip(onClick = {}, label = { Text(defect.kategori) })
-                    IconButton(onClick = { onEdit(defect) }) { Icon(Icons.Default.Edit, contentDescription = "Edit") }
-                    IconButton(onClick = { onDelete(defect) }) { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red) }
+                    IconButton(onClick = { onEdit(defect) }) { Icon(Icons.Default.Edit, contentDescription = "Ubah defect") }
+                    IconButton(onClick = { onDelete(defect) }) { Icon(Icons.Default.Delete, contentDescription = "Hapus defect", tint = Color.Red) }
                 }
             }
         }
@@ -510,7 +536,7 @@ fun PilihMaterialDialog(
         title = { Text("Pilih Material") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = label, onValueChange = { label = it }, label = { Text("Label (misal: Inner Layer)") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = label, onValueChange = { label = it }, label = { Text("Label, contoh: Inner Layer") }, modifier = Modifier.fillMaxWidth())
                 HorizontalDivider()
                 LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
                     items(availableMaterials) { mat ->
@@ -564,7 +590,7 @@ fun PartFormSheet(
         OutlinedTextField(
             value = initialData.partNo,
             onValueChange = { onUpdate(initialData.copy(partNo = it.uppercase())) },
-            label = { Text("Part Number") },
+            label = { Text("Nomor Part") },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -671,14 +697,14 @@ fun MaterialFormSheet(
         OutlinedTextField(
             value = initialData.supplier,
             onValueChange = { onUpdate(initialData.copy(supplier = it.uppercase())) },
-            label = { Text("Supplier (Manual/Info)") },
+            label = { Text("Supplier") },
             modifier = Modifier.fillMaxWidth()
         )
 
         OutlinedTextField(
             value = initialData.spec,
             onValueChange = { onUpdate(initialData.copy(spec = it.uppercase())) },
-            label = { Text("Spec / Deskripsi") },
+            label = { Text("Spesifikasi / Deskripsi") },
             modifier = Modifier.fillMaxWidth()
         )
 

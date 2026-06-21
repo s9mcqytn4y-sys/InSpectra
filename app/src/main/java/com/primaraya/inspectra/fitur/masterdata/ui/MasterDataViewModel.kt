@@ -15,7 +15,7 @@ import com.primaraya.inspectra.fitur.masterdata.domain.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.coroutines.FlowPreview
 
 class MasterDataViewModel(
     application: Application,
@@ -35,12 +35,7 @@ class MasterDataViewModel(
 
     init {
         onIntent(MasterDataContract.Intent.MuatAwal)
-        
-        keywordFlow
-            .debounce(350)
-            .distinctUntilChanged()
-            .onEach { muatDataTabAktif(reset = true) }
-            .launchIn(viewModelScope)
+        setupSearchDebounce()
 
         viewModelScope.launch {
             combine(
@@ -57,6 +52,15 @@ class MasterDataViewModel(
                 ) }
             }.collect()
         }
+    }
+
+    @OptIn(FlowPreview::class)
+    private fun setupSearchDebounce() {
+        keywordFlow
+            .debounce(350)
+            .distinctUntilChanged()
+            .onEach { muatDataTabAktif(reset = true) }
+            .launchIn(viewModelScope)
     }
 
     fun onIntent(intent: MasterDataContract.Intent) {
@@ -205,7 +209,7 @@ class MasterDataViewModel(
                     _state.update { it.copy(canLoadMore = canMore) }
 
                     if (reset) {
-                        if (newData.isEmpty()) updateTabState(tab, AsyncData.Empty("Data Kosong", "Belum ada data."))
+                        if (newData.isEmpty()) updateTabState(tab, AsyncData.Empty("Belum ada data", "Data aktif belum tersedia."))
                         else updateTabState(tab, AsyncData.Success(newData))
                     } else {
                         appendDataToTab(tab, newData)
@@ -233,6 +237,7 @@ class MasterDataViewModel(
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun updateTabState(tab: MasterDataContract.TabMasterData, async: AsyncData<*>) {
         _state.update {
             when (tab) {
@@ -258,8 +263,8 @@ class MasterDataViewModel(
             val mRes = repository.getPartMaterials(uniqNo)
             updatePartRelation(uniqNo) { s ->
                 s.copy(
-                    defects = if (dRes is NetworkResult.Success) AsyncData.Success(dRes.data) else AsyncData.Error("Error", (dRes as? NetworkResult.Error)?.message ?: ""),
-                    materials = if (mRes is NetworkResult.Success) AsyncData.Success(mRes.data) else AsyncData.Error("Error", (mRes as? NetworkResult.Error)?.message ?: "")
+                    defects = if (dRes is NetworkResult.Success) AsyncData.Success(dRes.data) else AsyncData.Error("Gagal", (dRes as? NetworkResult.Error)?.message ?: ""),
+                    materials = if (mRes is NetworkResult.Success) AsyncData.Success(mRes.data) else AsyncData.Error("Gagal", (mRes as? NetworkResult.Error)?.message ?: "")
                 )
             }
         }

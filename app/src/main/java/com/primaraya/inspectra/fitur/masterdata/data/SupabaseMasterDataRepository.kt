@@ -4,33 +4,27 @@ import com.primaraya.inspectra.core.data.DatabaseDriver
 import com.primaraya.inspectra.core.data.PageRequest
 import com.primaraya.inspectra.core.data.RemoteTable
 import com.primaraya.inspectra.core.data.SupabasePgRestDriver
+import com.primaraya.inspectra.core.network.InspectraHttpClient
 import com.primaraya.inspectra.core.network.NetworkResult
 import com.primaraya.inspectra.core.network.runNetworkCatching
 import com.primaraya.inspectra.fitur.masterdata.domain.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.json.Json
 
 class SupabaseMasterDataRepository(
     private val driver: DatabaseDriver = SupabasePgRestDriver()
 ) : MasterDataRepository {
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        explicitNulls = false
-        encodeDefaults = true
-        isLenient = true
-    }
+    private val json = InspectraHttpClient.json
 
     override suspend fun healthCheck(): NetworkResult<Unit> = withContext(Dispatchers.IO) {
         runNetworkCatching {
             driver.getList(
                 table = RemoteTable.Part,
                 query = "select=id&limit=1",
-                decode = { json.decodeFromString(ListSerializer(MasterPartDto.serializer()), it) }
+                decode = { /* No-op: just verify connection and valid response */ }
             )
-            Unit
         }
     }
 

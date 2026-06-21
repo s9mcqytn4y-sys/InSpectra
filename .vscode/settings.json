@@ -1,0 +1,18 @@
+{
+  "files.exclude": {
+    "**/.gradle": true,
+    "**/.kotlin": true,
+    "**/build": true,
+    "**/.idea/workspace.xml": true
+  },
+  "search.exclude": {
+    "**/.gradle": true,
+    "**/.kotlin": true,
+    "**/build": true,
+    "**/.idea/caches": true
+  },
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.compile.nullAnalysis.mode": "automatic",
+  "kotlin.languageServer.enabled": true,
+  "terminal.integrated.defaultProfile.windows": "PowerShell"
+}
