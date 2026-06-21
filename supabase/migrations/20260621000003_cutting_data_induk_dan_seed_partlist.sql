@@ -81,17 +81,14 @@ create table if not exists public.m_material (
 );
 
 alter table public.m_material
+    add column if not exists spec text,
+    add column if not exists satuan text,
     add column if not exists kode_material text unique,
     add column if not exists supplier_id uuid references public.m_supplier(id) on delete restrict,
     add column if not exists supplier_manual text,
     add column if not exists jenis_material text,
-    add column if not exists spec_ringkas text;
-
-alter table public.m_material
+    add column if not exists spec_ringkas text,
     add column if not exists nama_normalisasi text;
-
--- Hapus update manual karena jika nama_normalisasi adalah generated column,
--- PostgreSQL akan mengisinya secara otomatis.
 
 -- ---------------------------------------------------------
 -- Compatibility columns: m_material_spec
@@ -274,8 +271,6 @@ alter table public.e_defect_checksheet
     add column if not exists dibuat_pada timestamptz not null default now(),
     add column if not exists diperbarui_pada timestamptz not null default now();
 
--- Hapus update yang merujuk ke nama_defect jika kolom tersebut tidak ada di table e_defect_checksheet.
--- Snapshot akan diisi dari id_defect sebagai fallback teraman.
 update public.e_defect_checksheet
 set nama_defect_snapshot = coalesce(nama_defect_snapshot, id_defect)
 where nama_defect_snapshot is null;
@@ -300,7 +295,7 @@ create table if not exists public.e_cutting_batch (
     tanggal date not null default current_date,
     no_lot_roll text,
     no_roll text,
-    size_cutting_cm numeric(12, 3) not null check (size_cutting_cm > 0),
+    size_cutting_cm numeric(12, 3) check (size_cutting_cm > 0),
     roll_width_cm_snapshot numeric(12, 3),
     roll_length_cm_snapshot numeric(12, 3),
     qty_layer_ok int not null default 0 check (qty_layer_ok >= 0),
@@ -313,25 +308,15 @@ create table if not exists public.e_cutting_batch (
 );
 
 alter table public.e_cutting_batch
-    add column if not exists total_layer int generated always as (qty_layer_ok + qty_layer_ng) stored,
-    add column if not exists output_ok_panjang_cm numeric(14, 3) generated always as (size_cutting_cm * qty_layer_ok) stored,
-    add column if not exists output_ng_panjang_cm numeric(14, 3) generated always as (size_cutting_cm * qty_layer_ng) stored,
-    add column if not exists output_total_panjang_cm numeric(14, 3) generated always as (size_cutting_cm * (qty_layer_ok + qty_layer_ng)) stored,
-    add column if not exists input_estimasi_panjang_cm numeric(14, 3) generated always as ((size_cutting_cm * (qty_layer_ok + qty_layer_ng)) + waste_panjang_cm) stored,
-    add column if not exists rasio_ng_layer numeric(8, 3) generated always as (
-        case
-            when (qty_layer_ok + qty_layer_ng) > 0
-                then round((qty_layer_ng::numeric / (qty_layer_ok + qty_layer_ng)::numeric) * 100, 3)
-            else 0
-        end
-    ) stored,
-    add column if not exists rasio_waste_panjang numeric(8, 3) generated always as (
-        case
-            when ((size_cutting_cm * (qty_layer_ok + qty_layer_ng)) + waste_panjang_cm) > 0
-                then round((waste_panjang_cm / ((size_cutting_cm * (qty_layer_ok + qty_layer_ng)) + waste_panjang_cm)) * 100, 3)
-            else 0
-        end
-    ) stored;
+    add column if not exists size_cutting_cm numeric(12, 3),
+    add column if not exists ukuran_cutting_cm numeric(12, 3);
+
+update public.e_cutting_batch
+set
+    size_cutting_cm = coalesce(size_cutting_cm, ukuran_cutting_cm),
+    ukuran_cutting_cm = coalesce(ukuran_cutting_cm, size_cutting_cm)
+where size_cutting_cm is null
+   or ukuran_cutting_cm is null;
 
 create table if not exists public.e_cutting_defect_detail (
     id uuid primary key default gen_random_uuid(),
@@ -348,57 +333,36 @@ create table if not exists public.e_cutting_defect_detail (
 
 begin;
 
-create table if not exists public.m_material_defect (
-    id uuid primary key default gen_random_uuid(),
-    material_id uuid not null references public.m_material(id) on delete cascade,
-    id_defect text not null references public.m_defect(id_defect) on delete restrict,
-    urutan int not null default 1 check (urutan > 0),
-    wajib_check boolean not null default true,
-    aktif boolean not null default true,
-    dibuat_pada timestamptz not null default now(),
-    unique (material_id, id_defect)
-);
+-- ---------------------------------------------------------
+-- Master data for Cutting
+-- ---------------------------------------------------------
 
 create table if not exists public.m_cutting_size_reference (
     id uuid primary key default gen_random_uuid(),
     material_id uuid not null references public.m_material(id) on delete cascade,
-    ukuran_cutting_cm numeric(12, 3) not null check (ukuran_cutting_cm > 0),
+    size_cutting_cm numeric(12, 3) check (size_cutting_cm > 0),
+    ukuran_cutting_cm numeric(12, 3),
     urutan int not null default 1 check (urutan > 0),
     aktif boolean not null default true,
     dibuat_pada timestamptz not null default now(),
-    unique (material_id, ukuran_cutting_cm)
+    unique (material_id, size_cutting_cm)
 );
 
-create table if not exists public.e_cutting_batch (
-    id uuid primary key default gen_random_uuid(),
-    id_sesi uuid not null references public.e_sesi_checksheet(id) on delete cascade,
-    material_id uuid not null references public.m_material(id) on delete restrict,
-    nama_material_snapshot text not null,
-    spec_material_snapshot text,
-    no_lot_roll text,
-    no_roll text,
-    ukuran_cutting_cm numeric(12, 3) not null check (ukuran_cutting_cm > 0),
-    qty_layer_ok int not null default 0 check (qty_layer_ok >= 0),
-    qty_layer_ng int not null default 0 check (qty_layer_ng >= 0),
-    waste_panjang_cm numeric(12, 3) not null default 0 check (waste_panjang_cm >= 0),
-    nama_operator text,
-    catatan text,
-    dibuat_pada timestamptz not null default now(),
-    constraint chk_cutting_batch_layer check (qty_layer_ok + qty_layer_ng > 0)
-);
+alter table public.m_cutting_size_reference
+    add column if not exists size_cutting_cm numeric(12, 3),
+    add column if not exists ukuran_cutting_cm numeric(12, 3);
 
-create table if not exists public.e_cutting_defect_detail (
-    id uuid primary key default gen_random_uuid(),
-    id_cutting_batch uuid not null references public.e_cutting_batch(id) on delete cascade,
-    id_defect text not null references public.m_defect(id_defect) on delete restrict,
-    nama_defect_snapshot text not null,
-    slot_waktu_id uuid references public.m_slot_waktu(id) on delete restrict,
-    jumlah_layer_terdampak int not null check (jumlah_layer_terdampak > 0),
-    panjang_defect_cm numeric(12, 3) check (panjang_defect_cm is null or panjang_defect_cm > 0),
-    dibuat_pada timestamptz not null default now()
-);
+update public.m_cutting_size_reference
+set
+    size_cutting_cm = coalesce(size_cutting_cm, ukuran_cutting_cm),
+    ukuran_cutting_cm = coalesce(ukuran_cutting_cm, size_cutting_cm)
+where size_cutting_cm is null
+   or ukuran_cutting_cm is null;
 
-create index if not exists idx_m_material_defect_material on public.m_material_defect(material_id) where aktif = true;
+create index if not exists idx_m_cutting_size_reference_material
+on public.m_cutting_size_reference(material_id, size_cutting_cm)
+where aktif = true;
+
 create index if not exists idx_e_cutting_batch_sesi on public.e_cutting_batch(id_sesi);
 create index if not exists idx_e_cutting_defect_batch on public.e_cutting_defect_detail(id_cutting_batch);
 
@@ -421,52 +385,84 @@ create or replace view public.v_cutting_material_option as
 select
     m.id as material_id,
     m.nama_material,
-    coalesce(m.spec_ringkas, '') as spec_ringkas,
+    coalesce(m.spec_ringkas, m.spec, '') as spec_ringkas,
     m.satuan::text as satuan,
     coalesce(
         jsonb_agg(
             jsonb_build_object(
                 'id', ukuran.id,
-                'ukuran_cutting_cm', ukuran.ukuran_cutting_cm,
+                'size_cutting_cm', coalesce(ukuran.size_cutting_cm, ukuran.ukuran_cutting_cm),
+                'ukuran_cutting_cm', coalesce(ukuran.size_cutting_cm, ukuran.ukuran_cutting_cm),
                 'urutan', ukuran.urutan
-            ) order by ukuran.urutan, ukuran.ukuran_cutting_cm
+            )
+            order by ukuran.urutan, coalesce(ukuran.size_cutting_cm, ukuran.ukuran_cutting_cm)
         ) filter (where ukuran.id is not null),
         '[]'::jsonb
     ) as daftar_ukuran_cutting
 from public.m_material m
 left join public.m_cutting_size_reference ukuran
-    on ukuran.material_id = m.id and ukuran.aktif = true
+    on ukuran.material_id = m.id
+   and ukuran.aktif = true
 where m.aktif = true
-group by m.id, m.nama_material, m.spec_ringkas, m.satuan;
+group by
+    m.id,
+    m.nama_material,
+    m.spec_ringkas,
+    m.spec,
+    m.satuan;
 
 create or replace view public.v_cutting_daily_summary as
+with batch_normalized as (
+    select
+        batch.*,
+        coalesce(batch.size_cutting_cm, batch.ukuran_cutting_cm) as ukuran_cm
+    from public.e_cutting_batch batch
+)
 select
     sesi.id as id_sesi,
     sesi.tanggal_pemeriksaan,
     sesi.nama_shift,
     sesi.nama_line,
-    count(batch.id) as total_batch,
-    coalesce(sum(batch.qty_layer_ok), 0) as total_layer_ok,
-    coalesce(sum(batch.qty_layer_ng), 0) as total_layer_ng,
-    coalesce(sum(batch.ukuran_cutting_cm * batch.qty_layer_ok), 0) as total_panjang_ok_cm,
-    coalesce(sum(batch.ukuran_cutting_cm * batch.qty_layer_ng), 0) as total_panjang_ng_cm,
+
+    count(batch.id)::int as total_batch,
+
+    coalesce(sum(batch.qty_layer_ok), 0)::int as total_layer_ok,
+    coalesce(sum(batch.qty_layer_ng), 0)::int as total_layer_ng,
+    coalesce(sum(batch.qty_layer_ok + batch.qty_layer_ng), 0)::int as total_layer,
+
+    coalesce(sum(batch.ukuran_cm * batch.qty_layer_ok), 0) as total_panjang_ok_cm,
+    coalesce(sum(batch.ukuran_cm * batch.qty_layer_ng), 0) as total_panjang_ng_cm,
+    coalesce(sum(batch.ukuran_cm * (batch.qty_layer_ok + batch.qty_layer_ng)), 0) as total_panjang_output_cm,
+
     coalesce(sum(batch.waste_panjang_cm), 0) as total_waste_cm,
-    case when coalesce(sum(batch.qty_layer_ok + batch.qty_layer_ng), 0) = 0 then 0
-         else round(
+
+    case
+        when coalesce(sum(batch.qty_layer_ok + batch.qty_layer_ng), 0) = 0 then 0
+        else round(
             sum(batch.qty_layer_ng)::numeric /
             sum(batch.qty_layer_ok + batch.qty_layer_ng)::numeric * 100,
             3
-         ) end as rasio_ng_layer,
-    case when coalesce(sum(batch.ukuran_cutting_cm * (batch.qty_layer_ok + batch.qty_layer_ng) + batch.waste_panjang_cm), 0) = 0 then 0
-         else round(
-            sum(batch.waste_panjang_cm) /
-            sum(batch.ukuran_cutting_cm * (batch.qty_layer_ok + batch.qty_layer_ng) + batch.waste_panjang_cm) * 100,
+        )
+    end as rasio_ng_layer,
+
+    case
+        when coalesce(sum((batch.ukuran_cm * (batch.qty_layer_ok + batch.qty_layer_ng)) + batch.waste_panjang_cm), 0) = 0 then 0
+        else round(
+            sum(batch.waste_panjang_cm)::numeric /
+            sum((batch.ukuran_cm * (batch.qty_layer_ok + batch.qty_layer_ng)) + batch.waste_panjang_cm)::numeric * 100,
             3
-         ) end as rasio_waste_panjang
+        )
+    end as rasio_waste_panjang
+
 from public.e_sesi_checksheet sesi
-left join public.e_cutting_batch batch on batch.id_sesi = sesi.id
+left join batch_normalized batch
+    on batch.id_sesi = sesi.id
 where sesi.tipe_proses = 'CUTTING'
-group by sesi.id, sesi.tanggal_pemeriksaan, sesi.nama_shift, sesi.nama_line;
+group by
+    sesi.id,
+    sesi.tanggal_pemeriksaan,
+    sesi.nama_shift,
+    sesi.nama_line;
 
 create or replace view public.v_checksheet_part_defect as
 with defect_part as (
@@ -611,7 +607,7 @@ values
     ('Y20', 'AT002-A0068', 'APRON TANGAN BIRU', 'CONS', 'RAVALIA INTI MANDIRI', 'CONSUMABLE', null),
     ('Y21', 'AD002-A0069', 'APRON DADA BIRU', 'CONS', 'RAVALIA INTI MANDIRI', 'CONSUMABLE', null),
     ('Y22', 'AK001-A0070', 'APRON KAKI', 'CONS', 'RAVALIA INTI MANDIRI', 'CONSUMABLE', null)
-;
+on conflict (uniq_no) do nothing;
 
 create temporary table seed_partlist_relasi (
     baris_sumber int primary key,
@@ -725,7 +721,7 @@ values
     (100, 'MN9', 'INSULATION SHEET NO. 5/FT8', null, null, null, null, null, null, null, null, null),
     (101, 'ER2', 'PAD FR DOOR SILINCER', null, null, null, null, null, null, null, null, null),
     (102, 'CB3', 'PAD FR DOOR SILINCER', null, null, null, null, null, null, null, null, null)
-;
+on conflict (baris_sumber) do nothing;
 
 create temporary table seed_partlist_defect (
     id_defect text primary key,
@@ -748,7 +744,7 @@ values
     ('MAT_A9ABF94C4452', 'SPUNDBOUND TERLIPAT'),
     ('MAT_A51AF3ABD50E', 'TERLIPAT'),
     ('MAT_A4AF7F14E1D9', 'TIPIS')
-;
+on conflict (id_defect) do nothing;
 
 insert into public.m_supplier (nama_supplier, aktif)
 select distinct relasi.nama_supplier, true
@@ -778,22 +774,6 @@ on conflict (uniq_no) do update set
     lokasi_gambar = excluded.lokasi_gambar,
     aktif = true,
     diperbarui_pada = now();
-
-update public.m_material material
-set
-    satuan = case upper(trim(relasi.satuan_sumber))
-        when 'ROLL' then 'ROLL'::public.satuan_inspectra
-        when 'PCS' then 'PCS'::public.satuan_inspectra
-        when 'CONES' then 'CONES'::public.satuan_inspectra
-        else 'UNKNOWN'::public.satuan_inspectra
-    end,
-    aktif = true,
-    diperbarui_pada = now()
-from seed_partlist_relasi relasi
-left join public.m_supplier supplier on supplier.nama_supplier = nullif(trim(relasi.nama_supplier), '')
-where material.nama_normalisasi = upper(trim(regexp_replace(relasi.nama_material, '\s+', ' ', 'g')))
-  and material.supplier_id is not distinct from supplier.id
-  and material.spec_ringkas is not distinct from nullif(trim(relasi.spec_asli), '');
 
 insert into public.m_material (nama_material, supplier_id, spec_ringkas, satuan, aktif)
 select distinct
