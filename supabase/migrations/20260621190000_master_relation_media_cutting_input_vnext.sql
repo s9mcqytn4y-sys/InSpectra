@@ -31,7 +31,6 @@ alter table if exists public.m_part
 
 alter table if exists public.m_material
     add column if not exists nama_normalisasi text,
-    add column if not exists jenis_material text,
     add column if not exists kategori_material text,
     add column if not exists default_satuan text,
     add column if not exists sumber_data text not null default 'MANUAL',
@@ -70,10 +69,6 @@ set
     gramasi_gsm = coalesce(gramasi_gsm, berat_value),
     qty_default = coalesce(qty_default, qty_value)
 where aktif = true;
-
-update public.m_material
-set nama_normalisasi = upper(trim(regexp_replace(coalesce(nama_material, ''), '\s+', ' ', 'g')))
-where nama_normalisasi is null;
 
 update public.m_supplier
 set nama_normalisasi = upper(trim(regexp_replace(coalesce(nama_supplier, ''), '\s+', ' ', 'g')))
