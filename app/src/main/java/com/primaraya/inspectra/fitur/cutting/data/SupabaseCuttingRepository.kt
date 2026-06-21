@@ -133,7 +133,11 @@ private data class BatchCuttingDto(
     val spec_material_snapshot: String? = null,
     val no_lot_roll: String? = null,
     val no_roll: String? = null,
-    val ukuran_cutting_cm: Double,
+
+    // transitional: kirim dua-duanya
+    val size_cutting_cm: Double,
+    val ukuran_cutting_cm: Double = size_cutting_cm,
+
     val qty_layer_ok: Int,
     val qty_layer_ng: Int,
     val waste_panjang_cm: Double,
