@@ -1,9 +1,9 @@
 package com.primaraya.inspectra.fitur.masterdata.ui
 
 import android.app.Application
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -138,19 +138,22 @@ fun MasterDataScreen(
                             .padding(horizontal = 16.dp, vertical = 12.dp)
                     )
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .padding(bottom = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        MasterDataContract.FilterMasterData.entries.forEach { filter ->
-                            FilterChip(
-                                selected = state.filterAktif == filter,
-                                onClick = { viewModel.onIntent(MasterDataContract.Intent.PilihFilter(filter)) },
-                                label = { Text(filter.labelIndonesia(), style = MaterialTheme.typography.labelSmall) }
-                            )
+                    if (state.tabAktif == MasterDataContract.TabMasterData.PART) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilterDataInduk.entries.forEach { filter ->
+                                FilterChip(
+                                    selected = state.filterAktif == filter,
+                                    onClick = { viewModel.onIntent(MasterDataContract.Intent.PilihFilter(filter)) },
+                                    label = { Text(filter.labelIndonesia(), style = MaterialTheme.typography.labelSmall) }
+                                )
+                            }
                         }
                     }
 
@@ -375,13 +378,33 @@ private fun MasterDataContract.TabMasterData.labelIndonesia(): String {
     }
 }
 
-private fun MasterDataContract.FilterMasterData.labelIndonesia(): String {
+private fun FilterDataInduk.labelIndonesia(): String {
     return when (this) {
-        MasterDataContract.FilterMasterData.SEMUA -> "Semua"
-        MasterDataContract.FilterMasterData.TANPA_MATERIAL -> "Tanpa Material"
-        MasterDataContract.FilterMasterData.TANPA_DEFECT -> "Tanpa Defect"
-        MasterDataContract.FilterMasterData.NONAKTIF -> "Nonaktif"
+        FilterDataInduk.SEMUA -> "Semua"
+        FilterDataInduk.SIAP_INPUT -> "Siap Input"
+        FilterDataInduk.PERLU_VERIFIKASI -> "Perlu Verifikasi"
+        FilterDataInduk.TANPA_MATERIAL -> "Tanpa Material"
+        FilterDataInduk.TANPA_DEFECT -> "Tanpa Defect"
+        FilterDataInduk.NONAKTIF -> "Nonaktif"
     }
+}
+
+@Composable
+private fun PartKesiapanBadge(part: MasterPartDto) {
+    val (label, nada) = when {
+        !part.aktif -> "Nonaktif" to NadaStatusAplikasi.INFO
+        part.butuh_review -> "Perlu Verifikasi" to NadaStatusAplikasi.PERINGATAN
+        part.status_input == "SIAP_INPUT" -> "Siap Input" to NadaStatusAplikasi.SUKSES
+        part.status_input == "TANPA_MATERIAL" -> "Tanpa Material" to NadaStatusAplikasi.BAHAYA
+        part.status_input == "TANPA_DEFECT" -> "Tanpa Defect" to NadaStatusAplikasi.PERINGATAN
+        else -> "Belum Dievaluasi" to NadaStatusAplikasi.INFO
+    }
+
+    AppStatusBadge(
+        label = label,
+        nada = nada,
+        modifier = Modifier.padding(top = 8.dp)
+    )
 }
 
 @Composable
@@ -401,10 +424,10 @@ fun PartList(
             val detail = detailState[part.uniq_no] ?: MasterDataContract.PartRelationState()
             
             ElevatedCard(
-                shape = RoundedCornerShape(20.dp),
+                shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp).fillMaxWidth().animateContentSize()) {
+                Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.clickable { onToggleDetail(part.uniq_no) }
@@ -450,6 +473,7 @@ fun PartList(
                     }
                     Text("Model: ${part.model ?: "-"}", style = MaterialTheme.typography.bodySmall)
                     Text("Komoditas: ${part.komoditas}", style = MaterialTheme.typography.labelMedium, color = Color(0xFFD97706))
+                    PartKesiapanBadge(part)
                     
                     if (detail.expanded) {
                         Column(modifier = Modifier.padding(top = 16.dp)) {
@@ -555,8 +579,8 @@ fun MaterialList(
         items(materials, key = { it.id ?: it.nama_material }) { material ->
             val materialId = material.id ?: return@items
             val detail = relationState[materialId] ?: MasterDataContract.MaterialRelationState()
-            ElevatedCard(shape = RoundedCornerShape(16.dp)) {
-                Column(modifier = Modifier.padding(16.dp).fillMaxWidth().animateContentSize()) {
+            ElevatedCard(shape = MaterialTheme.shapes.medium) {
+                Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.clickable { onToggleDetail(materialId) }

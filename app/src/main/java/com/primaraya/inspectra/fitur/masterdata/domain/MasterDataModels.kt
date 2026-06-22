@@ -1,6 +1,17 @@
 package com.primaraya.inspectra.fitur.masterdata.domain
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
+
+enum class FilterDataInduk {
+    SEMUA,
+    SIAP_INPUT,
+    PERLU_VERIFIKASI,
+    TANPA_MATERIAL,
+    TANPA_DEFECT,
+    NONAKTIF
+}
 
 @Serializable
 data class MasterSupplierDto(
@@ -12,6 +23,7 @@ data class MasterSupplierDto(
 )
 
 @Serializable
+@OptIn(ExperimentalSerializationApi::class)
 data class MasterPartDto(
     val id: String? = null,
     val part_no: String? = null,
@@ -21,7 +33,14 @@ data class MasterPartDto(
     val customer: String? = null,
     val komoditas: String,
     val lokasi_gambar: String? = null,
-    val aktif: Boolean = true
+    val aktif: Boolean = true,
+    val status_kelengkapan: String? = null,
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val butuh_review: Boolean = false,
+    val catatan_review: String? = null,
+    val jumlah_material: Int? = null,
+    val jumlah_defect: Int? = null,
+    val status_input: String? = null
 )
 
 @Serializable

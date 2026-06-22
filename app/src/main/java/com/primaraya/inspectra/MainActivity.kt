@@ -10,7 +10,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Assignment
@@ -25,7 +24,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.filled.Warning
@@ -59,7 +57,10 @@ class MainActivity : ComponentActivity() {
             var prosesTerpilih by rememberSaveable { mutableStateOf(TipeProses.PRESS) }
 
             InSpectraTheme {
-                Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF8FAFC)) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
                     when (currentScreen) {
                         NavState.SPLASH -> SplashScreen(
                             onSelesai = {
@@ -116,7 +117,7 @@ fun MainDashboard(
             if (!isSchemaCompatible) {
                 Surface(
                     color = MaterialTheme.colorScheme.errorContainer,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -137,20 +138,13 @@ fun MainDashboard(
                 text = "Workspace QC InSpectra",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Black,
-                color = Color(0xFF16365F)
+                color = MaterialTheme.colorScheme.primary
             )
 
-            AssistChip(
-                onClick = {},
-                label = { Text("Data diproses langsung ke server") },
-                colors = AssistChipDefaults.assistChipColors(containerColor = Color(0xFFF0FDF4))
-            )
-
-
-            AssistChip(
-                onClick = {},
-                label = { Text("Data diproses langsung ke server") },
-                colors = AssistChipDefaults.assistChipColors(containerColor = Color(0xFFF0FDF4))
+            Text(
+                text = "Input diperiksa terhadap data acuan server sebelum dikirim.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             if (isTablet) {
@@ -201,9 +195,9 @@ private fun DashboardModuleCard(
             .fillMaxWidth()
             .heightIn(min = 132.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.elevatedCardColors(
-            containerColor = Color(0xFF1A365D)
+            containerColor = MaterialTheme.colorScheme.primary
         ),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
@@ -215,13 +209,13 @@ private fun DashboardModuleCard(
             horizontalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = Color.White.copy(alpha = 0.12f)
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f)
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.padding(12.dp).size(32.dp)
                 )
             }
@@ -231,19 +225,19 @@ private fun DashboardModuleCard(
                     text = title,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Black,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.78f)
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.78f)
                 )
             }
 
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.75f)
+                tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f)
             )
         }
     }
@@ -278,7 +272,7 @@ fun MenuChecksheet(
                 text = "Pilih Proses Inspeksi",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Black,
-                color = Color(0xFF1A365D)
+                color = MaterialTheme.colorScheme.primary
             )
         }
 
@@ -289,7 +283,7 @@ fun MenuChecksheet(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            items(prosesChecksheetAktif) { proses ->
+            items(prosesChecksheetAktif, key = { it.name }) { proses ->
                 ProcessCard(
                     proses = proses,
                     onClick = { onProcessSelect(proses) }
@@ -324,8 +318,8 @@ private fun ProcessCard(
             .fillMaxWidth()
             .height(164.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier
@@ -336,7 +330,7 @@ private fun ProcessCard(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color(0xFF1A365D),
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(42.dp)
             )
 
@@ -345,12 +339,12 @@ private fun ProcessCard(
                     text = proses.labelIndonesia(),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Black,
-                    color = Color(0xFF1A365D)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF64748B)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

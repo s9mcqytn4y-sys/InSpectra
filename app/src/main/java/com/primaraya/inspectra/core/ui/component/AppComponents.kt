@@ -12,6 +12,41 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
+enum class NadaStatusAplikasi {
+    INFO,
+    SUKSES,
+    PERINGATAN,
+    BAHAYA
+}
+
+@Composable
+fun AppStatusBadge(
+    label: String,
+    nada: NadaStatusAplikasi,
+    modifier: Modifier = Modifier
+) {
+    val colors = when (nada) {
+        NadaStatusAplikasi.INFO -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+        NadaStatusAplikasi.SUKSES -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
+        NadaStatusAplikasi.PERINGATAN -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+        NadaStatusAplikasi.BAHAYA -> MaterialTheme.colorScheme.error to MaterialTheme.colorScheme.onError
+    }
+
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.small,
+        color = colors.first,
+        contentColor = colors.second
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
 @Composable
 fun AppEmptyState(
     title: String,

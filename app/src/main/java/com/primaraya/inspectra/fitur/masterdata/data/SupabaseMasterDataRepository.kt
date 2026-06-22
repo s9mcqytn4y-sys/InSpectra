@@ -105,15 +105,25 @@ class SupabaseMasterDataRepository(
 
 
     override suspend fun getPartsPage(
-        page: PageRequest
+        page: PageRequest,
+        filter: FilterDataInduk
     ): NetworkResult<List<MasterPartDto>> = withContext(Dispatchers.IO) {
         runNetworkCatching {
             driver.getList(
-                table = RemoteTable.Part,
-                query = page.toPostgrestQuery() + "&aktif=eq.true",
+                table = RemoteTable.ViewDataIndukPart,
+                query = page.toPostgrestQuery() + filter.toPostgrestFilter(),
                 decode = { json.decodeFromString(ListSerializer(MasterPartDto.serializer()), it) }
             )
         }
+    }
+
+    private fun FilterDataInduk.toPostgrestFilter(): String = when (this) {
+        FilterDataInduk.SEMUA -> "&aktif=eq.true"
+        FilterDataInduk.SIAP_INPUT -> "&aktif=eq.true&status_input=eq.SIAP_INPUT"
+        FilterDataInduk.PERLU_VERIFIKASI -> "&aktif=eq.true&butuh_review=eq.true"
+        FilterDataInduk.TANPA_MATERIAL -> "&aktif=eq.true&status_input=eq.TANPA_MATERIAL"
+        FilterDataInduk.TANPA_DEFECT -> "&aktif=eq.true&status_input=eq.TANPA_DEFECT"
+        FilterDataInduk.NONAKTIF -> "&aktif=eq.false"
     }
 
     override suspend fun getSuppliersPage(

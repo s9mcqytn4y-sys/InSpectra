@@ -12,7 +12,10 @@ interface MasterDataRepository {
 
     suspend fun getPartPickerItems(tipeProses: String): NetworkResult<List<PartPickerItem>>
 
-    suspend fun getPartsPage(page: PageRequest): NetworkResult<List<MasterPartDto>>
+    suspend fun getPartsPage(
+        page: PageRequest,
+        filter: FilterDataInduk
+    ): NetworkResult<List<MasterPartDto>>
     suspend fun getSuppliersPage(page: PageRequest): NetworkResult<List<MasterSupplierDto>>
     suspend fun getMaterialsPage(page: PageRequest): NetworkResult<List<MasterMaterialDto>>
     suspend fun getDefectsPage(page: PageRequest): NetworkResult<List<MasterDefectDto>>

@@ -51,7 +51,7 @@ class MasterDataViewModel(
             MasterDataContract.Intent.MuatAwal -> muatDataTabAktif(reset = true)
             MasterDataContract.Intent.MuatLebihBanyak -> muatDataTabAktif(reset = false)
             is MasterDataContract.Intent.PilihTab -> {
-                _state.update { it.copy(tabAktif = intent.tab, kataKunci = "", canLoadMore = true, filterAktif = MasterDataContract.FilterMasterData.SEMUA) }
+                _state.update { it.copy(tabAktif = intent.tab, kataKunci = "", canLoadMore = true, filterAktif = FilterDataInduk.SEMUA) }
                 keywordFlow.value = ""
                 muatDataTabAktif(reset = true)
             }
@@ -193,7 +193,7 @@ class MasterDataViewModel(
             }
 
             val result = when (tab) {
-                MasterDataContract.TabMasterData.PART -> repository.getPartsPage(page)
+                MasterDataContract.TabMasterData.PART -> repository.getPartsPage(page, s.filterAktif)
                 MasterDataContract.TabMasterData.MATERIAL -> repository.getMaterialsPage(page)
                 MasterDataContract.TabMasterData.SUPPLIER -> repository.getSuppliersPage(page)
                 MasterDataContract.TabMasterData.DEFECT -> repository.getDefectsPage(page)
