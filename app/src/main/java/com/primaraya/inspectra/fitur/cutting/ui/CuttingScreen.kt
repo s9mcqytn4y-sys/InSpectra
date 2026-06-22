@@ -8,7 +8,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -221,9 +222,9 @@ private fun FormBatchCutting(
                     AppDropdownField(
                         label = "Ukuran cutting (cm)",
                         value = input.ukuranCuttingCm,
-                        options = materialTerpilih?.daftar_ukuran_cutting?.map { "${it.ukuranEfektif} cm" }.orEmpty(),
+                        options = materialTerpilih?.daftarUkuranValid?.map { "${it.ukuranEfektif} cm" }.orEmpty(),
                         onSelected = { label ->
-                            materialTerpilih?.daftar_ukuran_cutting
+                            materialTerpilih?.daftarUkuranValid
                                 ?.firstOrNull { "${it.ukuranEfektif} cm" == label }
                                 ?.let { ukuran ->
                                     onUbah(
@@ -454,9 +455,9 @@ private fun FormBatchCutting(
                 AppDropdownField(
                     label = "Ukuran cutting (cm)",
                     value = input.ukuranCuttingCm,
-                    options = materialTerpilih?.daftar_ukuran_cutting?.map { "${it.ukuranEfektif} cm" }.orEmpty(),
+                    options = materialTerpilih?.daftarUkuranValid?.map { "${it.ukuranEfektif} cm" }.orEmpty(),
                     onSelected = { label ->
-                        materialTerpilih?.daftar_ukuran_cutting
+                        materialTerpilih?.daftarUkuranValid
                             ?.firstOrNull { "${it.ukuranEfektif} cm" == label }
                             ?.let { ukuran ->
                                 onUbah(

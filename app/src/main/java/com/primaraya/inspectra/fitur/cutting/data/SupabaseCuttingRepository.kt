@@ -35,8 +35,8 @@ class SupabaseCuttingRepository(
     override suspend fun bacaOpsiPartUkuran(): NetworkResult<List<OpsiPartUkuranCutting>> = withContext(Dispatchers.IO) {
         runNetworkCatching {
             driver.getList(
-                table = RemoteTable.ViewChecksheetPartPicker,
-                query = "komoditas=eq.CUTTING&order=uniq_no.asc&limit=100",
+                table = RemoteTable.ViewCuttingPartSizeOption,
+                query = "select=*&order=uniq_no.asc&limit=100",
                 decode = { json.decodeFromString(ListSerializer(OpsiPartUkuranCutting.serializer()), it) }
             )
         }

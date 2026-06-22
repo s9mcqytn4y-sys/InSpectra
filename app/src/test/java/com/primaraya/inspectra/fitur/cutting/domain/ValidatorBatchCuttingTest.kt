@@ -66,6 +66,22 @@ class ValidatorBatchCuttingTest {
         assertEquals("CB9 - 58815-KK010-00 - CARPET CONSOLE BOX", opsi.labelPilihan)
     }
 
+    @Test
+    fun `opsi ukuran mengabaikan referensi kosong atau nol`() {
+        val material = OpsiMaterialCutting(
+            material_id = "material-1",
+            nama_material = "Material Uji",
+            satuan = "ROLL",
+            daftar_ukuran_cutting = listOf(
+                UkuranCuttingAcuan(id = "kosong"),
+                UkuranCuttingAcuan(id = "nol", size_cutting_cm = 0.0),
+                UkuranCuttingAcuan(id = "valid", size_cutting_cm = 76.0)
+            )
+        )
+
+        assertEquals(listOf("valid"), material.daftarUkuranValid.map { it.id })
+    }
+
     private fun inputDasar(): InputBatchCutting = InputBatchCutting(
         tanggalPemeriksaan = "2026-06-21",
         materialId = "material-1",

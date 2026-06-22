@@ -42,6 +42,9 @@ data class OpsiMaterialCutting(
         get() = listOf(nama_material, spec_ringkas.takeIf(String::isNotBlank), satuan.takeIf(String::isNotBlank))
             .filterNotNull()
             .joinToString(" - ")
+
+    val daftarUkuranValid: List<UkuranCuttingAcuan>
+        get() = daftar_ukuran_cutting.filter { it.ukuranEfektif > 0.0 }
 }
 
 @Serializable
@@ -55,6 +58,9 @@ data class OpsiPartUkuranCutting(
 ) {
     val labelPilihan: String
         get() = listOf(uniq_no, part_no, nama_part).filterNotNull().filter(String::isNotBlank).joinToString(" - ")
+
+    val daftarUkuranValid: List<UkuranCuttingAcuan>
+        get() = daftar_ukuran_cutting.filter { it.ukuranEfektif > 0.0 }
 }
 
 @Serializable

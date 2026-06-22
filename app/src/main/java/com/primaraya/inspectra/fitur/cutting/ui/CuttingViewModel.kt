@@ -38,8 +38,8 @@ class CuttingViewModel(
             CuttingContract.Intent.Muat -> muat()
             is CuttingContract.Intent.UbahInput -> ubahInput(intent.input)
             is CuttingContract.Intent.PilihMaterial -> {
-                val ukuran = intent.material.daftar_ukuran_cutting.firstOrNull { it.is_default }
-                    ?: intent.material.daftar_ukuran_cutting.firstOrNull()
+                val ukuran = intent.material.daftarUkuranValid.firstOrNull { it.is_default }
+                    ?: intent.material.daftarUkuranValid.firstOrNull()
                 ubahInput(
                     _state.value.input.copy(
                         materialId = intent.material.material_id,
@@ -51,10 +51,12 @@ class CuttingViewModel(
                 )
             }
             is CuttingContract.Intent.PilihPartAcuanUkuran -> {
-                val ukuran = intent.part.daftar_ukuran_cutting.firstOrNull()
+                val ukuran = intent.part.daftarUkuranValid.firstOrNull()
                 ubahInput(
                     _state.value.input.copy(
-                        idReferensiUkuranMaterial = ukuran?.id,
+                        // ID referensi part bukan foreign key size_reference_id pada RPC.
+                        // Nilai dipakai sebagai acuan manual sampai kontrak transaksi menyimpan referensi part tersendiri.
+                        idReferensiUkuranMaterial = null,
                         ukuranCuttingCm = ukuran?.ukuranEfektif?.toString().orEmpty()
                     )
                 )
