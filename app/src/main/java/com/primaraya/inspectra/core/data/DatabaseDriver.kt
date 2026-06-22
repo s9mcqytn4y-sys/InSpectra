@@ -61,6 +61,7 @@ enum class RemoteTable(val value: String) {
     ViewCuttingMaterialOption("v_cutting_material_option"),
     ViewCuttingDailySummary("v_cutting_daily_summary"),
     ViewAppBootstrap("v_app_bootstrap"),
+    DataRevision("m_data_revision"),
     SesiChecksheet("e_sesi_checksheet"),
     ItemChecksheet("e_item_checksheet"),
     DefectChecksheet("e_defect_checksheet"),

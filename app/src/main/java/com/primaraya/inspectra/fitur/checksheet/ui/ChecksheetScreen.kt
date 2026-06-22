@@ -6,6 +6,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -20,21 +23,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.app.Application
 import androidx.compose.ui.platform.LocalContext
 import com.primaraya.inspectra.core.common.AsyncData
-import com.primaraya.inspectra.core.ui.component.AppEmptyState
-import com.primaraya.inspectra.core.ui.component.AppFriendlyDialog
-import com.primaraya.inspectra.core.ui.component.AppListSkeleton
-import com.primaraya.inspectra.core.ui.component.PreviewChecksheetDialog
-import com.primaraya.inspectra.core.ui.component.RingkasanAtas
+import com.primaraya.inspectra.core.ui.component.*
 import com.primaraya.inspectra.core.ui.viewmodel.pabrikViewModelAplikasi
-import com.primaraya.inspectra.fitur.checksheet.domain.InputDefect
-import com.primaraya.inspectra.fitur.checksheet.domain.KategoriDefect
-import com.primaraya.inspectra.fitur.checksheet.domain.RingkasanPartChecksheet
-import com.primaraya.inspectra.fitur.checksheet.domain.TipeProses
+import com.primaraya.inspectra.fitur.checksheet.domain.*
+import com.primaraya.inspectra.fitur.checksheet.ui.ChecksheetContract.State.Step
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,18 +77,24 @@ fun ChecksheetScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Inspeksi ${tipeProses.labelIndonesia()}",
+                            text = if (state.step == Step.PILIH_PART) "Pilih Part ${tipeProses.labelIndonesia()}" else "Inspeksi ${tipeProses.labelIndonesia()}",
                             fontWeight = FontWeight.Black
                         )
                         Text(
-                            text = "Form pemeriksaan harian",
+                            text = if (state.step == Step.PILIH_PART) "Cari dan pilih part yang akan dicek" else "Form pemeriksaan harian",
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White.copy(alpha = 0.78f)
                         )
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = {
+                        if (state.step == Step.ISI_FORM) {
+                            viewModel.onIntent(ChecksheetContract.Intent.KembaliKePicker)
+                        } else {
+                            onBackClick()
+                        }
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 },
@@ -102,89 +107,61 @@ fun ChecksheetScreen(
         },
         bottomBar = {
             Surface(shadowElevation = 10.dp) {
-                Button(
-                    onClick = { viewModel.onIntent(ChecksheetContract.Intent.Tinjau) },
-                    enabled = state.adaInput && !state.adaQtyTidakValid && !state.adaSlotTidakMatch && !state.mengirim,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .height(54.dp),
-                    shape = RoundedCornerShape(18.dp)
-                ) {
-                    if (state.mengirim) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                            color = Color.White
-                        )
-                    } else {
-                        Icon(Icons.Default.TaskAlt, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Tinjau & Kirim", fontWeight = FontWeight.Black)
+                if (state.step == Step.PILIH_PART) {
+                    Button(
+                        onClick = { viewModel.onIntent(ChecksheetContract.Intent.LanjutKeForm) },
+                        enabled = state.partTerpilih.isNotEmpty(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .height(54.dp),
+                        shape = RoundedCornerShape(18.dp)
+                    ) {
+                        Text("Mulai Cek (${state.partTerpilih.size} Part)", fontWeight = FontWeight.Black)
+                    }
+                } else {
+                    Button(
+                        onClick = { viewModel.onIntent(ChecksheetContract.Intent.Tinjau) },
+                        enabled = state.adaInput && !state.adaQtyTidakValid && !state.adaSlotTidakMatch && !state.mengirim,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .height(54.dp),
+                        shape = RoundedCornerShape(18.dp)
+                    ) {
+                        if (state.mengirim) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White
+                            )
+                        } else {
+                            Icon(Icons.Default.TaskAlt, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Tinjau & Kirim", fontWeight = FontWeight.Black)
+                        }
                     }
                 }
             }
         }
     ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(Color(0xFFF8FAFC))
-        ) {
-            Column {
-                RingkasanAtas(
-                    totalDiperiksa = state.totalDiperiksa,
-                    totalOk = state.totalOk,
-                    totalNg = state.totalNg,
-                    rasioNg = state.rasioNg,
-                    adaKuantitasTidakValid = state.adaQtyTidakValid
+        AppResponsiveContent(modifier = Modifier.padding(padding)) { isTablet, contentModifier ->
+            if (state.step == Step.PILIH_PART) {
+                StepPilihPart(
+                    state = state,
+                    isTablet = isTablet,
+                    onCari = { viewModel.onIntent(ChecksheetContract.Intent.CariPart(it)) },
+                    onPilih = { uniqNo, pilih -> viewModel.onIntent(ChecksheetContract.Intent.PilihPart(uniqNo, pilih)) },
+                    modifier = contentModifier
                 )
-
-                when (val data = state.dataChecksheet) {
-                    is AsyncData.Loading -> AppListSkeleton()
-                    is AsyncData.Empty -> AppEmptyState(title = data.title, message = data.message)
-                    is AsyncData.Error -> AppEmptyState(title = data.title, message = data.message)
-                    is AsyncData.Success -> {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(
-                                start = 16.dp,
-                                end = 16.dp,
-                                bottom = 24.dp
-                            ),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(
-                                items = data.data,
-                                key = { it.uniqNo }
-                            ) { part ->
-                                KartuPartChecksheetRingkas(
-                                    part = part,
-                                    tipeProses = tipeProses,
-                                    onBukaTutup = { viewModel.onIntent(ChecksheetContract.Intent.TogglePart(part.uniqNo)) },
-                                    onJumlahDiperiksaUbah = {
-                                        viewModel.onIntent(ChecksheetContract.Intent.UbahJumlahDiperiksa(part.uniqNo, it))
-                                    },
-                                    onDefectTambahKurang = { idDefect, tambah ->
-                                        if (tambah) {
-                                            viewModel.onIntent(ChecksheetContract.Intent.TambahDefect(part.uniqNo, idDefect))
-                                        } else {
-                                            viewModel.onIntent(ChecksheetContract.Intent.KurangiDefect(part.uniqNo, idDefect))
-                                        }
-                                    },
-                                    onDefectInputManual = { idDefect, qty ->
-                                        viewModel.onIntent(ChecksheetContract.Intent.UbahJumlahDefect(part.uniqNo, idDefect, qty))
-                                    },
-                                    onSlotDefectUbah = { idDefect, slotId, qty ->
-                                        viewModel.onIntent(ChecksheetContract.Intent.UbahJumlahSlotDefect(part.uniqNo, idDefect, slotId, qty))
-                                    }
-                                )
-                            }
-                        }
-                    }
-                    else -> Unit
-                }
+            } else {
+                StepIsiForm(
+                    state = state,
+                    tipeProses = tipeProses,
+                    viewModel = viewModel,
+                    isTablet = isTablet,
+                    modifier = contentModifier
+                )
             }
         }
     }
@@ -229,12 +206,30 @@ fun KartuPartChecksheetRingkas(
                     .clickable(onClick = onBukaTutup),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Layers,
-                    contentDescription = null,
-                    tint = Color(0xFF1A365D),
-                    modifier = Modifier.size(38.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .background(Color(0xFFF1F5F9), RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (part.lokasiGambar != null) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(part.lokasiGambar)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Layers,
+                            contentDescription = null,
+                            tint = Color(0xFF1A365D),
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
 
                 Spacer(Modifier.width(16.dp))
 
@@ -534,5 +529,257 @@ fun TipeProses.labelIndonesia(): String {
         TipeProses.MATERIAL -> "Material"
         TipeProses.PASS_THROUGH -> "Pass Through"
         TipeProses.CONSUMABLE -> "Consumable"
+    }
+}
+
+@Composable
+private fun StepPilihPart(
+    state: ChecksheetContract.State,
+    isTablet: Boolean,
+    onCari: (String) -> Unit,
+    onPilih: (String, Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        OutlinedTextField(
+            value = state.pencarian,
+            onValueChange = onCari,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            placeholder = { Text("Cari UNIQ NO atau Nama Part...") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            trailingIcon = {
+                if (state.pencarian.isNotEmpty()) {
+                    IconButton(onClick = { onCari("") }) {
+                        Icon(Icons.Default.Close, contentDescription = null)
+                    }
+                }
+            },
+            shape = RoundedCornerShape(16.dp),
+            singleLine = true
+        )
+
+        when (val data = state.dataPicker) {
+            is AsyncData.Loading -> AppListSkeleton()
+            is AsyncData.Error -> AppEmptyState(data.title, data.message)
+            is AsyncData.Success -> {
+                val list = state.pickerFiltered
+                if (list.isEmpty()) {
+                    AppEmptyState("Tidak ada hasil", "Coba kata kunci lain.")
+                } else {
+                    if (isTablet) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(3),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(list, key = { it.uniq_no }) { item ->
+                                ItemKartuPicker(
+                                    item = item,
+                                    terpilih = state.partTerpilih.contains(item.uniq_no),
+                                    onPilih = onPilih
+                                )
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(list, key = { it.uniq_no }) { item ->
+                                ItemKartuPicker(
+                                    item = item,
+                                    terpilih = state.partTerpilih.contains(item.uniq_no),
+                                    onPilih = onPilih
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            else -> Unit
+        }
+    }
+}
+
+@Composable
+private fun ItemKartuPicker(
+    item: PartPickerItem,
+    terpilih: Boolean,
+    onPilih: (String, Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onPilih(item.uniq_no, !terpilih) },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (terpilih) MaterialTheme.colorScheme.primaryContainer else Color.White
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = terpilih,
+                onCheckedChange = { onPilih(item.uniq_no, it) }
+            )
+            Spacer(Modifier.width(12.dp))
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(Color(0xFFF1F5F9), RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (item.image_url != null) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(item.image_url)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Inventory2,
+                        contentDescription = null,
+                        tint = Color(0xFF64748B),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(item.uniq_no, fontWeight = FontWeight.Bold)
+                Text(
+                    "${item.part_no ?: "-"} | ${item.nama_part}",
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            if (item.status_input != "SIAP_INPUT") {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = item.status_input,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StepIsiForm(
+    state: ChecksheetContract.State,
+    tipeProses: TipeProses,
+    viewModel: ChecksheetMviViewModel,
+    isTablet: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        RingkasanAtas(
+            totalDiperiksa = state.totalDiperiksa,
+            totalOk = state.totalOk,
+            totalNg = state.totalNg,
+            rasioNg = state.rasioNg,
+            adaKuantitasTidakValid = state.adaQtyTidakValid
+        )
+
+        when (val data = state.dataChecksheet) {
+            is AsyncData.Loading -> AppListSkeleton()
+            is AsyncData.Success -> {
+                if (isTablet) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            bottom = 24.dp
+                        ),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(
+                            items = data.data,
+                            key = { it.uniqNo }
+                        ) { part ->
+                            KartuPartChecksheetRingkas(
+                                part = part,
+                                tipeProses = tipeProses,
+                                onBukaTutup = { viewModel.onIntent(ChecksheetContract.Intent.TogglePart(part.uniqNo)) },
+                                onJumlahDiperiksaUbah = {
+                                    viewModel.onIntent(ChecksheetContract.Intent.UbahJumlahDiperiksa(part.uniqNo, it))
+                                },
+                                onDefectTambahKurang = { idDefect, tambah ->
+                                    if (tambah) {
+                                        viewModel.onIntent(ChecksheetContract.Intent.TambahDefect(part.uniqNo, idDefect))
+                                    } else {
+                                        viewModel.onIntent(ChecksheetContract.Intent.KurangiDefect(part.uniqNo, idDefect))
+                                    }
+                                },
+                                onDefectInputManual = { idDefect, qty ->
+                                    viewModel.onIntent(ChecksheetContract.Intent.UbahJumlahDefect(part.uniqNo, idDefect, qty))
+                                },
+                                onSlotDefectUbah = { idDefect, slotId, qty ->
+                                    viewModel.onIntent(ChecksheetContract.Intent.UbahJumlahSlotDefect(part.uniqNo, idDefect, slotId, qty))
+                                }
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            bottom = 24.dp
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(
+                            items = data.data,
+                            key = { it.uniqNo }
+                        ) { part ->
+                            KartuPartChecksheetRingkas(
+                                part = part,
+                                tipeProses = tipeProses,
+                                onBukaTutup = { viewModel.onIntent(ChecksheetContract.Intent.TogglePart(part.uniqNo)) },
+                                onJumlahDiperiksaUbah = {
+                                    viewModel.onIntent(ChecksheetContract.Intent.UbahJumlahDiperiksa(part.uniqNo, it))
+                                },
+                                onDefectTambahKurang = { idDefect, tambah ->
+                                    if (tambah) {
+                                        viewModel.onIntent(ChecksheetContract.Intent.TambahDefect(part.uniqNo, idDefect))
+                                    } else {
+                                        viewModel.onIntent(ChecksheetContract.Intent.KurangiDefect(part.uniqNo, idDefect))
+                                    }
+                                },
+                                onDefectInputManual = { idDefect, qty ->
+                                    viewModel.onIntent(ChecksheetContract.Intent.UbahJumlahDefect(part.uniqNo, idDefect, qty))
+                                },
+                                onSlotDefectUbah = { idDefect, slotId, qty ->
+                                    viewModel.onIntent(ChecksheetContract.Intent.UbahJumlahSlotDefect(part.uniqNo, idDefect, slotId, qty))
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+            else -> Unit
+        }
     }
 }

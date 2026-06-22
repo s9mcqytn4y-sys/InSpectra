@@ -1,187 +1,75 @@
 # InSpectra
 
-InSpectra adalah aplikasi Android tablet untuk sistem informasi Quality Control PT. Primaraya Graha Nusantara.
+InSpectra adalah aplikasi Android tablet untuk sistem informasi Quality Control manufacturing. Dirancang khusus untuk efisiensi input data operasional di lapangan dengan arsitektur modern dan performa tinggi.
 
-Tujuan produk: menyediakan workspace QC yang rapi, operasional, dan bisa berkembang menjadi standar SaaS internal untuk input Lembar Periksa, Data Induk, riwayat inspeksi, analytics, dan follow-up perbaikan kualitas.
+Tujuan produk: menyediakan workspace QC yang rapi, operasional, dan siap tumbuh menjadi standar SaaS internal untuk input Lembar Periksa, Data Induk, riwayat inspeksi, analytics, dan tindak lanjut perbaikan kualitas.
 
-## Stack
+## Fitur Unggulan vNext
 
-- Kotlin 2.x.
-- Android Gradle Plugin 8.x.
-- Jetpack Compose.
-- Material 3.
-- Ktor Client.
-- kotlinx.serialization.
-- Supabase PostgREST sebagai backend saat ini.
-- Gradle wrapper.
-- ADB untuk tablet/emulator lokal.
+- **Checksheet Picker Flow**: Alur pemilihan part yang dioptimalkan dengan pencarian dan status kesiapan input. Mengurangi beban UI dan mempercepat proses inspeksi.
+- **Cutting Management**: Pencatatan batch pemotongan berbasis material dan lot/roll dengan kalkulasi real-time rasio NG dan waste.
+- **Server-Authoritative Cache**: Sistem sinkronisasi data cerdas berbasis `m_data_revision`. Aplikasi hanya melakukan fetch data dari network jika terdapat pembaruan di sisi server.
+- **Media Integration**: Integrasi gambar part dan defect untuk visualisasi temuan yang lebih akurat di lapangan.
+- **Responsive Tablet UI**: Layout adaptif yang memanfaatkan layar lebar tablet (grid 2-kolom dan side-by-side forms).
 
-## Struktur
+## Stack Teknologi
+
+- **Kotlin 2.0 / Jetpack Compose**: UI deklaratif yang reaktif dan modern.
+- **Material 3 Adaptive**: Layout yang responsif terhadap berbagai ukuran layar.
+- **Ktor Client**: Networking yang ringan dan efisien.
+- **Supabase PostgREST**: Backend serverless dengan integrasi database PostgreSQL yang kuat.
+- **Coil**: Pemuatan gambar asinkron dengan caching efisien.
+- **Kotlinx Serialization**: Serialisasi data JSON yang type-safe.
+
+## Struktur Project
 
 ```text
 app/src/main/java/com/primaraya/inspectra
 +-- core
-|   +-- common
-|   +-- data
-|   +-- network
-|   +-- ui
+|   +-- common    (Result handling, AsyncData)
+|   +-- data      (Driver database, Repository bootstrap)
+|   +-- network   (Konfigurasi HTTP Client)
+|   +-- ui        (Komponen global, Theme, Adaptive Layout)
 +-- fitur
-|   +-- checksheet
-|   |   +-- data
-|   |   +-- domain
-|   |   +-- ui
-|   +-- masterdata
-|   |   +-- data
-|   |   +-- domain
-|   |   +-- ui
-|   +-- splash
-+-- MainActivity.kt
+|   +-- checksheet (Lembar periksa Press/Sewing)
+|   +-- cutting    (Batch cutting material)
+|   +-- masterdata (Manajemen Data Induk)
+|   +-- splash     (Inisialisasi visual)
++-- MainActivity.kt (Navigasi utama)
 ```
 
-## Konfigurasi Lokal
+## Persiapan & Pengembangan
 
-Credential Supabase disimpan di `local.properties`. File ini tidak boleh di-commit.
-
-Contoh:
-
+### Konfigurasi Lokal
+Credential Supabase disimpan di `local.properties` (jangan di-commit):
 ```properties
-sdk.dir=C\:\\Users\\Acer\\AppData\\Local\\Android\\Sdk
-SUPABASE_URL=https://project-ref.supabase.co
-SUPABASE_KEY=replace-with-local-key
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-anon-key
 ```
 
-Gradle membaca nilai tersebut di `app/build.gradle.kts` dan meneruskannya ke:
-
-- `BuildConfig.SUPABASE_URL`.
-- `BuildConfig.SUPABASE_KEY`.
-
-Jangan hardcode credential di Kotlin, XML, dokumentasi, screenshot, atau Logcat.
-
-## Menjalankan Project
-
-PowerShell:
-
+### Menjalankan Project
+Gunakan PowerShell untuk build dan install:
 ```powershell
-cd C:\Users\Acer\AndroidStudioProjects\InSpectra
-$env:JAVA_HOME='C:\Program Files\Java\jdk-17'
-$env:GRADLE_OPTS='-Xmx1536m -Dfile.encoding=UTF-8'
-.\gradlew :app:testDebugUnitTest --stacktrace --no-daemon --no-parallel --max-workers=1 '-Dkotlin.compiler.execution.strategy=in-process'
-.\gradlew :app:assembleDebug --stacktrace --no-daemon --no-parallel --max-workers=1 '-Dkotlin.compiler.execution.strategy=in-process'
+# Build APK
+.\gradlew :app:assembleDebug
+
+# Install ke Device/Emulator
+.\gradlew :app:installDebug
 ```
 
-Install ke device:
-
+### Verifikasi Mandiri
+Sebelum melakukan push, pastikan build dan test berjalan lancar:
 ```powershell
-adb devices -l
-$env:GRADLE_OPTS='-Xmx1536m -Dfile.encoding=UTF-8'
-.\gradlew :app:installDebug --stacktrace --no-daemon --no-parallel --max-workers=1 '-Dkotlin.compiler.execution.strategy=in-process'
+.\gradlew test
+.\gradlew build --warning-mode all
 ```
 
-Ambil Logcat aplikasi:
+## Backend (Supabase)
 
-```powershell
-adb logcat -c
-adb logcat | Select-String "com.primaraya.inspectra|AndroidRuntime|FATAL EXCEPTION|InspectraNetwork"
-```
+Aplikasi ini menggunakan skema database **vNext** yang telah dimatangkan untuk hubungan master data yang kompleks.
+Seluruh RPC submit (`rpc_submit_checksheet`, `rpc_submit_cutting_batch`) telah dioptimalkan untuk integritas data dan performa.
 
-## Verifikasi
+Migration file terbaru tersedia di `supabase/migrations/`.
 
-Minimal sebelum menyatakan patch selesai:
-
-```powershell
-git status --short --branch
-git diff --check
-.\gradlew test --stacktrace
-.\gradlew build --stacktrace --warning-mode all
-```
-
-Jika patch menyentuh runtime Android:
-
-```powershell
-adb devices -l
-.\gradlew installDebug --stacktrace
-```
-
-## Supabase
-
-Integrasi backend saat ini menggunakan Supabase PostgREST.
-
-Komponen utama:
-
-- `core/network/InspectraHttpClient.kt`: konfigurasi Ktor, timeout, retry, JSON, dan header Supabase.
-- `core/data/SupabasePgRestDriver.kt`: driver PostgREST generik.
-- `fitur/masterdata/data/SupabaseMasterDataRepository.kt`: data induk.
-- `fitur/checksheet/data/SupabaseChecksheetRepository.kt`: submit lembar periksa.
-- `fitur/cutting/data/SupabaseCuttingRepository.kt`: batch Cutting berbasis material dan lot/roll.
-
-Prinsip:
-
-- Repository adalah batas akses data remote.
-- ViewModel tidak menyusun URL Supabase.
-- Composable tidak memanggil repository atau API langsung.
-- Response error harus dipetakan menjadi pesan yang ramah pengguna.
-- Header sensitif wajib disamarkan di Logcat.
-- Android hanya boleh memakai publishable/anon key dengan RLS yang diaudit; jangan gunakan service-role key.
-
-### Migration Produksi
-
-Migration Next-Phase bersifat additive dan berada di `supabase/migrations/`.
-Workbook sumber tidak disimpan di repository; seed SQL statis dapat diaudit.
-Ukuran Cutting dari FM-QA-026 dicatat per `UNIQ NO` pada
-`m_part_cutting_size_reference`, bukan disamakan per material. Sumber yang belum
-memiliki part induk tidak dibuatkan part atau relasi sintetis.
-
-Sebelum mendorong migration, tautkan project Supabase dan jalankan:
-
-```powershell
-$env:INSPECTRA_IZINKAN_PRODUKSI='YA'
-supabase db lint --linked --level warning
-supabase migration list
-supabase db push
-```
-
-`INSPECTRA_IZINKAN_PRODUKSI` adalah gate operasional untuk prosedur tim. CLI
-tidak membacanya secara otomatis. Jangan mendorong production tanpa backup yang
-diverifikasi, review migration, dan query integritas yang sesuai perubahan.
-
-## Standar UI
-
-InSpectra harus terasa seperti aplikasi SaaS operasional:
-
-- Navigasi stabil.
-- Layout padat dan mudah discan.
-- Surface bersih, border jelas, elevation rendah.
-- Bahasa Indonesia untuk semua UI end-user.
-- State kosong dan error harus jujur.
-- Tidak ada dummy production data.
-- Aksi disabled harus punya alasan yang jelas.
-
-Lihat `DESIGN.md` untuk pedoman desain lebih lengkap.
-
-## Troubleshooting
-
-`Cannot create an instance of ViewModel`:
-
-- Cek apakah ViewModel memakai constructor `Application`.
-- Jika memakai `AndroidViewModel`, Compose `viewModel()` perlu factory yang bisa membuat instance dengan `Application`.
-- Jika ada dependency tambahan, sediakan `ViewModelProvider.Factory`.
-
-`Skipped frames` atau UI terasa berat:
-
-- Pastikan pekerjaan IO/network tidak berjalan di main thread.
-- Hindari parsing besar di Composable.
-- Gunakan `LazyColumn`/`LazyVerticalGrid` dengan key stabil.
-- Batasi shadow/elevation berlebihan.
-
-Supabase gagal:
-
-- Pastikan `SUPABASE_URL` dan `SUPABASE_KEY` ada di `local.properties`.
-- Cek RLS/policy Supabase.
-- Cek response PostgREST di Logcat yang sudah disanitasi.
-
-## Catatan Keamanan
-
-- Jangan commit secret.
-- Jangan log token, API key, password, atau NIP.
-- Jangan menyimpan JWT permanen kecuali ada fitur remember-me yang eksplisit.
-- Jangan memasukkan data produksi palsu ke UI.
+---
+© 2024 PT. Primaraya Graha Nusantara. All Rights Reserved.

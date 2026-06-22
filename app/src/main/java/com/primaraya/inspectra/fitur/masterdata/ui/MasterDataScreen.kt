@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -28,7 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.primaraya.inspectra.core.common.AsyncData
@@ -405,6 +409,33 @@ fun PartList(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.clickable { onToggleDetail(part.uniq_no) }
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .background(Color(0xFFF1F5F9), RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (part.lokasi_gambar != null) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(part.lokasi_gambar)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Layers,
+                                    contentDescription = null,
+                                    tint = Color(0xFF1A365D),
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+                        
+                        Spacer(Modifier.width(16.dp))
+
                         Column(modifier = Modifier.weight(1f)) {
                             Text(part.uniq_no, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
                             Text(part.nama_part, style = MaterialTheme.typography.bodyLarge)

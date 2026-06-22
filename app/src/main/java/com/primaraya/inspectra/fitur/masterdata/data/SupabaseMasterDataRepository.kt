@@ -7,16 +7,25 @@ import com.primaraya.inspectra.core.data.SupabasePgRestDriver
 import com.primaraya.inspectra.core.network.InspectraHttpClient
 import com.primaraya.inspectra.core.network.NetworkResult
 import com.primaraya.inspectra.core.network.runNetworkCatching
+import com.primaraya.inspectra.fitur.checksheet.domain.PartPickerItem
 import com.primaraya.inspectra.fitur.masterdata.domain.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.*
 
 class SupabaseMasterDataRepository(
     private val driver: DatabaseDriver = SupabasePgRestDriver()
 ) : MasterDataRepository {
 
     private val json = InspectraHttpClient.json
+    
+    // Memory Cache
+    private var lastChecksheetVersion = -1L
+    private var cachedChecksheetData = mutableMapOf<String, List<ChecksheetPartDefectViewDto>>()
+    
+    private var lastPickerVersion = -1L
+    private var cachedPickerItems = mutableMapOf<String, List<PartPickerItem>>()
 
     override suspend fun healthCheck(): NetworkResult<Unit> = withContext(Dispatchers.IO) {
         runNetworkCatching {
@@ -28,17 +37,72 @@ class SupabaseMasterDataRepository(
         }
     }
 
+    private suspend fun isCacheStale(kode: String, lastVersion: Long): Boolean {
+        return try {
+            val res = driver.getList(
+                table = RemoteTable.DataRevision,
+                query = "select=versi&kode=eq.$kode",
+                decode = { json.decodeFromString<List<JsonObject>>(it) }
+            )
+            val serverVersion = res.firstOrNull()?.get("versi")?.jsonPrimitive?.longOrNull ?: 0L
+            serverVersion > lastVersion
+        } catch (e: Exception) {
+            true
+        }
+    }
+
     override suspend fun getChecksheetData(
         komoditas: String
     ): NetworkResult<List<ChecksheetPartDefectViewDto>> = withContext(Dispatchers.IO) {
         runNetworkCatching {
-            driver.getList(
+            if (!isCacheStale("CHECKSHEET_REFERENCE", lastChecksheetVersion)) {
+                cachedChecksheetData[komoditas]?.let { return@runNetworkCatching it }
+            }
+
+            val data = driver.getList(
                 table = RemoteTable.ViewChecksheetPartDefect,
                 query = "select=*&komoditas=eq.$komoditas&order=uniq_no.asc&limit=100",
                 decode = { json.decodeFromString(ListSerializer(ChecksheetPartDefectViewDto.serializer()), it) }
             )
+            
+            // Note: In a real app, you'd fetch the version *with* the data or right before
+            // For simplicity, we just update version here
+            val latestVer = driver.getList(
+                table = RemoteTable.DataRevision,
+                query = "select=versi&kode=eq.CHECKSHEET_REFERENCE",
+                decode = { json.decodeFromString<List<JsonObject>>(it).firstOrNull()?.get("versi")?.jsonPrimitive?.longOrNull ?: 0L }
+            )
+            
+            lastChecksheetVersion = latestVer
+            cachedChecksheetData[komoditas] = data
+            data
         }
     }
+
+    override suspend fun getPartPickerItems(tipeProses: String): NetworkResult<List<PartPickerItem>> = withContext(Dispatchers.IO) {
+        runNetworkCatching {
+            if (!isCacheStale("CHECKSHEET_REFERENCE", lastPickerVersion)) {
+                cachedPickerItems[tipeProses]?.let { return@runNetworkCatching it }
+            }
+
+            val data = driver.getList(
+                table = RemoteTable.ViewChecksheetPartPicker,
+                query = "komoditas=eq.$tipeProses&order=uniq_no.asc",
+                decode = { json.decodeFromString(ListSerializer(PartPickerItem.serializer()), it) }
+            )
+
+            val latestVer = driver.getList(
+                table = RemoteTable.DataRevision,
+                query = "select=versi&kode=eq.CHECKSHEET_REFERENCE",
+                decode = { json.decodeFromString<List<JsonObject>>(it).firstOrNull()?.get("versi")?.jsonPrimitive?.longOrNull ?: 0L }
+            )
+
+            lastPickerVersion = latestVer
+            cachedPickerItems[tipeProses] = data
+            data
+        }
+    }
+
 
     override suspend fun getPartsPage(
         page: PageRequest

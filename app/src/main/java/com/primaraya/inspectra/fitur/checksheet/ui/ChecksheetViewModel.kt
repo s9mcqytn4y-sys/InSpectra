@@ -36,6 +36,11 @@ class ChecksheetMviViewModel(
     fun onIntent(intent: ChecksheetContract.Intent) {
         when (intent) {
             is ChecksheetContract.Intent.Muat -> muat(intent.tipeProses)
+            is ChecksheetContract.Intent.CariPart -> _state.update { it.copy(pencarian = intent.query) }
+            is ChecksheetContract.Intent.PilihPart -> pilihPart(intent.uniqNo, intent.pilih)
+            ChecksheetContract.Intent.LanjutKeForm -> muatForm()
+            ChecksheetContract.Intent.KembaliKePicker -> _state.update { it.copy(step = ChecksheetContract.State.Step.PILIH_PART) }
+            
             is ChecksheetContract.Intent.TogglePart -> togglePart(intent.uniqNo)
             is ChecksheetContract.Intent.UbahJumlahDiperiksa -> ubahJumlahDiperiksa(intent.uniqNo, intent.jumlah)
             is ChecksheetContract.Intent.UbahJumlahDefect -> ubahJumlahDefect(intent.uniqNo, intent.idDefect, intent.jumlah)
@@ -55,10 +60,43 @@ class ChecksheetMviViewModel(
             _state.update {
                 it.copy(
                     tipeProses = tipeProses,
-                    dataChecksheet = AsyncData.Loading,
+                    dataPicker = AsyncData.Loading,
+                    dataChecksheet = AsyncData.Idle,
+                    partTerpilih = emptySet(),
+                    step = ChecksheetContract.State.Step.PILIH_PART,
                     preview = null
                 )
             }
+
+            when (val result = masterRepository.getPartPickerItems(tipeProses.name)) {
+                is NetworkResult.Success -> {
+                    _state.update { it.copy(dataPicker = AsyncData.Success(result.data)) }
+                }
+                is NetworkResult.Error -> {
+                    val msg = UserMessageMapper.fromThrowableMessage(result.message, KonteksOperasi.CHECKSHEET)
+                    _state.update { it.copy(dataPicker = AsyncData.Error(msg.title, msg.body)) }
+                }
+                else -> Unit
+            }
+        }
+    }
+
+    private fun pilihPart(uniqNo: String, pilih: Boolean) {
+        _state.update {
+            val set = it.partTerpilih.toMutableSet()
+            if (pilih) set.add(uniqNo) else set.remove(uniqNo)
+            it.copy(partTerpilih = set)
+        }
+    }
+
+    private fun muatForm() {
+        val tipeProses = _state.value.tipeProses
+        val terpilih = _state.value.partTerpilih
+        if (terpilih.isEmpty()) return
+
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            _state.update { it.copy(dataChecksheet = AsyncData.Loading) }
 
             val slotsRes = masterRepository.getSlotWaktu(tipeProses.name)
             val slots = (slotsRes as? NetworkResult.Success)?.data ?: emptyList()
@@ -66,33 +104,36 @@ class ChecksheetMviViewModel(
             when (val result = masterRepository.getChecksheetData(tipeProses.name)) {
                 is NetworkResult.Success -> {
                     val daftar = result.data
-                        .filter { dto -> dto.komoditas.equals(tipeProses.name, ignoreCase = true) }
+                        .filter { dto -> terpilih.contains(dto.uniq_no) }
                         .map { dto ->
-                        RingkasanPartChecksheet(
-                            uniqNo = dto.uniq_no,
-                            nomorPart = dto.part_no,
-                            namaPart = dto.nama_part,
-                            komoditas = tipeProses,
-                            daftarDefect = dto.daftar_defect.map { defect ->
-                                InputDefect(
-                                    idDefect = defect.id_defect,
-                                    namaDefect = defect.nama_defect,
-                                    kategori = runCatching {
-                                        KategoriDefect.valueOf(defect.kategori.uppercase())
-                                    }.getOrDefault(KategoriDefect.PROSES),
-                                    jumlahNg = 0,
-                                    detailSlot = slots.map { SlotNg(it.id, it.label_waktu) }
-                                )
-                            },
-                            lokasiGambar = dto.lokasi_gambar
-                        )
-                    }
+                            RingkasanPartChecksheet(
+                                uniqNo = dto.uniq_no,
+                                nomorPart = dto.part_no,
+                                namaPart = dto.nama_part,
+                                komoditas = tipeProses,
+                                daftarDefect = dto.daftar_defect.map { defect ->
+                                    InputDefect(
+                                        idDefect = defect.id_defect,
+                                        namaDefect = defect.nama_defect,
+                                        kategori = runCatching {
+                                            KategoriDefect.valueOf(defect.kategori.uppercase())
+                                        }.getOrDefault(KategoriDefect.PROSES),
+                                        jumlahNg = 0,
+                                        detailSlot = slots.map { SlotNg(it.id, it.label_waktu) }
+                                    )
+                                },
+                                lokasiGambar = dto.lokasi_gambar,
+                                terbuka = terpilih.size == 1 // Auto-open if only one part selected
+                            )
+                        }
 
                     _state.update {
-                        it.copy(dataChecksheet = if (daftar.isEmpty()) AsyncData.Empty("Belum ada data", "Silakan periksa Data Induk.") else AsyncData.Success(daftar))
+                        it.copy(
+                            dataChecksheet = AsyncData.Success(daftar),
+                            step = ChecksheetContract.State.Step.ISI_FORM
+                        )
                     }
                 }
-
                 is NetworkResult.Error -> {
                     val msg = UserMessageMapper.fromThrowableMessage(result.message, KonteksOperasi.CHECKSHEET)
                     _state.update { it.copy(dataChecksheet = AsyncData.Error(msg.title, msg.body)) }

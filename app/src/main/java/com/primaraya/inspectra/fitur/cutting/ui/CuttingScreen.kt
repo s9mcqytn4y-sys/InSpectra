@@ -1,36 +1,15 @@
 package com.primaraya.inspectra.fitur.cutting.ui
 
 import android.app.Application
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -105,7 +84,7 @@ fun CuttingScreen(
             is AsyncData.Loading -> AppListSkeleton()
             is AsyncData.Error -> AppEmptyState("Material Cutting gagal dimuat", statusMaterial.message)
             else -> {
-                AppResponsiveContent(modifier = Modifier.padding(padding)) { _, contentModifier ->
+                AppResponsiveContent(modifier = Modifier.padding(padding)) { isTablet, contentModifier ->
                     FormBatchCutting(
                         input = state.input,
                         material = (state.material as? AsyncData.Success)?.data.orEmpty(),
@@ -115,6 +94,7 @@ fun CuttingScreen(
                         ringkasan = state.ringkasan,
                         daftarPesanValidasi = state.daftarPesanValidasi,
                         menyimpan = state.menyimpan,
+                        isTablet = isTablet,
                         onUbah = { viewModel.onIntent(CuttingContract.Intent.UbahInput(it)) },
                         onPilihMaterial = { viewModel.onIntent(CuttingContract.Intent.PilihMaterial(it)) },
                         onPilihPartUkuran = { viewModel.onIntent(CuttingContract.Intent.PilihPartAcuanUkuran(it)) },
@@ -151,6 +131,7 @@ private fun FormBatchCutting(
     ringkasan: AsyncData<List<com.primaraya.inspectra.fitur.cutting.domain.RingkasanHarianCutting>>,
     daftarPesanValidasi: List<String>,
     menyimpan: Boolean,
+    isTablet: Boolean,
     onUbah: (InputBatchCutting) -> Unit,
     onPilihMaterial: (OpsiMaterialCutting) -> Unit,
     onPilihPartUkuran: (OpsiPartUkuranCutting) -> Unit,
@@ -163,176 +144,412 @@ private fun FormBatchCutting(
     modifier: Modifier
 ) {
     val materialTerpilih = material.firstOrNull { it.material_id == input.materialId }
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item {
-            Text("Setup Sesi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+    if (isTablet) {
+        Row(
+            modifier = modifier.fillMaxSize().padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            LazyColumn(
+                modifier = Modifier.weight(1.5f),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Section 1: Setup
+                item {
+                    Text("Setup Sesi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(
+                            value = input.tanggalPemeriksaan,
+                            onValueChange = { onUbah(input.copy(tanggalPemeriksaan = it)) },
+                            label = { Text("Tanggal") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = input.namaOperator.orEmpty(),
+                            onValueChange = { onUbah(input.copy(namaOperator = it)) },
+                            label = { Text("Nama Operator") },
+                            modifier = Modifier.weight(1.5f),
+                            singleLine = true
+                        )
+                    }
+                }
+
+                item { HorizontalDivider() }
+
+                // Section 2: Batch Info
+                item {
+                    Text("Batch Pemotongan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    AppDropdownField(
+                        label = "Material",
+                        value = input.namaMaterial,
+                        options = material.map { it.labelPilihan },
+                        onSelected = { label -> material.firstOrNull { it.labelPilihan == label }?.let(onPilihMaterial) }
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = input.spesifikasiMaterial,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Spesifikasi material") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(
+                            value = input.nomorLotRoll,
+                            onValueChange = { onUbah(input.copy(nomorLotRoll = it)) },
+                            label = { Text("Nomor lot / roll") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = input.nomorRoll,
+                            onValueChange = { onUbah(input.copy(nomorRoll = it)) },
+                            label = { Text("Nomor roll") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                    }
+                }
+                item {
+                    AppDropdownField(
+                        label = "Ukuran cutting (cm)",
+                        value = input.ukuranCuttingCm,
+                        options = materialTerpilih?.daftar_ukuran_cutting?.map { "${it.ukuranEfektif} cm" }.orEmpty(),
+                        onSelected = { label ->
+                            materialTerpilih?.daftar_ukuran_cutting
+                                ?.firstOrNull { "${it.ukuranEfektif} cm" == label }
+                                ?.let { ukuran ->
+                                    onUbah(
+                                        input.copy(
+                                            ukuranCuttingCm = ukuran.ukuranEfektif.toString(),
+                                            idReferensiUkuranMaterial = ukuran.id
+                                        )
+                                    )
+                                }
+                        }
+                    )
+                    OutlinedTextField(
+                        value = input.ukuranCuttingCm,
+                        onValueChange = { onUbah(input.copy(ukuranCuttingCm = it, idReferensiUkuranMaterial = null)) },
+                        label = { Text("Atau isi ukuran manual (cm)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true
+                    )
+                }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(
+                            value = input.qtyLayerOk,
+                            onValueChange = { onUbah(input.copy(qtyLayerOk = it.filter(Char::isDigit))) },
+                            label = { Text("Layer OK") },
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = input.qtyLayerNg,
+                            onValueChange = { onUbah(input.copy(qtyLayerNg = it.filter(Char::isDigit))) },
+                            label = { Text("Layer NG") },
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true
+                        )
+                    }
+                }
+                item {
+                    OutlinedTextField(
+                        value = input.wastePanjangCm,
+                        onValueChange = { onUbah(input.copy(wastePanjangCm = it)) },
+                        label = { Text("Waste (cm)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true
+                    )
+                }
+
+                item { HorizontalDivider() }
+
+                // Section 3: Defects
+                item {
+                    Text("Daftar Temuan Defect", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    AppDropdownField(
+                        label = "Tambah defect bila ada NG",
+                        value = "Pilih defect",
+                        options = defect.filterNot { kandidat -> input.daftarDefect.any { it.idDefect == kandidat.id_defect } }.map { it.nama_defect },
+                        onSelected = { nama -> defect.firstOrNull { it.nama_defect == nama }?.let(onTambahDefect) }
+                    )
+                }
+                items(input.daftarDefect, key = { it.idDefect }) { item ->
+                    BarisDefectCutting(
+                        defect = item,
+                        slotWaktu = slotWaktu,
+                        onUbahJumlah = { onUbahJumlahDefect(item.idDefect, it) },
+                        onUbahPanjang = { onUbahPanjangDefect(item.idDefect, it) },
+                        onUbahSlot = { onUbahSlotDefect(item.idDefect, it) },
+                        onHapus = { onHapusDefect(item.idDefect) }
+                    )
+                }
+            }
+
+            // Right Pane: Summary and Submission
+            Column(
+                modifier = Modifier.weight(1f).padding(top = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9))
+                ) {
+                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Kalkulasi Real-time", fontWeight = FontWeight.Black, color = Color(0xFF1E293B))
+                        HorizontalDivider(color = Color.White)
+                        
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Total Layer:")
+                            Text("${input.totalLayer}", fontWeight = FontWeight.Bold)
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Rasio NG:")
+                            Text("${input.rasioNgLayer}%", fontWeight = FontWeight.Bold, color = if(input.rasioNgLayer > 5) Color.Red else Color.Unspecified)
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Rasio Waste:")
+                            Text("${input.rasioWastePanjang}%", fontWeight = FontWeight.Bold)
+                        }
+                        
+                        Spacer(Modifier.height(8.dp))
+                        Text("Estimasi Panjang (cm)", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Hasil OK:")
+                            Text("${input.estimasiPanjangOkCm} cm", fontWeight = FontWeight.Bold)
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Hasil NG:")
+                            Text("${input.estimasiPanjangNgCm} cm", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                if (daftarPesanValidasi.isNotEmpty()) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Mohon perbaiki:", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                            daftarPesanValidasi.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.weight(1f))
+
+                Button(
+                    onClick = onSimpan,
+                    enabled = !menyimpan,
+                    modifier = Modifier.fillMaxWidth().height(64.dp),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    if (menyimpan) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                    else {
+                        Icon(Icons.Default.Save, contentDescription = null)
+                        Spacer(Modifier.width(12.dp))
+                        Text("SIMPAN BATCH", fontWeight = FontWeight.Black)
+                    }
+                }
+
+                // Show daily summary mini list
+                val ringkasanHariIni = (ringkasan as? AsyncData.Success)?.data.orEmpty()
+                if (ringkasanHariIni.isNotEmpty()) {
+                    Text("Ringkasan Harian", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    LazyColumn(modifier = Modifier.height(200.dp)) {
+                        items(ringkasanHariIni) { data ->
+                            Text(
+                                text = "• ${data.nama_line ?: "Line"}: ${data.total_batch} batch | OK ${data.total_layer_ok} | NG ${data.total_layer_ng}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+            }
         }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    } else {
+        // Phone Layout
+        LazyColumn(
+            modifier = modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                Text("Setup Sesi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+            item {
                 OutlinedTextField(
                     value = input.tanggalPemeriksaan,
                     onValueChange = { onUbah(input.copy(tanggalPemeriksaan = it)) },
                     label = { Text("Tanggal") },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+            }
+            item {
                 OutlinedTextField(
                     value = input.namaOperator.orEmpty(),
                     onValueChange = { onUbah(input.copy(namaOperator = it)) },
                     label = { Text("Nama Operator") },
-                    modifier = Modifier.weight(1.5f),
+                    modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
             }
-        }
 
-        item { HorizontalDivider() }
-        item { Text("Batch Pemotongan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
-        item {
-            AppDropdownField(
-                label = "Material",
-                value = input.namaMaterial,
-                options = material.map { it.labelPilihan },
-                onSelected = { label -> material.firstOrNull { it.labelPilihan == label }?.let(onPilihMaterial) }
-            )
-        }
-        item {
-            OutlinedTextField(
-                value = input.spesifikasiMaterial,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Spesifikasi material") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = input.nomorLotRoll,
-                    onValueChange = { onUbah(input.copy(nomorLotRoll = it)) },
-                    label = { Text("Nomor lot / roll") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
+            item { HorizontalDivider() }
+            item { Text("Batch Pemotongan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+            item {
+                AppDropdownField(
+                    label = "Material",
+                    value = input.namaMaterial,
+                    options = material.map { it.labelPilihan },
+                    onSelected = { label -> material.firstOrNull { it.labelPilihan == label }?.let(onPilihMaterial) }
                 )
+            }
+            item {
                 OutlinedTextField(
-                    value = input.nomorRoll,
-                    onValueChange = { onUbah(input.copy(nomorRoll = it)) },
-                    label = { Text("Nomor roll") },
-                    modifier = Modifier.weight(1f),
+                    value = input.spesifikasiMaterial,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Spesifikasi material") },
+                    modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
             }
-        }
-        item {
-            AppDropdownField(
-                label = "Ukuran cutting (cm)",
-                value = input.ukuranCuttingCm,
-                options = materialTerpilih?.daftar_ukuran_cutting?.map { "${it.ukuranEfektif} cm" }.orEmpty(),
-                onSelected = { label ->
-                    materialTerpilih?.daftar_ukuran_cutting
-                        ?.firstOrNull { "${it.ukuranEfektif} cm" == label }
-                        ?.let { ukuran ->
-                            onUbah(
-                                input.copy(
-                                    ukuranCuttingCm = ukuran.ukuranEfektif.toString(),
-                                    idReferensiUkuranMaterial = ukuran.id
-                                )
-                            )
-                        }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = input.nomorLotRoll,
+                        onValueChange = { onUbah(input.copy(nomorLotRoll = it)) },
+                        label = { Text("Lot") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = input.nomorRoll,
+                        onValueChange = { onUbah(input.copy(nomorRoll = it)) },
+                        label = { Text("Roll") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
                 }
-            )
-            OutlinedTextField(
-                value = input.ukuranCuttingCm,
-                onValueChange = { onUbah(input.copy(ukuranCuttingCm = it, idReferensiUkuranMaterial = null)) },
-                label = { Text("Atau isi ukuran manual (cm)") },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                singleLine = true
-            )
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = input.qtyLayerOk,
-                    onValueChange = { onUbah(input.copy(qtyLayerOk = it.filter(Char::isDigit))) },
-                    label = { Text("Layer OK") },
-                    modifier = Modifier.weight(1f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true
+            }
+            item {
+                AppDropdownField(
+                    label = "Ukuran cutting (cm)",
+                    value = input.ukuranCuttingCm,
+                    options = materialTerpilih?.daftar_ukuran_cutting?.map { "${it.ukuranEfektif} cm" }.orEmpty(),
+                    onSelected = { label ->
+                        materialTerpilih?.daftar_ukuran_cutting
+                            ?.firstOrNull { "${it.ukuranEfektif} cm" == label }
+                            ?.let { ukuran ->
+                                onUbah(
+                                    input.copy(
+                                        ukuranCuttingCm = ukuran.ukuranEfektif.toString(),
+                                        idReferensiUkuranMaterial = ukuran.id
+                                    )
+                                )
+                            }
+                    }
                 )
                 OutlinedTextField(
-                    value = input.qtyLayerNg,
-                    onValueChange = { onUbah(input.copy(qtyLayerNg = it.filter(Char::isDigit))) },
-                    label = { Text("Layer NG") },
-                    modifier = Modifier.weight(1f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = input.wastePanjangCm,
-                    onValueChange = { onUbah(input.copy(wastePanjangCm = it)) },
-                    label = { Text("Waste (cm)") },
-                    modifier = Modifier.weight(1f),
+                    value = input.ukuranCuttingCm,
+                    onValueChange = { onUbah(input.copy(ukuranCuttingCm = it, idReferensiUkuranMaterial = null)) },
+                    label = { Text("Atau isi ukuran manual (cm)") },
+                    modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true
                 )
             }
-        }
-        item { HorizontalDivider() }
-        item {
-            AppDropdownField(
-                label = "Tambah defect bila ada NG",
-                value = "Pilih defect",
-                options = defect.filterNot { kandidat -> input.daftarDefect.any { it.idDefect == kandidat.id_defect } }.map { it.nama_defect },
-                onSelected = { nama -> defect.firstOrNull { it.nama_defect == nama }?.let(onTambahDefect) }
-            )
-        }
-        items(input.daftarDefect, key = { it.idDefect }) { item ->
-            BarisDefectCutting(
-                defect = item,
-                slotWaktu = slotWaktu,
-                onUbahJumlah = { onUbahJumlahDefect(item.idDefect, it) },
-                onUbahPanjang = { onUbahPanjangDefect(item.idDefect, it) },
-                onUbahSlot = { onUbahSlotDefect(item.idDefect, it) },
-                onHapus = { onHapusDefect(item.idDefect) }
-            )
-        }
-        item {
-            Text("Rasio NG: ${input.rasioNgLayer}% | Rasio waste: ${input.rasioWastePanjang}%", style = MaterialTheme.typography.labelLarge)
-            Text("Estimasi panjang OK: ${input.estimasiPanjangOkCm} cm | NG: ${input.estimasiPanjangNgCm} cm", style = MaterialTheme.typography.labelMedium)
-        }
-        val ringkasanHariIni = (ringkasan as? AsyncData.Success)?.data.orEmpty()
-        if (ringkasanHariIni.isNotEmpty()) {
             item {
-                HorizontalDivider()
-                Spacer(Modifier.height(8.dp))
-                Text("Ringkasan Harian", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                ringkasanHariIni.forEach { data ->
-                    Text(
-                        text = "${data.nama_line ?: "Tanpa line"}: ${data.total_batch} batch | " +
-                            "OK ${data.total_layer_ok} | NG ${data.total_layer_ng} | " +
-                            "Waste ${data.total_waste_cm} cm",
-                        style = MaterialTheme.typography.bodySmall
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = input.qtyLayerOk,
+                        onValueChange = { onUbah(input.copy(qtyLayerOk = it.filter(Char::isDigit))) },
+                        label = { Text("OK") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = input.qtyLayerNg,
+                        onValueChange = { onUbah(input.copy(qtyLayerNg = it.filter(Char::isDigit))) },
+                        label = { Text("NG") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true
                     )
                 }
             }
-        }
-        if (daftarPesanValidasi.isNotEmpty()) {
             item {
-                Column {
+                OutlinedTextField(
+                    value = input.wastePanjangCm,
+                    onValueChange = { onUbah(input.copy(wastePanjangCm = it)) },
+                    label = { Text("Waste (cm)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true
+                )
+            }
+
+            item { HorizontalDivider() }
+            item {
+                Text("Daftar Defect", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                AppDropdownField(
+                    label = "Tambah defect",
+                    value = "Pilih defect",
+                    options = defect.filterNot { kandidat -> input.daftarDefect.any { it.idDefect == kandidat.id_defect } }.map { it.nama_defect },
+                    onSelected = { nama -> defect.firstOrNull { it.nama_defect == nama }?.let(onTambahDefect) }
+                )
+            }
+            items(input.daftarDefect, key = { it.idDefect }) { item ->
+                BarisDefectCutting(
+                    defect = item,
+                    slotWaktu = slotWaktu,
+                    onUbahJumlah = { onUbahJumlahDefect(item.idDefect, it) },
+                    onUbahPanjang = { onUbahPanjangDefect(item.idDefect, it) },
+                    onUbahSlot = { onUbahSlotDefect(item.idDefect, it) },
+                    onHapus = { onHapusDefect(item.idDefect) }
+                )
+            }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9))
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("Ringkasan: OK ${input.estimasiPanjangOkCm} cm | NG ${input.estimasiPanjangNgCm} cm", style = MaterialTheme.typography.labelMedium)
+                        Text("Rasio NG: ${input.rasioNgLayer}% | Waste: ${input.rasioWastePanjang}%", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            if (daftarPesanValidasi.isNotEmpty()) {
+                item {
                     daftarPesanValidasi.forEach { Text(it, color = MaterialTheme.colorScheme.error) }
                 }
             }
-        }
-        item {
-            Button(onClick = onSimpan, enabled = !menyimpan, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                if (menyimpan) CircularProgressIndicator(modifier = Modifier.width(20.dp), color = Color.White)
-                else Text("Lanjut Preview")
+            item {
+                Button(onClick = onSimpan, enabled = !menyimpan, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                    if (menyimpan) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
+                    else Text("Lanjut Preview")
+                }
             }
         }
     }

@@ -2,12 +2,15 @@ package com.primaraya.inspectra.fitur.masterdata.data
 
 import com.primaraya.inspectra.core.data.PageRequest
 import com.primaraya.inspectra.core.network.NetworkResult
+import com.primaraya.inspectra.fitur.checksheet.domain.PartPickerItem
 import com.primaraya.inspectra.fitur.masterdata.domain.*
 
 interface MasterDataRepository {
     suspend fun healthCheck(): NetworkResult<Unit>
 
     suspend fun getChecksheetData(komoditas: String): NetworkResult<List<ChecksheetPartDefectViewDto>>
+
+    suspend fun getPartPickerItems(tipeProses: String): NetworkResult<List<PartPickerItem>>
 
     suspend fun getPartsPage(page: PageRequest): NetworkResult<List<MasterPartDto>>
     suspend fun getSuppliersPage(page: PageRequest): NetworkResult<List<MasterSupplierDto>>

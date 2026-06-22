@@ -28,8 +28,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.filled.Warning
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.primaraya.inspectra.core.ui.component.AppResponsiveContent
 import com.primaraya.inspectra.core.ui.theme.InSpectraTheme
+import com.primaraya.inspectra.core.ui.viewmodel.AppViewModel
+import com.primaraya.inspectra.core.ui.viewmodel.CURRENT_SCHEMA_REVISION
 import com.primaraya.inspectra.fitur.checksheet.domain.TipeProses
 import com.primaraya.inspectra.fitur.checksheet.ui.ChecksheetScreen
 import com.primaraya.inspectra.fitur.checksheet.ui.labelIndonesia
@@ -97,19 +102,50 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainDashboard(
     onChecksheetClick: () -> Unit,
-    onMasterDataClick: () -> Unit
+    onMasterDataClick: () -> Unit,
+    appViewModel: AppViewModel = viewModel()
 ) {
+    val isSchemaCompatible by appViewModel.isSchemaCompatible.collectAsStateWithLifecycle()
+    val bootstrap by appViewModel.bootstrap.collectAsStateWithLifecycle()
+
     AppResponsiveContent { isTablet, contentModifier ->
         Column(
             modifier = contentModifier.padding(top = 28.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
+            if (!isSchemaCompatible) {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.width(16.dp))
+                        Column {
+                            Text("Versi Database Tidak Cocok", fontWeight = FontWeight.Bold)
+                            Text("Aplikasi mungkin tidak berfungsi dengan benar. Harap hubungi Admin IT.", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+            
             Text(
                 text = "Workspace QC InSpectra",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Black,
                 color = Color(0xFF16365F)
             )
+
+            AssistChip(
+                onClick = {},
+                label = { Text("Data diproses langsung ke server") },
+                colors = AssistChipDefaults.assistChipColors(containerColor = Color(0xFFF0FDF4))
+            )
+
 
             AssistChip(
                 onClick = {},
