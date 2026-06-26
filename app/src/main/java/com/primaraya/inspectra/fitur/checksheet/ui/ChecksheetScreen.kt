@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -138,7 +139,7 @@ fun ChecksheetScreen(
                         } else {
                             Icon(Icons.Default.TaskAlt, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Tinjau & Kirim", fontWeight = FontWeight.Black)
+                            Text(stringResource(com.primaraya.inspectra.R.string.checksheet_review_submit), fontWeight = FontWeight.Black)
                         }
                     }
                 }
@@ -360,7 +361,7 @@ fun KartuPartChecksheetRingkas(
                 OutlinedTextField(
                     value = if (part.jumlahDiperiksa == 0) "" else part.jumlahDiperiksa.toString(),
                     onValueChange = { onJumlahDiperiksaUbah(it.toIntOrNull() ?: 0) },
-                    label = { Text("Input Jumlah Diperiksa") },
+                    label = { Text(stringResource(com.primaraya.inspectra.R.string.checksheet_input_checked_qty)) },
                     placeholder = { Text("0 Pcs") },
                     supportingText = {
                         if (part.kuantitasTidakValid) {
@@ -383,7 +384,7 @@ fun KartuPartChecksheetRingkas(
                 Spacer(Modifier.height(20.dp))
 
                 Text(
-                    text = "Daftar Temuan NG",
+                    text = stringResource(com.primaraya.inspectra.R.string.checksheet_ng_findings_list),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Black,
                     color = Color(0xFF1E293B)
@@ -424,11 +425,11 @@ fun KartuPartChecksheetRingkas(
                     onClick = onBukaTambahDefect,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp)
+                    border = ButtonDefaults.outlinedButtonBorder(enabled = true)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Tambah Jenis Defect Lain")
+                    Text(stringResource(com.primaraya.inspectra.R.string.checksheet_add_other_defect))
                 }
             }
         }

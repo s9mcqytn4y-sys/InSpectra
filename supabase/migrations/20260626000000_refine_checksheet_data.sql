@@ -99,6 +99,7 @@ begin
 end $$;
 
 -- 4. Update v_checksheet_part_defect to be Recursive (for Material Composition)
+drop view if exists public.v_checksheet_part_defect cascade;
 create or replace view public.v_checksheet_part_defect as
 with recursive material_hierarchy as (
     -- Base: Direct materials for each part

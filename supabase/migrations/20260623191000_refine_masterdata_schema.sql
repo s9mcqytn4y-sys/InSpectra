@@ -19,6 +19,7 @@ alter table public.m_material
     add column if not exists catatan_spesifikasi text;
 
 -- 2. View untuk Defect Efektif Part (Proses + Material)
+drop view if exists public.v_part_defect_efektif cascade;
 create or replace view public.v_part_defect_efektif as
 -- Defect Proses Part
 select
@@ -57,6 +58,7 @@ join public.m_material_defect md on md.material_id = m.id
 join public.m_defect d on d.id_defect = md.id_defect;
 
 -- 3. Update View ViewDataIndukPart dengan split counts
+drop view if exists public.v_data_induk_part cascade;
 create or replace view public.v_data_induk_part as
 with counts as (
     select
