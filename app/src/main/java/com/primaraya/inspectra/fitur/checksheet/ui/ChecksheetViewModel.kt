@@ -12,6 +12,7 @@ import com.primaraya.inspectra.core.ui.KonteksOperasi
 import com.primaraya.inspectra.fitur.checksheet.domain.*
 import com.primaraya.inspectra.fitur.masterdata.data.MasterDataRepository
 import com.primaraya.inspectra.fitur.masterdata.data.SupabaseMasterDataRepository
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -47,6 +48,13 @@ class ChecksheetMviViewModel(
             is ChecksheetContract.Intent.UbahJumlahSlotDefect -> ubahJumlahSlotDefect(intent)
             is ChecksheetContract.Intent.TambahDefect -> tambahKurangi(intent.uniqNo, intent.idDefect, 1)
             is ChecksheetContract.Intent.KurangiDefect -> tambahKurangi(intent.uniqNo, intent.idDefect, -1)
+            
+            is ChecksheetContract.Intent.SembunyikanDefect -> sembunyikanDefect(intent.uniqNo, intent.idDefect)
+            is ChecksheetContract.Intent.TampilkanDefect -> tampilkanDefect(intent.uniqNo, intent.idDefect)
+            is ChecksheetContract.Intent.BukaTambahDefectLain -> bukaTambahDefectLain(intent.uniqNo)
+            is ChecksheetContract.Intent.TambahDefectLain -> tambahDefectLain(intent.uniqNo, intent.defect)
+            ChecksheetContract.Intent.TutupDialogTambahDefect -> _state.update { it.copy(dialogTambahDefect = null) }
+
             ChecksheetContract.Intent.Tinjau -> buatPreview()
             ChecksheetContract.Intent.TutupPreview -> _state.update { it.copy(preview = null) }
             ChecksheetContract.Intent.Kirim -> kirim()
@@ -70,7 +78,7 @@ class ChecksheetMviViewModel(
 
             when (val result = masterRepository.getPartPickerItems(tipeProses.name)) {
                 is NetworkResult.Success -> {
-                    _state.update { it.copy(dataPicker = AsyncData.Success(result.data)) }
+                    _state.update { it.copy(dataPicker = AsyncData.Success(result.data.toImmutableList())) }
                 }
                 is NetworkResult.Error -> {
                     val msg = UserMessageMapper.fromThrowableMessage(result.message, KonteksOperasi.CHECKSHEET)
@@ -119,13 +127,13 @@ class ChecksheetMviViewModel(
                                             KategoriDefect.valueOf(defect.kategori.uppercase())
                                         }.getOrDefault(KategoriDefect.PROSES),
                                         jumlahNg = 0,
-                                        detailSlot = slots.map { SlotNg(it.id, it.label_waktu) }
+                                        detailSlot = slots.map { SlotNg(it.kode_slot, it.label_waktu) }.toImmutableList()
                                     )
-                                },
+                                }.toImmutableList(),
                                 lokasiGambar = dto.lokasi_gambar,
                                 terbuka = terpilih.size == 1 // Auto-open if only one part selected
                             )
-                        }
+                        }.toImmutableList()
 
                     _state.update {
                         it.copy(
@@ -158,7 +166,7 @@ class ChecksheetMviViewModel(
             part.copy(
                 daftarDefect = part.daftarDefect.map { defect ->
                     if (defect.idDefect == idDefect) defect.copy(jumlahNg = jumlah.coerceAtLeast(0)) else defect
-                }
+                }.toImmutableList()
             )
         }
     }
@@ -172,10 +180,10 @@ class ChecksheetMviViewModel(
                         defect.copy(
                             detailSlot = defect.detailSlot.map { slot ->
                                 if (slot.slotId == intent.slotId) slot.copy(jumlah = intent.jumlah.coerceAtLeast(0)) else slot
-                            }
+                            }.toImmutableList()
                         )
                     } else defect
-                }
+                }.toImmutableList()
             )
         }
     }
@@ -186,12 +194,62 @@ class ChecksheetMviViewModel(
         ubahJumlahDefect(uniqNo, idDefect, defect.jumlahNg + delta)
     }
 
+    private fun sembunyikanDefect(uniqNo: String, idDefect: String) {
+        updateDaftarPart(uniqNo) { part ->
+            part.copy(defectTersembunyi = part.defectTersembunyi + idDefect)
+        }
+    }
+
+    private fun tampilkanDefect(uniqNo: String, idDefect: String) {
+        updateDaftarPart(uniqNo) { part ->
+            part.copy(defectTersembunyi = part.defectTersembunyi - idDefect)
+        }
+    }
+
+    private fun bukaTambahDefectLain(uniqNo: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(dialogTambahDefect = uniqNo) }
+            val current = _state.value.daftarDefectMaster
+            if (current !is AsyncData.Success) {
+                _state.update { it.copy(daftarDefectMaster = AsyncData.Loading) }
+                when (val result = masterRepository.getDefectsPage(com.primaraya.inspectra.core.data.PageRequest(limit = 100, cursorColumn = "id_defect"))) {
+                    is NetworkResult.Success -> _state.update { it.copy(daftarDefectMaster = AsyncData.Success(result.data.toImmutableList())) }
+                    is NetworkResult.Error -> _effect.emit(ChecksheetContract.Effect.PesanError("Gagal muat master defect", result.message))
+                    else -> Unit
+                }
+            }
+        }
+    }
+
+    private fun tambahDefectLain(uniqNo: String, defect: com.primaraya.inspectra.fitur.masterdata.domain.MasterDefectDto) {
+        viewModelScope.launch {
+            val slotsRes = masterRepository.getSlotWaktu(_state.value.tipeProses.name)
+            val slots = (slotsRes as? NetworkResult.Success)?.data ?: emptyList()
+
+            updateDaftarPart(uniqNo) { part ->
+                if (part.daftarDefect.any { it.idDefect == defect.id_defect }) {
+                    part.copy(defectTersembunyi = part.defectTersembunyi - defect.id_defect)
+                } else {
+                    val input = InputDefect(
+                        idDefect = defect.id_defect,
+                        namaDefect = defect.nama_defect,
+                        kategori = runCatching { KategoriDefect.valueOf(defect.kategori.uppercase()) }.getOrDefault(KategoriDefect.PROSES),
+                        jumlahNg = 0,
+                        detailSlot = slots.map { SlotNg(it.kode_slot, it.label_waktu) }.toImmutableList()
+                    )
+                    part.copy(daftarDefect = (part.daftarDefect + input).toImmutableList())
+                }
+            }
+            _state.update { it.copy(dialogTambahDefect = null) }
+        }
+    }
+
     private fun updateDaftarPart(targetUniqNo: String? = null, transform: (RingkasanPartChecksheet) -> RingkasanPartChecksheet) {
         val current = _state.value.dataChecksheet
         if (current is AsyncData.Success) {
             val updated = current.data.map { 
                 if (targetUniqNo == null || it.uniqNo == targetUniqNo) transform(it) else it
-            }
+            }.toImmutableList()
             _state.update { it.copy(dataChecksheet = AsyncData.Success(updated)) }
             
         }
@@ -234,9 +292,9 @@ class ChecksheetMviViewModel(
                     jumlahOk = part.jumlahOk,
                     jumlahNg = part.jumlahNg,
                     rasioNg = part.rasioNgSatuDesimal,
-                    daftarDefectNg = part.daftarDefect.filter { it.jumlahNg > 0 }
+                    daftarDefectNg = part.daftarDefect.filter { it.jumlahNg > 0 }.toImmutableList()
                 )
-            }
+            }.toImmutableList()
         )
 
         _state.update { it.copy(preview = payload) }
@@ -256,9 +314,9 @@ class ChecksheetMviViewModel(
                             terbuka = false,
                             daftarDefect = part.daftarDefect.map { defect ->
                                 defect.copy(jumlahNg = 0)
-                            }
+                            }.toImmutableList()
                         )
-                    }
+                    }.toImmutableList()
                     
                     _state.update {
                         it.copy(

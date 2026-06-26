@@ -25,38 +25,45 @@ fun RingkasanAtas(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9))
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(18.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Diperiksa", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                Text("$totalDiperiksa Pcs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("OK", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                Text("$totalOk Pcs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black, color = Color(0xFF16A34A))
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("NG", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                Text("$totalNg Pcs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black, color = Color(0xFFDC2626))
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Rasio NG", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                Text(
-                    String.format("%.1f%%", rasioNg),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Black,
-                    color = if (adaKuantitasTidakValid) Color(0xFFDC2626) else Color(0xFFD97706)
-                )
-            }
+            InfoColumn("Diperiksa", "$totalDiperiksa Pcs", Color(0xFF475569))
+            InfoColumn("OK", "$totalOk Pcs", Color(0xFF16A34A))
+            InfoColumn("NG", "$totalNg Pcs", Color(0xFFDC2626))
+            InfoColumn(
+                "Rasio NG",
+                String.format("%.1f%%", rasioNg),
+                if (adaKuantitasTidakValid) Color(0xFFDC2626) else Color(0xFFD97706)
+            )
         }
+    }
+}
+
+@Composable
+private fun InfoColumn(label: String, value: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = Color(0xFF64748B),
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Black,
+            color = color
+        )
     }
 }
 
@@ -69,22 +76,22 @@ fun PreviewChecksheetDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Tinjau Checksheet", fontWeight = FontWeight.Black) },
+        title = { Text("Tinjau & Kirim", fontWeight = FontWeight.Black) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Pastikan data pemeriksaan sudah benar sebelum dikirim.")
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Periksa kembali data sebelum disimpan ke server.")
                 HorizontalDivider()
-                Text("Proses: ${payload.tipeProses}")
-                Text("Part diisi: ${payload.daftarPart.size}")
-                Text("Diperiksa: ${payload.totalDiperiksa} pcs")
-                Text("OK: ${payload.totalOk} pcs")
-                Text("NG: ${payload.totalNg} pcs")
-                Text("Rasio NG: ${"%.1f".format(payload.rasioNgGlobal)}%")
+                
+                DetailRow("Total Diperiksa", "${payload.totalDiperiksa} Pcs")
+                DetailRow("Total OK", "${payload.totalOk} Pcs", Color(0xFF16A34A))
+                DetailRow("Total NG", "${payload.totalNg} Pcs", Color(0xFFDC2626))
+                DetailRow("Rasio NG", String.format("%.1f%%", payload.rasioNgGlobal), Color(0xFFD97706))
 
                 if (payload.daftarPart.any { it.jumlahNg > it.jumlahDiperiksa }) {
                     Text(
-                        "Ada jumlah NG yang melebihi jumlah diperiksa.",
-                        color = MaterialTheme.colorScheme.error
+                        "Peringatan: Ada jumlah NG yang tidak valid.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
@@ -92,19 +99,33 @@ fun PreviewChecksheetDialog(
         confirmButton = {
             Button(
                 enabled = !sending,
-                onClick = onConfirm
+                onClick = onConfirm,
+                shape = RoundedCornerShape(12.dp)
             ) {
                 if (sending) {
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
                 } else {
-                    Text("Kirim")
+                    Icon(Icons.Default.CloudUpload, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Kirim Sekarang")
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Tinjau Lagi")
+                Text("Batal")
             }
         }
     )
+}
+
+@Composable
+private fun DetailRow(label: String, value: String, color: Color = Color(0xFF1E293B)) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF64748B))
+        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = color)
+    }
 }

@@ -1,5 +1,9 @@
 package com.primaraya.inspectra.fitur.checksheet.ui
 
+import androidx.compose.runtime.Immutable
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import com.primaraya.inspectra.core.common.AsyncData
 import com.primaraya.inspectra.fitur.checksheet.domain.PartPickerItem
 import com.primaraya.inspectra.fitur.checksheet.domain.PayloadChecksheet
@@ -14,23 +18,26 @@ object ChecksheetContract {
     /**
      * State tunggal layar checksheet.
      */
+    @Immutable
     data class State(
         val mengirim: Boolean = false,
         val tipeProses: TipeProses = TipeProses.PRESS,
         val step: Step = Step.PILIH_PART,
-        val dataPicker: AsyncData<List<PartPickerItem>> = AsyncData.Idle,
-        val dataChecksheet: AsyncData<List<RingkasanPartChecksheet>> = AsyncData.Idle,
+        val dataPicker: AsyncData<ImmutableList<PartPickerItem>> = AsyncData.Idle,
+        val dataChecksheet: AsyncData<ImmutableList<RingkasanPartChecksheet>> = AsyncData.Idle,
         val partTerpilih: Set<String> = emptySet(),
         val pencarian: String = "",
-        val preview: PayloadChecksheet? = null
+        val preview: PayloadChecksheet? = null,
+        val dialogTambahDefect: String? = null, // uniqNo part yang sedang dibuka dialognya
+        val daftarDefectMaster: AsyncData<ImmutableList<com.primaraya.inspectra.fitur.masterdata.domain.MasterDefectDto>> = AsyncData.Idle
     ) {
         enum class Step {
             PILIH_PART,
             ISI_FORM
         }
 
-        val daftarPart: List<RingkasanPartChecksheet>
-            get() = (dataChecksheet as? AsyncData.Success)?.data ?: emptyList()
+        val daftarPart: ImmutableList<RingkasanPartChecksheet>
+            get() = (dataChecksheet as? AsyncData.Success)?.data ?: persistentListOf()
 
         val totalDiperiksa: Int get() = daftarPart.sumOf { it.jumlahDiperiksa }
         val totalNg: Int get() = daftarPart.sumOf { it.jumlahNg }
@@ -38,13 +45,13 @@ object ChecksheetContract {
         val rasioNg: Float get() = if (totalDiperiksa > 0) totalNg.toFloat() / totalDiperiksa * 100f else 0f
         val adaInput: Boolean get() = daftarPart.any { it.jumlahDiperiksa > 0 || it.jumlahNg > 0 }
         val adaQtyTidakValid: Boolean get() = daftarPart.any { it.kuantitasTidakValid }
-        val adaSlotTidakMatch: Boolean get() = daftarPart.any { p -> p.daftarDefect.any { !it.slotMatch } }
+        val adaSlotTidakMatch: Boolean get() = daftarPart.any { p -> p.daftarDefectAktif.any { !it.slotMatch } }
         
-        val pickerFiltered: List<PartPickerItem>
+        val pickerFiltered: ImmutableList<PartPickerItem>
             get() = (dataPicker as? AsyncData.Success)?.data?.filter {
                 it.uniq_no.contains(pencarian, ignoreCase = true) || 
                 it.nama_part.contains(pencarian, ignoreCase = true)
-            } ?: emptyList()
+            }?.toImmutableList() ?: persistentListOf()
     }
 
     /**
@@ -63,6 +70,12 @@ object ChecksheetContract {
         data class UbahJumlahSlotDefect(val uniqNo: String, val idDefect: String, val slotId: String, val jumlah: Int) : Intent
         data class TambahDefect(val uniqNo: String, val idDefect: String) : Intent
         data class KurangiDefect(val uniqNo: String, val idDefect: String) : Intent
+        
+        data class SembunyikanDefect(val uniqNo: String, val idDefect: String) : Intent
+        data class TampilkanDefect(val uniqNo: String, val idDefect: String) : Intent
+        data class BukaTambahDefectLain(val uniqNo: String) : Intent
+        data class TambahDefectLain(val uniqNo: String, val defect: com.primaraya.inspectra.fitur.masterdata.domain.MasterDefectDto) : Intent
+        data object TutupDialogTambahDefect : Intent
 
         data object Tinjau : Intent
         data object TutupPreview : Intent

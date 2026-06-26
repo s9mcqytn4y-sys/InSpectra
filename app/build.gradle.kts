@@ -112,6 +112,7 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
 
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.collections.immutable)
 
     runtimeOnly("org.slf4j:slf4j-nop:2.0.13")
 

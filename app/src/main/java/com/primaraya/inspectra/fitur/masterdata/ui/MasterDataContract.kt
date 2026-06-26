@@ -39,12 +39,14 @@ object MasterDataContract {
 
     data class PartRelationState(
         val defects: AsyncData<List<MasterPartDefectDto>> = AsyncData.Idle,
+        val effectiveDefects: AsyncData<List<MasterPartEffectiveDefectDto>> = AsyncData.Idle,
         val materials: AsyncData<List<MasterPartMaterialDto>> = AsyncData.Idle,
         val expanded: Boolean = false
     )
 
     data class MaterialRelationState(
         val defects: AsyncData<List<MasterMaterialDefectDto>> = AsyncData.Idle,
+        val usageParts: AsyncData<List<MasterPartMaterialDto>> = AsyncData.Idle,
         val expanded: Boolean = false
     )
 
@@ -90,6 +92,9 @@ object MasterDataContract {
         data class TambahMaterialKePart(val uniqNo: String, val materialId: String, val label: String) : Intent
         data class HapusMaterialDariPart(val uniqNo: String, val relationId: String) : Intent
 
+        data class BukaPilihSupplier(val context: String = "MATERIAL") : Intent
+        data class PilihSupplier(val context: String, val supplier: MasterSupplierDto) : Intent
+
         data class BukaPilihDefectUntukMaterial(val materialId: String) : Intent
         data class TambahDefectKeMaterial(val materialId: String, val idDefect: String) : Intent
         data class HapusDefectDariMaterial(val materialId: String, val relationId: String) : Intent
@@ -115,6 +120,7 @@ object MasterDataContract {
         data class PilihDefectUntukPart(val uniqNo: String) : DialogForm
         data class PilihMaterialUntukPart(val uniqNo: String) : DialogForm
         data class PilihDefectUntukMaterial(val materialId: String) : DialogForm
+        data class PilihSupplier(val context: String) : DialogForm
         data class KonfirmasiHapus(val judul: String, val pesan: String, val onConfirm: () -> Unit) : DialogForm
     }
 }

@@ -22,6 +22,17 @@ class SupabaseCuttingRepository(
 
     private val json = InspectraHttpClient.json
 
+    override suspend fun bacaBootstrap(): NetworkResult<BootstrapCutting> = withContext(Dispatchers.IO) {
+        runNetworkCatching {
+            driver.rpc(
+                functionName = "rpc_bootstrap_cutting",
+                body = emptyMap<String, String>(),
+                encode = { "{}" },
+                decode = { json.decodeFromString(BootstrapCutting.serializer(), it) }
+            )
+        }
+    }
+
     override suspend fun bacaOpsiMaterial(): NetworkResult<List<OpsiMaterialCutting>> = withContext(Dispatchers.IO) {
         runNetworkCatching {
             driver.getList(
@@ -61,9 +72,9 @@ class SupabaseCuttingRepository(
                 size_reference_id = input.idReferensiUkuranMaterial,
                 nama_material_snapshot = input.namaMaterial,
                 spec_material_snapshot = input.spesifikasiMaterial.ifBlank { null },
-                no_lot_roll = input.nomorLotRoll.ifBlank { null },
-                nomor_lot_roll = input.nomorLotRoll.ifBlank { null },
-                no_roll = input.nomorRoll.ifBlank { null },
+                no_lot_roll = input.lotRoll.ifBlank { null },
+                nomor_lot_roll = input.lotRoll.ifBlank { null },
+                no_roll = null,
                 size_cutting_cm = ukuran,
                 ukuran_cutting_cm = ukuran,
                 qty_layer_ok = input.qtyLayerOkAngka,

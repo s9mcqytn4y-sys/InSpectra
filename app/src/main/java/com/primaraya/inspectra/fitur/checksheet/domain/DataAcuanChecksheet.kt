@@ -1,5 +1,7 @@
 package com.primaraya.inspectra.fitur.checksheet.domain
 
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import com.primaraya.inspectra.core.common.SafeTsv
 import com.primaraya.inspectra.core.common.SafeTsv.blankToNull
 import com.primaraya.inspectra.core.common.SafeTsv.toNullableDouble
@@ -310,7 +312,7 @@ baris_excel	UNIQ	PART NO.	PART NAME	KOMODITAS	MATERIAL USED	SUPPLIER	MATERIAL DE
                     komoditas = SafeTsv.get(c, 4).toTipeProses(),
                     materialDigunakan = SafeTsv.get(c, 5),
                     namaSupplier = SafeTsv.get(c, 6).blankToNull(),
-                    potensiDefectMaterial = SafeTsv.get(c, 7).splitDefect(),
+                    potensiDefectMaterial = SafeTsv.get(c, 7).splitDefect().toImmutableList(),
                     lebar = SafeTsv.get(c, 8).toNullableDouble(),
                     panjang = SafeTsv.get(c, 9).toNullableDouble(),
                     tebalMm = SafeTsv.get(c, 10).toNullableDouble(),
@@ -340,7 +342,7 @@ baris_excel	UNIQ	PART NO.	PART NAME	KOMODITAS	MATERIAL USED	SUPPLIER	MATERIAL DE
         )
     }
 
-    fun daftarDefectUntukPart(uniqNo: String): List<InputDefect> {
+    fun daftarDefectUntukPart(uniqNo: String): ImmutableList<InputDefect> {
         val materialDefect = daftarRelasiPartMaterial()
             .filter { it.uniqNo == uniqNo }
             .flatMap { it.potensiDefectMaterial }
@@ -395,9 +397,10 @@ baris_excel	UNIQ	PART NO.	PART NAME	KOMODITAS	MATERIAL USED	SUPPLIER	MATERIAL DE
         return (materialDefect + defectProses)
             .distinctBy { it.namaDefect.uppercase() }
             .sortedWith(compareBy<InputDefect> { it.kategori.name }.thenBy { it.namaDefect })
+            .toImmutableList()
     }
 
-    fun daftarPartChecksheet(tipeProses: TipeProses): List<RingkasanPartChecksheet> {
+    fun daftarPartChecksheet(tipeProses: TipeProses): ImmutableList<RingkasanPartChecksheet> {
         val relasi = daftarRelasiPartMaterial()
             .filter { it.komoditas == tipeProses }
             .groupBy { it.uniqNo }
@@ -409,11 +412,12 @@ baris_excel	UNIQ	PART NO.	PART NAME	KOMODITAS	MATERIAL USED	SUPPLIER	MATERIAL DE
                 nomorPart = first.nomorPart,
                 namaPart = first.namaPart,
                 komoditas = first.komoditas,
-                daftarMaterial = daftarMaterial,
+                daftarMaterial = daftarMaterial.toImmutableList(),
                 daftarDefect = daftarDefectUntukPart(uniqNo),
                 lokasiGambar = daftarPartAcuan().firstOrNull { it.uniqNo == uniqNo }?.lokasiGambar
             )
         }.sortedBy { it.uniqNo }
+            .toImmutableList()
     }
 
 

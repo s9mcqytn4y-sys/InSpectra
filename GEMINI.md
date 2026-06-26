@@ -8,7 +8,19 @@ InSpectra adalah aplikasi Android Kotlin untuk Quality Control. Aplikasi memakai
 
 Target utama adalah aplikasi tablet yang stabil, rapi, dan siap tumbuh menjadi workspace SaaS internal QC.
 
-## Instruksi Utama
+## Mandat Arsitektur Utama (Principal Mandate)
+
+- **MVI (Model-View-Intent)**: Wajib menggunakan UDF yang ketat.
+    - **UI State**: Data class tunggal dengan anotasi `@Immutable`.
+    - **UI Intent**: Sealed interface untuk interaksi user.
+    - **UI Effect**: Sealed class untuk event sekali jalan (navigasi, snackbar) via `SharedFlow`.
+    - **ViewModel**: Expose state via `StateFlow` menggunakan `stateIn(SharingStarted.WhileSubscribed(5000))`.
+- **Stabilitas Compose**: Gunakan `kotlinx.collections.immutable` (seperti `ImmutableList`) dalam UI State untuk mencegah rekomposisi paksa.
+- **Offline-First**: Prioritaskan Room sebagai SSOT (Single Source of Truth). Repository mengekspos Flow dari cache lokal, sinkronisasi Supabase berjalan asinkron.
+- **Optimasi List**: Setiap item dalam `LazyColumn` wajib memiliki `key` yang unik dan stabil.
+- **Validasi Input**: Gunakan `derivedStateOf` untuk kalkulasi berat atau validasi form agar tidak terjadi frame drop.
+
+## Instruksi Operasional
 
 - Baca `AGENTS.md`, `README.md`, dan `DESIGN.md` sebelum mengubah kode.
 - Gunakan current working directory sebagai root repository.

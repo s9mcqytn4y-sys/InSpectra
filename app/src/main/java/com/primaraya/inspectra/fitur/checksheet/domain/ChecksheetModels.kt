@@ -1,5 +1,7 @@
 package com.primaraya.inspectra.fitur.checksheet.domain
 
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.serialization.Serializable
 import kotlin.math.roundToInt
 
@@ -44,7 +46,7 @@ data class InputDefect(
     val namaDefect: String,
     val kategori: KategoriDefect,
     val jumlahNg: Int = 0,
-    val detailSlot: List<SlotNg> = emptyList()
+    val detailSlot: ImmutableList<SlotNg> = persistentListOf()
 ) {
     val totalNgDariSlot: Int get() = detailSlot.sumOf { it.jumlah }
     val slotMatch: Boolean get() = detailSlot.isEmpty() || totalNgDariSlot == jumlahNg
@@ -70,7 +72,7 @@ data class MaterialPartAcuan(
     val komoditas: TipeProses,
     val materialDigunakan: String,
     val namaSupplier: String?,
-    val potensiDefectMaterial: List<String>,
+    val potensiDefectMaterial: ImmutableList<String> = persistentListOf(),
     val lebar: Double? = null,
     val panjang: Double? = null,
     val tebalMm: Double? = null,
@@ -86,14 +88,18 @@ data class RingkasanPartChecksheet(
     val nomorPart: String?,
     val namaPart: String,
     val komoditas: TipeProses,
-    val daftarMaterial: List<MaterialPartAcuan> = emptyList(),
-    val daftarDefect: List<InputDefect>,
+    val daftarMaterial: ImmutableList<MaterialPartAcuan> = persistentListOf(),
+    val daftarDefect: ImmutableList<InputDefect>,
+    val defectTersembunyi: Set<String> = emptySet(),
     val lokasiGambar: String? = null,
     val jumlahDiperiksa: Int = 0,
     val terbuka: Boolean = false
 ) {
     val jumlahNg: Int
-        get() = daftarDefect.sumOf { it.jumlahNg }
+        get() = daftarDefect.filter { it.idDefect !in defectTersembunyi }.sumOf { it.jumlahNg }
+
+    val daftarDefectAktif: List<InputDefect>
+        get() = daftarDefect.filter { it.idDefect !in defectTersembunyi }
 
     val jumlahOk: Int
         get() = (jumlahDiperiksa - jumlahNg).coerceAtLeast(0)
@@ -138,7 +144,7 @@ data class PayloadChecksheet(
     val totalOk: Int,
     val totalNg: Int,
     val rasioNgGlobal: Float,
-    val daftarPart: List<PayloadPartDiperiksa>
+    val daftarPart: ImmutableList<PayloadPartDiperiksa>
 )
 
 @Serializable
@@ -151,6 +157,6 @@ data class PayloadPartDiperiksa(
     val jumlahOk: Int,
     val jumlahNg: Int,
     val rasioNg: Float,
-    val daftarMaterial: List<String> = emptyList(),
-    val daftarDefectNg: List<InputDefect>
+    val daftarMaterial: ImmutableList<String> = persistentListOf(),
+    val daftarDefectNg: ImmutableList<InputDefect>
 )

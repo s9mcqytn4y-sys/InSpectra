@@ -7,6 +7,8 @@ import com.primaraya.inspectra.core.data.SupabasePgRestDriver
 import com.primaraya.inspectra.core.network.InspectraHttpClient
 import com.primaraya.inspectra.core.network.NetworkResult
 import com.primaraya.inspectra.core.network.runNetworkCatching
+import com.primaraya.inspectra.core.common.AsyncData
+import com.primaraya.inspectra.core.common.ReferenceCache
 import com.primaraya.inspectra.fitur.checksheet.domain.PartPickerItem
 import com.primaraya.inspectra.fitur.masterdata.domain.*
 import kotlinx.coroutines.Dispatchers
@@ -20,12 +22,13 @@ class SupabaseMasterDataRepository(
 
     private val json = InspectraHttpClient.json
     
-    // Memory Cache
-    private var lastChecksheetVersion = -1L
-    private var cachedChecksheetData = mutableMapOf<String, List<ChecksheetPartDefectViewDto>>()
+    // Memory Cache with TTL
+    private val checksheetCache = ReferenceCache<Map<String, List<ChecksheetPartDefectViewDto>>>()
+    private val pickerCache = ReferenceCache<Map<String, List<PartPickerItem>>>()
+    private val versionCache = ReferenceCache<Map<String, Long>>()
     
+    private var lastChecksheetVersion = -1L
     private var lastPickerVersion = -1L
-    private var cachedPickerItems = mutableMapOf<String, List<PartPickerItem>>()
 
     override suspend fun healthCheck(): NetworkResult<Unit> = withContext(Dispatchers.IO) {
         runNetworkCatching {
@@ -38,6 +41,9 @@ class SupabaseMasterDataRepository(
     }
 
     private suspend fun isCacheStale(kode: String, lastVersion: Long): Boolean {
+        val cachedVersion = versionCache.getOrNull()?.get(kode)
+        if (cachedVersion != null) return cachedVersion > lastVersion
+
         return try {
             val res = driver.getList(
                 table = RemoteTable.DataRevision,
@@ -45,6 +51,8 @@ class SupabaseMasterDataRepository(
                 decode = { json.decodeFromString<List<JsonObject>>(it) }
             )
             val serverVersion = res.firstOrNull()?.get("versi")?.jsonPrimitive?.longOrNull ?: 0L
+            val newCache = (versionCache.getOrNull() ?: emptyMap()) + (kode to serverVersion)
+            versionCache.put(newCache)
             serverVersion > lastVersion
         } catch (e: Exception) {
             true
@@ -55,8 +63,9 @@ class SupabaseMasterDataRepository(
         komoditas: String
     ): NetworkResult<List<ChecksheetPartDefectViewDto>> = withContext(Dispatchers.IO) {
         runNetworkCatching {
-            if (!isCacheStale("CHECKSHEET_REFERENCE", lastChecksheetVersion)) {
-                cachedChecksheetData[komoditas]?.let { return@runNetworkCatching it }
+            val cached = checksheetCache.getOrNull()
+            if (cached != null && !isCacheStale("CHECKSHEET_REFERENCE", lastChecksheetVersion)) {
+                cached[komoditas]?.let { return@runNetworkCatching it }
             }
 
             val data = driver.getList(
@@ -65,8 +74,6 @@ class SupabaseMasterDataRepository(
                 decode = { json.decodeFromString(ListSerializer(ChecksheetPartDefectViewDto.serializer()), it) }
             )
             
-            // Note: In a real app, you'd fetch the version *with* the data or right before
-            // For simplicity, we just update version here
             val latestVer = driver.getList(
                 table = RemoteTable.DataRevision,
                 query = "select=versi&kode=eq.CHECKSHEET_REFERENCE",
@@ -74,15 +81,17 @@ class SupabaseMasterDataRepository(
             )
             
             lastChecksheetVersion = latestVer
-            cachedChecksheetData[komoditas] = data
+            val newCache = (checksheetCache.getOrNull() ?: emptyMap()) + (komoditas to data)
+            checksheetCache.put(newCache)
             data
         }
     }
 
     override suspend fun getPartPickerItems(tipeProses: String): NetworkResult<List<PartPickerItem>> = withContext(Dispatchers.IO) {
         runNetworkCatching {
-            if (!isCacheStale("CHECKSHEET_REFERENCE", lastPickerVersion)) {
-                cachedPickerItems[tipeProses]?.let { return@runNetworkCatching it }
+            val cached = pickerCache.getOrNull()
+            if (cached != null && !isCacheStale("CHECKSHEET_REFERENCE", lastPickerVersion)) {
+                cached[tipeProses]?.let { return@runNetworkCatching it }
             }
 
             val data = driver.getList(
@@ -98,7 +107,8 @@ class SupabaseMasterDataRepository(
             )
 
             lastPickerVersion = latestVer
-            cachedPickerItems[tipeProses] = data
+            val newCache = (pickerCache.getOrNull() ?: emptyMap()) + (tipeProses to data)
+            pickerCache.put(newCache)
             data
         }
     }
@@ -249,6 +259,16 @@ class SupabaseMasterDataRepository(
         }
     }
 
+    override suspend fun getPartEffectiveDefects(uniqNo: String): NetworkResult<List<MasterPartEffectiveDefectDto>> = withContext(Dispatchers.IO) {
+        runNetworkCatching {
+            driver.getList(
+                table = RemoteTable.ViewPartDefectEfektif,
+                query = "select=*&uniq_no=eq.$uniqNo&aktif=eq.true&order=urutan.asc",
+                decode = { json.decodeFromString(ListSerializer(MasterPartEffectiveDefectDto.serializer()), it) }
+            )
+        }
+    }
+
     override suspend fun upsertPartDefect(data: MasterPartDefectDto): NetworkResult<Unit> = withContext(Dispatchers.IO) {
         runNetworkCatching {
             driver.upsert(
@@ -270,6 +290,16 @@ class SupabaseMasterDataRepository(
             driver.getList(
                 table = RemoteTable.PartMaterial,
                 query = "select=*&uniq_no=eq.$uniqNo&aktif=eq.true&order=urutan.asc",
+                decode = { json.decodeFromString(ListSerializer(MasterPartMaterialDto.serializer()), it) }
+            )
+        }
+    }
+
+    override suspend fun getMaterialUsages(materialId: String): NetworkResult<List<MasterPartMaterialDto>> = withContext(Dispatchers.IO) {
+        runNetworkCatching {
+            driver.getList(
+                table = RemoteTable.PartMaterial,
+                query = "select=*&material_id=eq.$materialId&aktif=eq.true&order=urutan.asc",
                 decode = { json.decodeFromString(ListSerializer(MasterPartMaterialDto.serializer()), it) }
             )
         }

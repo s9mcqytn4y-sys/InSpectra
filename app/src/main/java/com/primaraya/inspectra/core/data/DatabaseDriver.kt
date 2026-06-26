@@ -59,6 +59,7 @@ enum class RemoteTable(val value: String) {
     ViewChecksheetPartDefect("v_checksheet_part_defect"),
     ViewChecksheetPartPicker("v_checksheet_part_picker"),
     ViewDataIndukPart("v_data_induk_part"),
+    ViewPartDefectEfektif("v_part_defect_efektif"),
     ViewCuttingMaterialOption("v_cutting_material_option"),
     ViewCuttingPartSizeOption("v_cutting_part_size_option"),
     ViewCuttingDailySummary("v_cutting_daily_summary"),

@@ -35,13 +35,14 @@ interface MasterDataRepository {
     suspend fun deleteDefectSoft(idDefect: String): NetworkResult<Unit>
 
     suspend fun getPartDefects(uniqNo: String): NetworkResult<List<MasterPartDefectDto>>
+    suspend fun getPartEffectiveDefects(uniqNo: String): NetworkResult<List<MasterPartEffectiveDefectDto>>
     suspend fun upsertPartDefect(data: MasterPartDefectDto): NetworkResult<Unit>
     suspend fun deletePartDefect(id: String): NetworkResult<Unit>
 
     suspend fun getPartMaterials(uniqNo: String): NetworkResult<List<MasterPartMaterialDto>>
     suspend fun upsertPartMaterial(data: MasterPartMaterialDto): NetworkResult<Unit>
     suspend fun deletePartMaterial(id: String): NetworkResult<Unit>
-
+    suspend fun getMaterialUsages(materialId: String): NetworkResult<List<MasterPartMaterialDto>>
     suspend fun getMaterialDefects(materialId: String): NetworkResult<List<MasterMaterialDefectDto>>
     suspend fun upsertMaterialDefect(data: MasterMaterialDefectDto): NetworkResult<Unit>
     suspend fun deleteMaterialDefect(id: String): NetworkResult<Unit>

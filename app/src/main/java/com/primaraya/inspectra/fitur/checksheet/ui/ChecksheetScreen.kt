@@ -174,6 +174,82 @@ fun ChecksheetScreen(
             sending = state.mengirim
         )
     }
+
+    state.dialogTambahDefect?.let { uniqNo ->
+        DialogTambahDefectLain(
+            defectsMaster = state.daftarDefectMaster,
+            onDismiss = { viewModel.onIntent(ChecksheetContract.Intent.TutupDialogTambahDefect) },
+            onConfirm = { defect -> viewModel.onIntent(ChecksheetContract.Intent.TambahDefectLain(uniqNo, defect)) }
+        )
+    }
+}
+
+@Composable
+fun DialogTambahDefectLain(
+    defectsMaster: AsyncData<List<com.primaraya.inspectra.fitur.masterdata.domain.MasterDefectDto>>,
+    onDismiss: () -> Unit,
+    onConfirm: (com.primaraya.inspectra.fitur.masterdata.domain.MasterDefectDto) -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Tambah Temuan Baru", fontWeight = FontWeight.Black) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Cari jenis defect yang belum muncul di daftar checksheet.", style = MaterialTheme.typography.bodyMedium)
+                
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    placeholder = { Text("Cetik nama defect...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+
+                when (defectsMaster) {
+                    is AsyncData.Loading -> Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                    is AsyncData.Error -> Text(defectsMaster.message, color = MaterialTheme.colorScheme.error)
+                    is AsyncData.Success -> {
+                        val filtered = defectsMaster.data.filter { 
+                            it.nama_defect.contains(query, ignoreCase = true) || it.id_defect.contains(query, ignoreCase = true)
+                        }
+                        if (filtered.isEmpty()) {
+                            AppEmptyState("Tidak ditemukan", "Gunakan kata kunci lain.", modifier = Modifier.height(150.dp))
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.heightIn(max = 350.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                items(filtered, key = { it.id_defect }) { defect ->
+                                    ListItem(
+                                        headlineContent = { Text(defect.nama_defect, fontWeight = FontWeight.Bold) },
+                                        supportingContent = { 
+                                            Text(defect.kategori, style = MaterialTheme.typography.labelSmall)
+                                        },
+                                        trailingContent = {
+                                            IconButton(onClick = { onConfirm(defect) }) {
+                                                Icon(Icons.Default.AddCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                            }
+                                        },
+                                        modifier = Modifier.clickable { onConfirm(defect) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    else -> Unit
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Selesai") }
+        }
+    )
 }
 
 @Composable
@@ -184,22 +260,27 @@ fun KartuPartChecksheetRingkas(
     onJumlahDiperiksaUbah: (Int) -> Unit,
     onDefectTambahKurang: (String, Boolean) -> Unit,
     onDefectInputManual: (String, Int) -> Unit,
-    onSlotDefectUbah: (String, String, Int) -> Unit
+    onSlotDefectUbah: (String, String, Int) -> Unit,
+    onDefectSembunyikan: (String) -> Unit,
+    onBukaTambahDefect: () -> Unit
 ) {
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize(),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = if (part.kuantitasTidakValid) {
                 Color(0xFFFFF1F2)
+            } else if (part.jumlahNg > 0) {
+                Color(0xFFF8FAFC)
             } else {
                 Color.White
             }
-        )
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -208,8 +289,8 @@ fun KartuPartChecksheetRingkas(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(52.dp)
-                        .background(Color(0xFFF1F5F9), RoundedCornerShape(12.dp)),
+                        .size(56.dp)
+                        .background(Color(0xFFF1F5F9), RoundedCornerShape(16.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (part.lokasiGambar != null) {
@@ -226,7 +307,7 @@ fun KartuPartChecksheetRingkas(
                             imageVector = Icons.Default.Layers,
                             contentDescription = null,
                             tint = Color(0xFF1A365D),
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(30.dp)
                         )
                     }
                 }
@@ -245,79 +326,85 @@ fun KartuPartChecksheetRingkas(
                         text = "${part.nomorPart ?: "-"} | ${part.namaPart}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFF475569),
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
 
                     Row(
-                        modifier = Modifier.padding(top = 8.dp),
+                        modifier = Modifier.padding(top = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        AssistChip(
-                            onClick = {},
-                            label = { Text("Cek: ${part.jumlahDiperiksa}") }
-                        )
-                        AssistChip(
-                            onClick = {},
-                            label = { Text("NG: ${part.jumlahNg}") }
-                        )
+                        Badge(containerColor = Color(0xFFE2E8F0)) {
+                            Text("Cek: ${part.jumlahDiperiksa}", modifier = Modifier.padding(horizontal = 4.dp))
+                        }
+                        if (part.jumlahNg > 0) {
+                            Badge(containerColor = Color(0xFFFEE2E2), contentColor = Color(0xFF991B1B)) {
+                                Text("NG: ${part.jumlahNg}", modifier = Modifier.padding(horizontal = 4.dp))
+                            }
+                        }
                     }
                 }
 
-                Icon(
-                    imageVector = if (part.terbuka) {
-                        Icons.Default.KeyboardArrowUp
-                    } else {
-                        Icons.Default.KeyboardArrowDown
-                    },
-                    contentDescription = null,
-                    tint = Color(0xFF64748B)
-                )
+                IconButton(onClick = onBukaTutup) {
+                    Icon(
+                        imageVector = if (part.terbuka) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = Color(0xFF64748B)
+                    )
+                }
             }
 
             if (part.terbuka) {
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(20.dp))
 
                 OutlinedTextField(
                     value = if (part.jumlahDiperiksa == 0) "" else part.jumlahDiperiksa.toString(),
                     onValueChange = { onJumlahDiperiksaUbah(it.toIntOrNull() ?: 0) },
-                    label = { Text("Jumlah Diperiksa") },
+                    label = { Text("Input Jumlah Diperiksa") },
+                    placeholder = { Text("0 Pcs") },
                     supportingText = {
                         if (part.kuantitasTidakValid) {
-                            Text("Jumlah NG tidak boleh melebihi jumlah diperiksa.")
+                            Text("Error: Jumlah NG melebihi jumlah diperiksa.", color = Color.Red)
+                        } else {
+                            Text("Masukkan total item yang dicek untuk part ini.")
                         }
                     },
                     isError = part.kuantitasTidakValid,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    singleLine = true
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFF8FAFC),
+                        unfocusedContainerColor = Color.White
+                    )
                 )
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(20.dp))
 
                 Text(
-                    text = "Jenis Temuan NG",
+                    text = "Daftar Temuan NG",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Black,
-                    color = Color(0xFF1A365D)
+                    color = Color(0xFF1E293B)
                 )
 
-                Spacer(Modifier.height(8.dp))
-
-                part.daftarDefect
+                part.daftarDefectAktif
                     .groupBy { it.kategori }
                     .forEach { (kategori, defects) ->
-                        Text(
-                            text = if (kategori == KategoriDefect.MATERIAL) {
-                                "Material"
-                            } else {
-                                "Proses"
-                            },
-                            style = MaterialTheme.typography.labelLarge,
-                            color = Color(0xFF64748B),
-                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                        )
+                        Surface(
+                            modifier = Modifier.padding(top = 12.dp),
+                            color = if (kategori == KategoriDefect.MATERIAL) Color(0xFFF0F9FF) else Color(0xFFF8FAFC),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = if (kategori == KategoriDefect.MATERIAL) "KATEGORI: MATERIAL" else "KATEGORI: PROSES",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (kategori == KategoriDefect.MATERIAL) Color(0xFF0369A1) else Color(0xFF475569),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
 
                         defects.forEach { defect ->
                             BarisDefectStepper(
@@ -325,10 +412,24 @@ fun KartuPartChecksheetRingkas(
                                 onMinus = { onDefectTambahKurang(defect.idDefect, false) },
                                 onPlus = { onDefectTambahKurang(defect.idDefect, true) },
                                 onManual = { qty -> onDefectInputManual(defect.idDefect, qty) },
-                                onSlotUbah = { slotId, qty -> onSlotDefectUbah(defect.idDefect, slotId, qty) }
+                                onSlotUbah = { slotId, qty -> onSlotDefectUbah(defect.idDefect, slotId, qty) },
+                                onSembunyikan = { onDefectSembunyikan(defect.idDefect) }
                             )
                         }
                     }
+                
+                Spacer(Modifier.height(12.dp))
+                
+                OutlinedButton(
+                    onClick = onBukaTambahDefect,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Tambah Jenis Defect Lain")
+                }
             }
         }
     }
@@ -340,66 +441,95 @@ fun BarisDefectStepper(
     onMinus: () -> Unit,
     onPlus: () -> Unit,
     onManual: (Int) -> Unit,
-    onSlotUbah: (String, Int) -> Unit
+    onSlotUbah: (String, Int) -> Unit,
+    onSembunyikan: () -> Unit
 ) {
     var showManualDialog by remember { mutableStateOf(false) }
     var showSlotDialog by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
 
-    Column {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp)
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 6.dp),
+                .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { expanded = !expanded }
+            ) {
                 Text(
                     text = defect.namaDefect,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF1F2937)
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (defect.jumlahNg > 0) Color(0xFF1E293B) else Color(0xFF64748B),
+                    fontWeight = if (defect.jumlahNg > 0) FontWeight.Bold else FontWeight.Medium
                 )
                 if (defect.detailSlot.isNotEmpty()) {
-                    Text(
-                        text = "Detail Slot: ${defect.totalNgDariSlot} / ${defect.jumlahNg}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (defect.slotMatch) Color(0xFF16A34A) else Color(0xFFDC2626),
-                        modifier = Modifier.clickable { showSlotDialog = true }
-                    )
+                    Surface(
+                        onClick = { showSlotDialog = true },
+                        color = if (defect.slotMatch) Color(0xFFF0FDF4) else Color(0xFFFEF2F2),
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            text = if (defect.slotMatch) "✓ Slot OK: ${defect.totalNgDariSlot}" else "⚠ Slot: ${defect.totalNgDariSlot}/${defect.jumlahNg}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (defect.slotMatch) Color(0xFF16A34A) else Color(0xFFDC2626),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
-            IconButton(onClick = onMinus) {
-                Icon(
-                    Icons.Default.RemoveCircleOutline,
-                    contentDescription = "Kurangi",
-                    tint = Color(0xFFDC2626)
-                )
-            }
-
-            Surface(
-                modifier = Modifier
-                    .width(56.dp)
-                    .height(42.dp)
-                    .clickable { showManualDialog = true },
-                shape = RoundedCornerShape(12.dp),
-                tonalElevation = 1.dp,
-                color = Color(0xFFF1F5F9)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = defect.jumlahNg.toString(),
-                        fontWeight = FontWeight.Black,
-                        color = Color(0xFF1A365D)
-                    )
+            if (expanded) {
+                IconButton(onClick = onSembunyikan) {
+                    Icon(Icons.Default.DeleteSweep, contentDescription = "Hapus", tint = Color.Gray, modifier = Modifier.size(20.dp))
                 }
             }
 
-            IconButton(onClick = onPlus) {
-                Icon(
-                    Icons.Default.AddCircleOutline,
-                    contentDescription = "Tambah",
-                    tint = Color(0xFF16A34A)
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onMinus) {
+                    Icon(
+                        Icons.Default.RemoveCircle,
+                        contentDescription = "Kurangi",
+                        tint = if (defect.jumlahNg > 0) Color(0xFFDC2626) else Color(0xFFE2E8F0),
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                Surface(
+                    modifier = Modifier
+                        .width(60.dp)
+                        .height(44.dp)
+                        .clickable { showManualDialog = true },
+                    shape = RoundedCornerShape(12.dp),
+                    tonalElevation = 2.dp,
+                    color = if (defect.jumlahNg > 0) Color(0xFF1A365D) else Color(0xFFF1F5F9)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = defect.jumlahNg.toString(),
+                            fontWeight = FontWeight.Black,
+                            color = if (defect.jumlahNg > 0) Color.White else Color(0xFF64748B),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+
+                IconButton(onClick = onPlus) {
+                    Icon(
+                        Icons.Default.AddCircle,
+                        contentDescription = "Tambah",
+                        tint = Color(0xFF16A34A),
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
         }
 
@@ -736,6 +866,12 @@ private fun StepIsiForm(
                                 },
                                 onSlotDefectUbah = { idDefect, slotId, qty ->
                                     viewModel.onIntent(ChecksheetContract.Intent.UbahJumlahSlotDefect(part.uniqNo, idDefect, slotId, qty))
+                                },
+                                onDefectSembunyikan = { idDefect ->
+                                    viewModel.onIntent(ChecksheetContract.Intent.SembunyikanDefect(part.uniqNo, idDefect))
+                                },
+                                onBukaTambahDefect = {
+                                    viewModel.onIntent(ChecksheetContract.Intent.BukaTambahDefectLain(part.uniqNo))
                                 }
                             )
                         }
@@ -773,6 +909,12 @@ private fun StepIsiForm(
                                 },
                                 onSlotDefectUbah = { idDefect, slotId, qty ->
                                     viewModel.onIntent(ChecksheetContract.Intent.UbahJumlahSlotDefect(part.uniqNo, idDefect, slotId, qty))
+                                },
+                                onDefectSembunyikan = { idDefect ->
+                                    viewModel.onIntent(ChecksheetContract.Intent.SembunyikanDefect(part.uniqNo, idDefect))
+                                },
+                                onBukaTambahDefect = {
+                                    viewModel.onIntent(ChecksheetContract.Intent.BukaTambahDefectLain(part.uniqNo))
                                 }
                             )
                         }

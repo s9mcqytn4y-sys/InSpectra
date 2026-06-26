@@ -32,6 +32,9 @@ data class MasterPartDto(
     val model: String? = null,
     val customer: String? = null,
     val komoditas: String,
+    val total_item_per_kanban: Int? = null,
+    val sample_item_per_kanban: Int? = null,
+    val sample_cycle_note: String? = null,
     val lokasi_gambar: String? = null,
     val aktif: Boolean = true,
     val status_kelengkapan: String? = null,
@@ -39,6 +42,8 @@ data class MasterPartDto(
     val butuh_review: Boolean = false,
     val catatan_review: String? = null,
     val jumlah_material: Int? = null,
+    val jumlah_defect_proses: Int? = null,
+    val jumlah_defect_material: Int? = null,
     val jumlah_defect: Int? = null,
     val status_input: String? = null
 )
@@ -77,10 +82,18 @@ data class MasterMaterialDefectDto(
 @Serializable
 data class MasterMaterialDto(
     val id: String? = null,
+    val supplier_id: String? = null,
     val supplier: String? = null,
     val nama_material: String,
     val spec: String? = null,
     val satuan: String? = null,
+    val lebar_roll_cm: Double? = null,
+    val panjang_roll_cm: Double? = null,
+    val tebal_mm: Double? = null,
+    val berat_gsm: Double? = null,
+    val gramasi_gsm: Double? = null,
+    val warna: String? = null,
+    val catatan_spesifikasi: String? = null,
     val aktif: Boolean = true
 )
 
@@ -116,4 +129,19 @@ data class MasterSlotWaktuDto(
     val nama_shift: String,
     val label_waktu: String,
     val urutan: Int
+)
+
+@Serializable
+data class MasterPartEffectiveDefectDto(
+    val relation_id: String? = null,
+    val uniq_no: String,
+    val id_defect: String,
+    val nama_defect: String? = null,
+    val kategori: String? = null,
+    val sumber_defect: String, // PROSES_PART atau MATERIAL
+    val material_id: String? = null,
+    val nama_material: String? = null,
+    val urutan: Int = 1,
+    val wajib_check: Boolean = true,
+    val aktif: Boolean = true
 )

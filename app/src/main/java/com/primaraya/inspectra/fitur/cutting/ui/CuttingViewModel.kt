@@ -33,6 +33,10 @@ class CuttingViewModel(
     private val _state = MutableStateFlow(CuttingContract.State(input = inputAwal()))
     val state: StateFlow<CuttingContract.State> = _state.asStateFlow()
 
+    companion object {
+        private const val DEFAULT_NAMA_OPERATOR = "Agung"
+    }
+
     fun onIntent(intent: CuttingContract.Intent) {
         when (intent) {
             CuttingContract.Intent.Muat -> muat()
@@ -84,24 +88,29 @@ class CuttingViewModel(
     private fun muat() {
         viewModelScope.launch {
             _state.update { it.copy(material = AsyncData.Loading, partUkuran = AsyncData.Loading, defect = AsyncData.Loading) }
-            val materialTertunda = async { repository.bacaOpsiMaterial() }
-            val partUkuranTertunda = async { repository.bacaOpsiPartUkuran() }
-            val defectTertunda = async { masterRepository.getDefectsPage(PageRequest(cursorColumn = "nama_defect", limit = 100)) }
-            val slotTertunda = async { masterRepository.getSlotWaktu("CUTTING") }
-            val material = materialTertunda.await()
-            val partUkuran = partUkuranTertunda.await()
-            val defect = defectTertunda.await()
-            val slot = slotTertunda.await()
-
-            _state.update {
-                it.copy(
-                    material = material.toAsyncData("Material Cutting belum tersedia."),
-                    partUkuran = partUkuran.toAsyncData("Referensi ukuran part belum tersedia."),
-                    defect = defect.toAsyncData("Defect belum tersedia."),
-                    slotWaktu = (slot as? NetworkResult.Success)?.data?.map { data ->
-                        SlotNg(data.id, data.label_waktu)
-                    }.orEmpty()
-                )
+            
+            when (val bootstrap = repository.bacaBootstrap()) {
+                is NetworkResult.Success -> {
+                    val data = bootstrap.data
+                    _state.update {
+                        it.copy(
+                            material = if (data.material_option.isEmpty()) AsyncData.Empty("Belum ada data", "Material Cutting belum tersedia.") else AsyncData.Success(data.material_option),
+                            partUkuran = if (data.part_size_option.isEmpty()) AsyncData.Empty("Belum ada data", "Referensi ukuran part belum tersedia.") else AsyncData.Success(data.part_size_option),
+                            defect = if (data.defect_option.isEmpty()) AsyncData.Empty("Belum ada data", "Defect belum tersedia.") else AsyncData.Success(data.defect_option),
+                            slotWaktu = data.slot_waktu.map { sw -> SlotNg(sw.id, sw.label_waktu) }
+                        )
+                    }
+                }
+                is NetworkResult.Error -> {
+                    _state.update { 
+                        it.copy(
+                            material = AsyncData.Error("Gagal memuat", bootstrap.message),
+                            partUkuran = AsyncData.Error("Gagal memuat", bootstrap.message),
+                            defect = AsyncData.Error("Gagal memuat", bootstrap.message)
+                        ) 
+                    }
+                }
+                else -> Unit
             }
             bacaRingkasan()
         }
@@ -181,7 +190,10 @@ class CuttingViewModel(
         }
     }
 
-    private fun inputAwal(): InputBatchCutting = InputBatchCutting(tanggalPemeriksaan = LocalDate.now().toString())
+    private fun inputAwal(): InputBatchCutting = InputBatchCutting(
+        tanggalPemeriksaan = java.time.LocalDate.now().toString(),
+        namaOperator = DEFAULT_NAMA_OPERATOR
+    )
 
     private fun <T> NetworkResult<List<T>>.toAsyncData(pesanKosong: String): AsyncData<List<T>> {
         return when (this) {

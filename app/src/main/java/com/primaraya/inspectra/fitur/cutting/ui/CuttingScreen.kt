@@ -41,9 +41,8 @@ fun CuttingScreen(
     onBackClick: () -> Unit,
     viewModel: CuttingViewModel = viewModel(
         factory = pabrikViewModelAplikasi(
-            application = LocalContext.current.applicationContext as Application,
-            pembuat = { CuttingViewModel(it) }
-        )
+            application = LocalContext.current.applicationContext as Application
+        ) { CuttingViewModel(it) }
     )
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -68,8 +67,8 @@ fun CuttingScreen(
                     }
                 },
                 navigationIcon = {
-                    androidx.compose.material3.IconButton(onClick = onBackClick) {
-                        androidx.compose.material3.Icon(Icons.AutoMirrored.Filled.ArrowBack, "Kembali")
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Kembali")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -80,8 +79,7 @@ fun CuttingScreen(
             )
         }
     ) { padding ->
-        val statusMaterial = state.material
-        when (statusMaterial) {
+        when (val statusMaterial = state.material) {
             is AsyncData.Loading -> AppListSkeleton()
             is AsyncData.Error -> AppEmptyState("Material Cutting gagal dimuat", statusMaterial.message)
             else -> {
@@ -155,33 +153,24 @@ private fun FormBatchCutting(
                 modifier = Modifier.weight(1.5f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Section 1: Setup
+                // Section 1: Informasi Pemotongan
                 item {
-                    Text("Setup Sesi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Informasi Pemotongan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedTextField(
-                            value = input.tanggalPemeriksaan,
-                            onValueChange = { onUbah(input.copy(tanggalPemeriksaan = it)) },
-                            label = { Text("Tanggal") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = input.namaOperator.orEmpty(),
-                            onValueChange = { onUbah(input.copy(namaOperator = it)) },
-                            label = { Text("Nama Operator") },
-                            modifier = Modifier.weight(1.5f),
-                            singleLine = true
-                        )
-                    }
+                    OutlinedTextField(
+                        value = input.tanggalPemeriksaan,
+                        onValueChange = { onUbah(input.copy(tanggalPemeriksaan = it)) },
+                        label = { Text("Tanggal") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
                 }
 
                 item { HorizontalDivider() }
 
-                // Section 2: Batch Info
+                // Section 2: Material dan Ukuran
                 item {
-                    Text("Batch Pemotongan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Material dan Ukuran", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
                     AppDropdownField(
                         label = "Material",
@@ -201,22 +190,13 @@ private fun FormBatchCutting(
                     )
                 }
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedTextField(
-                            value = input.nomorLotRoll,
-                            onValueChange = { onUbah(input.copy(nomorLotRoll = it)) },
-                            label = { Text("Nomor lot / roll") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = input.nomorRoll,
-                            onValueChange = { onUbah(input.copy(nomorRoll = it)) },
-                            label = { Text("Nomor roll") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                    }
+                    OutlinedTextField(
+                        value = input.lotRoll,
+                        onValueChange = { onUbah(input.copy(lotRoll = it)) },
+                        label = { Text("Lot / Roll") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
                 }
                 item {
                     AppDropdownField(
@@ -280,7 +260,7 @@ private fun FormBatchCutting(
 
                 // Section 3: Defects
                 item {
-                    Text("Daftar Temuan Defect", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Temuan NG", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
                     AppDropdownField(
                         label = "Tambah defect bila ada NG",
@@ -317,7 +297,7 @@ private fun FormBatchCutting(
                         
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Total Layer:")
-                            Text("${input.totalLayer}", fontWeight = FontWeight.Bold)
+                            Text(input.totalLayer.toString(), fontWeight = FontWeight.Bold)
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Rasio NG:")
@@ -365,7 +345,7 @@ private fun FormBatchCutting(
                     else {
                         Icon(Icons.Default.Save, contentDescription = null)
                         Spacer(Modifier.width(12.dp))
-                        Text("SIMPAN BATCH", fontWeight = FontWeight.Black)
+                        Text("SIMPAN HASIL POTONG", fontWeight = FontWeight.Black)
                     }
                 }
 
@@ -392,7 +372,7 @@ private fun FormBatchCutting(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text("Setup Sesi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Informasi Pemotongan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
             item {
                 OutlinedTextField(
@@ -403,18 +383,9 @@ private fun FormBatchCutting(
                     singleLine = true
                 )
             }
-            item {
-                OutlinedTextField(
-                    value = input.namaOperator.orEmpty(),
-                    onValueChange = { onUbah(input.copy(namaOperator = it)) },
-                    label = { Text("Nama Operator") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-            }
 
             item { HorizontalDivider() }
-            item { Text("Batch Pemotongan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+            item { Text("Material dan Ukuran", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
             item {
                 AppDropdownField(
                     label = "Material",
@@ -434,22 +405,13 @@ private fun FormBatchCutting(
                 )
             }
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = input.nomorLotRoll,
-                        onValueChange = { onUbah(input.copy(nomorLotRoll = it)) },
-                        label = { Text("Lot") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = input.nomorRoll,
-                        onValueChange = { onUbah(input.copy(nomorRoll = it)) },
-                        label = { Text("Roll") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                }
+                OutlinedTextField(
+                    value = input.lotRoll,
+                    onValueChange = { onUbah(input.copy(lotRoll = it)) },
+                    label = { Text("Lot / Roll") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
             }
             item {
                 AppDropdownField(
@@ -511,7 +473,7 @@ private fun FormBatchCutting(
 
             item { HorizontalDivider() }
             item {
-                Text("Daftar Defect", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Temuan NG", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
                 AppDropdownField(
                     label = "Tambah defect",
@@ -569,9 +531,8 @@ private fun DialogPreviewCutting(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Tanggal: ${input.tanggalPemeriksaan}")
-                Text("Operator: ${input.namaOperator ?: "-"}")
                 Text("Material: ${input.namaMaterial}")
-                Text("Lot/Roll: ${input.nomorLotRoll} / ${input.nomorRoll}")
+                Text("Lot/Roll: ${input.lotRoll}")
                 Text("OK: ${input.qtyLayerOk} | NG: ${input.qtyLayerNg}")
                 Text("Waste: ${input.wastePanjangCm} cm")
                 HorizontalDivider()
