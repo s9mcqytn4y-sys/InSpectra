@@ -1,5 +1,8 @@
 package com.primaraya.inspectra.fitur.cutting.domain
 
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.Serializable
 import kotlin.math.round
 
@@ -35,8 +38,8 @@ data class OpsiMaterialCutting(
     val nama_material: String,
     val spec_ringkas: String = "",
     val satuan: String,
-    val daftar_ukuran_cutting: List<UkuranCuttingAcuan> = emptyList(),
-    val daftar_defect_cutting: List<DefectCuttingAcuan> = emptyList()
+    val daftar_ukuran_cutting: ImmutableList<UkuranCuttingAcuan> = persistentListOf(),
+    val daftar_defect_cutting: ImmutableList<DefectCuttingAcuan> = persistentListOf()
 ) {
     val labelPilihan: String
         get() = listOf(nama_material, spec_ringkas.takeIf(String::isNotBlank), satuan.takeIf(String::isNotBlank))
@@ -54,7 +57,7 @@ data class OpsiPartUkuranCutting(
     val nama_part: String,
     val model: String? = null,
     val komoditas: String,
-    val daftar_ukuran_cutting: List<UkuranCuttingAcuan> = emptyList()
+    val daftar_ukuran_cutting: ImmutableList<UkuranCuttingAcuan> = persistentListOf()
 ) {
     val labelPilihan: String
         get() = listOf(uniq_no, part_no, nama_part).filterNotNull().filter(String::isNotBlank).joinToString(" - ")
@@ -126,7 +129,7 @@ data class RingkasanHarianCutting(
 )
 
 object ValidatorBatchCutting {
-    fun validasi(input: InputBatchCutting): List<String> = buildList {
+    fun validasi(input: InputBatchCutting): ImmutableList<String> = buildList {
         if (input.materialId.isBlank()) add("Material wajib dipilih.")
         if ((input.ukuranCuttingAngka ?: 0.0) <= 0) add("Ukuran cutting harus lebih besar dari nol.")
         if (input.qtyLayerOk.toIntOrNull() == null || input.qtyLayerOkAngka < 0) add("Jumlah layer OK tidak boleh negatif.")
@@ -139,5 +142,5 @@ object ValidatorBatchCutting {
             if (defect.jumlahLayerTerdampak <= 0) add("Jumlah layer defect harus lebih besar dari nol.")
             if (defect.panjangDefectCm != null && defect.panjangDefectCm <= 0) add("Panjang defect harus lebih besar dari nol.")
         }
-    }
+    }.toImmutableList()
 }

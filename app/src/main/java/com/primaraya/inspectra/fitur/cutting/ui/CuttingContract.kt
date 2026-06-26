@@ -1,5 +1,8 @@
 package com.primaraya.inspectra.fitur.cutting.ui
 
+import androidx.compose.runtime.Immutable
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import com.primaraya.inspectra.core.common.AsyncData
 import com.primaraya.inspectra.fitur.checksheet.domain.SlotNg
 import com.primaraya.inspectra.fitur.cutting.domain.InputBatchCutting
@@ -9,14 +12,15 @@ import com.primaraya.inspectra.fitur.cutting.domain.RingkasanHarianCutting
 import com.primaraya.inspectra.fitur.masterdata.domain.MasterDefectDto
 
 object CuttingContract {
+    @Immutable
     data class State(
         val input: InputBatchCutting,
-        val material: AsyncData<List<OpsiMaterialCutting>> = AsyncData.Idle,
-        val partUkuran: AsyncData<List<OpsiPartUkuranCutting>> = AsyncData.Idle,
-        val defect: AsyncData<List<MasterDefectDto>> = AsyncData.Idle,
-        val slotWaktu: List<SlotNg> = emptyList(),
-        val ringkasan: AsyncData<List<RingkasanHarianCutting>> = AsyncData.Idle,
-        val daftarPesanValidasi: List<String> = emptyList(),
+        val material: AsyncData<ImmutableList<OpsiMaterialCutting>> = AsyncData.Idle,
+        val partUkuran: AsyncData<ImmutableList<OpsiPartUkuranCutting>> = AsyncData.Idle,
+        val defect: AsyncData<ImmutableList<MasterDefectDto>> = AsyncData.Idle,
+        val slotWaktu: ImmutableList<SlotNg> = persistentListOf(),
+        val ringkasan: AsyncData<ImmutableList<RingkasanHarianCutting>> = AsyncData.Idle,
+        val daftarPesanValidasi: ImmutableList<String> = persistentListOf(),
         val menampilkanPreview: Boolean = false,
         val menyimpan: Boolean = false,
         val pesan: String? = null

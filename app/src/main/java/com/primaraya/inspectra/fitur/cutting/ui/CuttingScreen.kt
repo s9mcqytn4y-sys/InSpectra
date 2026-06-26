@@ -1,6 +1,7 @@
 package com.primaraya.inspectra.fitur.cutting.ui
 
 import android.app.Application
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,6 +25,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import com.primaraya.inspectra.core.common.AsyncData
 import com.primaraya.inspectra.core.ui.component.AppDropdownField
 import com.primaraya.inspectra.core.ui.component.AppEmptyState
@@ -86,9 +91,9 @@ fun CuttingScreen(
                 AppResponsiveContent(modifier = Modifier.padding(padding)) { isTablet, contentModifier ->
                     FormBatchCutting(
                         input = state.input,
-                        material = (state.material as? AsyncData.Success)?.data.orEmpty(),
-                        partUkuran = (state.partUkuran as? AsyncData.Success)?.data.orEmpty(),
-                        defect = (state.defect as? AsyncData.Success)?.data.orEmpty(),
+                        material = (state.material as? AsyncData.Success)?.data ?: persistentListOf(),
+                        partUkuran = (state.partUkuran as? AsyncData.Success)?.data ?: persistentListOf(),
+                        defect = (state.defect as? AsyncData.Success)?.data ?: persistentListOf(),
                         slotWaktu = state.slotWaktu,
                         ringkasan = state.ringkasan,
                         daftarPesanValidasi = state.daftarPesanValidasi,
@@ -123,12 +128,12 @@ fun CuttingScreen(
 @Composable
 private fun FormBatchCutting(
     input: InputBatchCutting,
-    material: List<OpsiMaterialCutting>,
-    partUkuran: List<OpsiPartUkuranCutting>,
-    defect: List<com.primaraya.inspectra.fitur.masterdata.domain.MasterDefectDto>,
-    slotWaktu: List<com.primaraya.inspectra.fitur.checksheet.domain.SlotNg>,
-    ringkasan: AsyncData<List<com.primaraya.inspectra.fitur.cutting.domain.RingkasanHarianCutting>>,
-    daftarPesanValidasi: List<String>,
+    material: ImmutableList<OpsiMaterialCutting>,
+    partUkuran: ImmutableList<OpsiPartUkuranCutting>,
+    defect: ImmutableList<com.primaraya.inspectra.fitur.masterdata.domain.MasterDefectDto>,
+    slotWaktu: ImmutableList<com.primaraya.inspectra.fitur.checksheet.domain.SlotNg>,
+    ringkasan: AsyncData<ImmutableList<com.primaraya.inspectra.fitur.cutting.domain.RingkasanHarianCutting>>,
+    daftarPesanValidasi: ImmutableList<String>,
     menyimpan: Boolean,
     isTablet: Boolean,
     onUbah: (InputBatchCutting) -> Unit,
@@ -566,17 +571,23 @@ private fun DialogPreviewCutting(
 @Composable
 private fun BarisDefectCutting(
     defect: InputDefectCutting,
-    slotWaktu: List<com.primaraya.inspectra.fitur.checksheet.domain.SlotNg>,
+    slotWaktu: ImmutableList<com.primaraya.inspectra.fitur.checksheet.domain.SlotNg>,
     onUbahJumlah: (String) -> Unit,
     onUbahPanjang: (String) -> Unit,
     onUbahSlot: (String?) -> Unit,
     onHapus: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFF8FAFC), RoundedCornerShape(12.dp))
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(defect.namaDefect, modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
-            OutlinedButton(onClick = onHapus) {
-                androidx.compose.material3.Icon(Icons.Filled.DeleteOutline, "Hapus defect")
+            Text(defect.namaDefect, modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+            IconButton(onClick = onHapus) {
+                Icon(Icons.Filled.DeleteOutline, "Hapus defect", tint = Color(0xFFDC2626))
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -586,14 +597,16 @@ private fun BarisDefectCutting(
                 label = { Text("Layer terdampak") },
                 modifier = Modifier.weight(1f),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                shape = RoundedCornerShape(12.dp),
                 singleLine = true
             )
             OutlinedTextField(
                 value = defect.panjangDefectCm?.toString().orEmpty(),
                 onValueChange = onUbahPanjang,
-                label = { Text("Panjang defect (cm)") },
+                label = { Text("Panjang (cm)") },
                 modifier = Modifier.weight(1f),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                shape = RoundedCornerShape(12.dp),
                 singleLine = true
             )
         }
@@ -603,6 +616,5 @@ private fun BarisDefectCutting(
             options = slotWaktu.map { it.labelWaktu },
             onSelected = { label -> onUbahSlot(slotWaktu.firstOrNull { it.labelWaktu == label }?.slotId) }
         )
-        HorizontalDivider()
     }
 }
