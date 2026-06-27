@@ -1,14 +1,15 @@
 package com.primaraya.inspectra.fitur.masterdata.ui.components
 
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.primaraya.inspectra.core.ui.component.SearchBarElite
 import com.primaraya.inspectra.fitur.masterdata.domain.FilterDataInduk
 import com.primaraya.inspectra.fitur.masterdata.ui.MasterDataContract
 
@@ -28,44 +29,49 @@ fun DataIndukSearchBar(
         MasterDataContract.TabMasterData.DEFECT -> "Cari defect atau kategori"
     }
 
-    Column(modifier = modifier.padding(vertical = 8.dp)) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            placeholder = { Text(placeholder) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            singleLine = true,
-            shape = MaterialTheme.shapes.medium,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                focusedContainerColor = MaterialTheme.colorScheme.surface
-            )
+    Column(modifier = modifier.padding(vertical = 12.dp)) {
+        SearchBarElite(
+            query = query,
+            onQueryChange = onQueryChange,
+            placeholder = placeholder,
+            modifier = Modifier.padding(horizontal = 16.dp)
         )
 
         if (tabAktif == MasterDataContract.TabMasterData.PART) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            Spacer(Modifier.height(12.dp))
+            
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                FilterDataInduk.entries.forEach { filter ->
+                items(FilterDataInduk.entries.toTypedArray(), key = { it.name }) { filter ->
                     FilterChip(
                         selected = filterAktif == filter,
                         onClick = { onFilterSelected(filter) },
-                        label = {
+                        label = { 
                             Text(
-                                text = filter.name.replace("_", " ").lowercase().capitalize(),
+                                text = filter.labelIndonesia(),
                                 style = MaterialTheme.typography.labelSmall
-                            )
-                        }
+                            ) 
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     )
                 }
             }
         }
     }
+}
+
+private fun FilterDataInduk.labelIndonesia(): String = when (this) {
+    FilterDataInduk.SEMUA -> "Semua"
+    FilterDataInduk.SIAP_INPUT -> "Siap Input"
+    FilterDataInduk.PERLU_VERIFIKASI -> "Perlu Verifikasi"
+    FilterDataInduk.TANPA_MATERIAL -> "Tanpa Material"
+    FilterDataInduk.TANPA_DEFECT -> "Tanpa Defect"
+    FilterDataInduk.NONAKTIF -> "Nonaktif"
 }

@@ -38,8 +38,8 @@ data class OpsiMaterialCutting(
     val nama_material: String,
     val spec_ringkas: String = "",
     val satuan: String,
-    val daftar_ukuran_cutting: ImmutableList<UkuranCuttingAcuan> = persistentListOf(),
-    val daftar_defect_cutting: ImmutableList<DefectCuttingAcuan> = persistentListOf()
+    val daftar_ukuran_cutting: List<UkuranCuttingAcuan> = emptyList(),
+    val daftar_defect_cutting: List<DefectCuttingAcuan> = emptyList()
 ) {
     val labelPilihan: String
         get() = listOf(nama_material, spec_ringkas.takeIf(String::isNotBlank), satuan.takeIf(String::isNotBlank))
@@ -57,7 +57,7 @@ data class OpsiPartUkuranCutting(
     val nama_part: String,
     val model: String? = null,
     val komoditas: String,
-    val daftar_ukuran_cutting: ImmutableList<UkuranCuttingAcuan> = persistentListOf()
+    val daftar_ukuran_cutting: List<UkuranCuttingAcuan> = emptyList()
 ) {
     val labelPilihan: String
         get() = listOf(uniq_no, part_no, nama_part).filterNotNull().filter(String::isNotBlank).joinToString(" - ")

@@ -705,23 +705,11 @@ private fun StepPilihPart(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
-        OutlinedTextField(
-            value = state.pencarian,
-            onValueChange = onCari,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            placeholder = { Text("Cari UNIQ NO atau Nama Part...") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            trailingIcon = {
-                if (state.pencarian.isNotEmpty()) {
-                    IconButton(onClick = { onCari("") }) {
-                        Icon(Icons.Default.Close, contentDescription = null)
-                    }
-                }
-            },
-            shape = RoundedCornerShape(16.dp),
-            singleLine = true
+        SearchBarElite(
+            query = state.pencarian,
+            onQueryChange = onCari,
+            placeholder = "Cari UNIQ NO atau Nama Part...",
+            modifier = Modifier.padding(16.dp)
         )
 
         when (val data = state.dataPicker) {

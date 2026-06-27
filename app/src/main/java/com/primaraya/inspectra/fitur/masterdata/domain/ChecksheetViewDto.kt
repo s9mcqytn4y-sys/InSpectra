@@ -12,6 +12,8 @@ data class ChecksheetPartDefectViewDto(
     val customer: String? = null,
     val komoditas: String,
     val lokasi_gambar: String? = null,
+    val total_item_per_kanban: Int? = null,
+    val sample_item_per_kanban: Int? = null,
     val daftar_defect: List<DefectItemDto> = emptyList()
 )
 

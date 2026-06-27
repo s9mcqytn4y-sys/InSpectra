@@ -45,7 +45,8 @@ data class MasterPartDto(
     val jumlah_defect_proses: Int? = null,
     val jumlah_defect_material: Int? = null,
     val jumlah_defect: Int? = null,
-    val status_input: String? = null
+    val status_input: String? = null,
+    val daftar_material: List<MasterPartMaterialDto> = emptyList()
 )
 
 @Serializable
