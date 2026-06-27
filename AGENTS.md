@@ -41,7 +41,8 @@ Aturan:
 - Composable hanya membaca state, mengirim intent/event, dan merender UI.
 - ViewModel mengorkestrasi use case, repository, dan state.
 - Repository menangani akses Supabase atau sumber data remote.
-- Semua state UI harus immutable.
+- Threading wajib menggunakan `CoroutineDispatchersProvider` yang di-inject.
+- Semua state UI wajib menggunakan koleksi immutable (`kotlinx.collections.immutable`).
 - Network call tidak boleh dipicu berulang karena recomposition.
 - Logger wajib menyamarkan `Authorization`, `apikey`, token, NIP, dan password.
 

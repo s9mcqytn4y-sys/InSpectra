@@ -4,13 +4,14 @@ InSpectra adalah aplikasi Android tablet untuk sistem informasi Quality Control 
 
 Tujuan produk: menyediakan workspace QC yang rapi, operasional, dan siap tumbuh menjadi standar SaaS internal untuk input Lembar Periksa, Data Induk, riwayat inspeksi, analytics, dan tindak lanjut perbaikan kualitas.
 
-## Fitur Unggulan vNext
+## Fitur Unggulan Elite 2026
 
-- **Checksheet Picker Flow**: Alur pemilihan part yang dioptimalkan dengan pencarian dan status kesiapan input. Mengurangi beban UI dan mempercepat proses inspeksi.
-- **Cutting Management**: Pencatatan batch pemotongan berbasis material dan lot/roll dengan kalkulasi real-time rasio NG dan waste.
-- **Server-Authoritative Cache**: Sistem sinkronisasi data cerdas berbasis `m_data_revision`. Aplikasi hanya melakukan fetch data dari network jika terdapat pembaruan di sisi server.
-- **Media Integration**: Integrasi gambar part dan defect untuk visualisasi temuan yang lebih akurat di lapangan.
-- **Responsive Tablet UI**: Layout adaptif yang memanfaatkan layar lebar tablet (grid 2-kolom dan side-by-side forms).
+- **Checksheet Elite Picker**: Alur pemilihan part cerdas dengan status kesiapan "SIAP_INPUT" dan validasi data acuan real-time.
+- **Dynamic Defect Sources**: Integrasi defect material otomatis ke dalam checksheet proses (Press/Sewing) berdasarkan mapping data induk.
+- **Supabase Media Storage**: Upload dan kelola gambar part langsung dari aplikasi menggunakan Supabase Storage.
+- **Advanced Cache Invalidation**: Sistem sinkronisasi berbasis versi (`m_data_revision`) dengan TTL cerdas untuk performa offline-first yang maksimal.
+- **Modern Splash & Home**: Implementasi Android 12 Splash Screen API dan Dashboard Workspace dengan ringkasan aktivitas harian.
+- **Responsive Tablet UX**: Desain "Elite" dengan kartu 24dp radius, visual weight yang seimbang, dan layout adaptif tablet.
 
 ## Stack Teknologi
 

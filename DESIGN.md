@@ -102,25 +102,22 @@ Data Induk:
 - Empty state tidak boleh menampilkan data palsu.
 - Dialog tambah/edit harus fokus dan tidak terlalu tinggi pada tablet.
 
-## Komponen
+## Komponen "Elite"
 
 Gunakan:
 
 - `Scaffold` untuk screen utama.
-- `TopAppBar` atau custom topbar yang stabil.
-- `NavigationRail` atau sidebar bila scope navigasi bertambah.
-- `Card` atau `ElevatedCard` hanya untuk item atau panel kerja.
+- `InspectraFeedback` untuk notifikasi sistem yang seragam.
+- `Surface` dengan `BorderStroke` (1.dp) dan `RoundedCornerShape(24.dp)` untuk kartu modern.
 - `AssistChip` untuk metadata ringkas.
-- `OutlinedTextField` untuk form.
-- `AlertDialog` untuk konfirmasi.
-- `Snackbar` atau flash compact untuk feedback.
+- `OutlinedTextField` dengan warna container konsisten.
+- `AlertDialog` dengan detail breakdown (misal: Preview Checksheet).
 
 Hindari:
 
-- Card di dalam card tanpa kebutuhan.
-- Text panjang di tombol sempit.
+- Radius tajam (gunakan 16-24dp).
+- Shadow berlebih (gunakan tonal elevation 2-4dp).
 - Icon tanpa `contentDescription` bila interaktif.
-- Hardcoded color baru di banyak file.
 - UI yang berubah ukuran saat state loading/error.
 
 ## Tipografi
