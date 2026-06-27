@@ -1,6 +1,7 @@
 package com.primaraya.inspectra.core.ui.component
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material3.*
@@ -51,7 +52,8 @@ fun AppStatusBadge(
 fun AppEmptyState(
     title: String,
     message: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onRetry: (() -> Unit)? = null
 ) {
     Column(
         modifier = modifier
@@ -64,19 +66,32 @@ fun AppEmptyState(
             imageVector = Icons.Default.Inbox,
             contentDescription = null,
             modifier = Modifier.size(64.dp),
-            tint = Color.LightGray
+            tint = MaterialTheme.colorScheme.outlineVariant
         )
         Spacer(Modifier.height(16.dp))
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
         )
         Text(
             text = message,
             textAlign = TextAlign.Center,
-            color = Color.Gray
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp)
         )
+        
+        if (onRetry != null) {
+            Spacer(Modifier.height(24.dp))
+            Button(
+                onClick = onRetry,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Coba Lagi")
+            }
+        }
     }
 }
 

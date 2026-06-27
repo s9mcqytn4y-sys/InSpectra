@@ -9,64 +9,102 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
- * Skeleton shimmer minimalis reusable untuk list.
+ * Skeleton shimmer modern dengan efek gradient bergerak.
+ * Mengikuti Mandat Elite Principal Architect untuk performa visual.
  */
 @Composable
 fun AppListSkeleton(
     modifier: Modifier = Modifier,
-    itemCount: Int = 8
+    itemCount: Int = 5
 ) {
-    val transition = rememberInfiniteTransition(label = "skeleton")
-    val alpha by transition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 0.85f,
+    val shimmerColors = listOf(
+        Color.LightGray.copy(alpha = 0.6f),
+        Color.LightGray.copy(alpha = 0.2f),
+        Color.LightGray.copy(alpha = 0.6f),
+    )
+
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val translateAnim by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
         animationSpec = infiniteRepeatable(
-            animation = tween(850),
-            repeatMode = RepeatMode.Reverse
+            animation = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
         ),
-        label = "skeletonAlpha"
+        label = "shimmerTranslation"
+    )
+
+    val brush = Brush.linearGradient(
+        colors = shimmerColors,
+        start = Offset.Zero,
+        end = Offset(x = translateAnim, y = translateAnim)
     )
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(itemCount) {
-            Card(
+            SkeletonItem(brush)
+        }
+    }
+}
+
+@Composable
+private fun SkeletonItem(brush: Brush) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(110.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9).copy(alpha = 0.5f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(96.dp)
-                    .alpha(alpha),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9))
+                    .size(64.dp)
+                    .background(brush, RoundedCornerShape(16.dp))
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.4f)
+                        .height(20.dp)
+                        .background(brush, RoundedCornerShape(8.dp))
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .height(14.dp)
+                        .background(brush, RoundedCornerShape(8.dp))
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(
-                        Modifier
-                            .fillMaxWidth(0.35f)
-                            .height(18.dp)
-                            .background(Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
+                        modifier = Modifier
+                            .width(60.dp)
+                            .height(24.dp)
+                            .background(brush, RoundedCornerShape(12.dp))
                     )
                     Box(
-                        Modifier
-                            .fillMaxWidth(0.75f)
-                            .height(14.dp)
-                            .background(Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
-                    )
-                    Box(
-                        Modifier
-                            .fillMaxWidth(0.5f)
-                            .height(14.dp)
-                            .background(Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
+                        modifier = Modifier
+                            .width(60.dp)
+                            .height(24.dp)
+                            .background(brush, RoundedCornerShape(12.dp))
                     )
                 }
             }

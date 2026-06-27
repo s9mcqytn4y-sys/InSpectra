@@ -11,9 +11,7 @@ import com.primaraya.inspectra.core.ui.UserMessageMapper
 import com.primaraya.inspectra.fitur.checksheet.domain.SlotNg
 import com.primaraya.inspectra.fitur.cutting.data.CuttingRepository
 import com.primaraya.inspectra.fitur.cutting.data.SupabaseCuttingRepository
-import com.primaraya.inspectra.fitur.cutting.domain.InputBatchCutting
-import com.primaraya.inspectra.fitur.cutting.domain.InputDefectCutting
-import com.primaraya.inspectra.fitur.cutting.domain.ValidatorBatchCutting
+import com.primaraya.inspectra.fitur.cutting.domain.*
 import com.primaraya.inspectra.fitur.masterdata.data.MasterDataRepository
 import com.primaraya.inspectra.fitur.masterdata.data.SupabaseMasterDataRepository
 import kotlinx.collections.immutable.ImmutableList
@@ -95,21 +93,27 @@ class CuttingViewModel(
             when (val bootstrap = repository.bacaBootstrap()) {
                 is NetworkResult.Success -> {
                     val data = bootstrap.data
+                    val materialList: ImmutableList<OpsiMaterialCutting> = data.material_option.toImmutableList()
+                    val partList: ImmutableList<OpsiPartUkuranCutting> = data.part_size_option.toImmutableList()
+                    val defectList: ImmutableList<com.primaraya.inspectra.fitur.masterdata.domain.MasterDefectDto> = data.defect_option.toImmutableList()
+                    val slotList: ImmutableList<SlotNg> = data.slot_waktu.map { sw -> SlotNg(sw.id, sw.label_waktu) }.toImmutableList()
+                    
                     _state.update {
                         it.copy(
-                            material = if (data.material_option.isEmpty()) AsyncData.Empty("Belum ada data", "Material Cutting belum tersedia.") else AsyncData.Success(data.material_option.toImmutableList()),
-                            partUkuran = if (data.part_size_option.isEmpty()) AsyncData.Empty("Belum ada data", "Referensi ukuran part belum tersedia.") else AsyncData.Success(data.part_size_option.toImmutableList()),
-                            defect = if (data.defect_option.isEmpty()) AsyncData.Empty("Belum ada data", "Defect belum tersedia.") else AsyncData.Success(data.defect_option.toImmutableList()),
-                            slotWaktu = data.slot_waktu.map { sw -> SlotNg(sw.id, sw.label_waktu) }.toImmutableList()
+                            material = if (materialList.isEmpty()) AsyncData.Empty("Belum ada data", "Material Cutting belum tersedia.") else AsyncData.Success(materialList),
+                            partUkuran = if (partList.isEmpty()) AsyncData.Empty("Belum ada data", "Referensi ukuran part belum tersedia.") else AsyncData.Success(partList),
+                            defect = if (defectList.isEmpty()) AsyncData.Empty("Belum ada data", "Defect belum tersedia.") else AsyncData.Success(defectList),
+                            slotWaktu = slotList
                         )
                     }
                 }
                 is NetworkResult.Error -> {
+                    val msg = bootstrap.message
                     _state.update { 
                         it.copy(
-                            material = AsyncData.Error("Gagal memuat", bootstrap.message),
-                            partUkuran = AsyncData.Error("Gagal memuat", bootstrap.message),
-                            defect = AsyncData.Error("Gagal memuat", bootstrap.message)
+                            material = AsyncData.Error("Gagal memuat", msg),
+                            partUkuran = AsyncData.Error("Gagal memuat", msg),
+                            defect = AsyncData.Error("Gagal memuat", msg)
                         ) 
                     }
                 }
@@ -123,10 +127,10 @@ class CuttingViewModel(
         viewModelScope.launch {
             when (val hasil = repository.bacaRingkasanHarian(_state.value.input.tanggalPemeriksaan)) {
                 is NetworkResult.Success -> {
-                    val list = hasil.data.toImmutableList()
+                    val list: ImmutableList<com.primaraya.inspectra.fitur.cutting.domain.RingkasanHarianCutting> = hasil.data.toImmutableList()
                     _state.update { it.copy(ringkasan = AsyncData.Success(list)) }
                 }
-                is NetworkResult.Error -> _state.update { it.copy(ringkasan = AsyncData.Error("Ringkasan belum tersedia", hasil.message)) }
+                is NetworkResult.Error -> _state.update { it.copy(ringkasan = AsyncData.Error("Ringkasan belum tersedia", hasil.message ?: "")) }
                 else -> Unit
             }
         }
@@ -196,15 +200,4 @@ class CuttingViewModel(
         tanggalPemeriksaan = java.time.LocalDate.now().toString(),
         namaOperator = DEFAULT_NAMA_OPERATOR
     )
-
-    private fun <T : Any> NetworkResult<List<T>>.toAsyncData(pesanKosong: String): AsyncData<ImmutableList<T>> {
-        return when (this) {
-            is NetworkResult.Success -> {
-                val list = this.data.toImmutableList()
-                if (list.isEmpty()) AsyncData.Empty("Belum ada data", pesanKosong) else AsyncData.Success(list)
-            }
-            is NetworkResult.Error -> AsyncData.Error("Gagal memuat", this.message)
-            else -> AsyncData.Loading
-        }
-    }
 }
