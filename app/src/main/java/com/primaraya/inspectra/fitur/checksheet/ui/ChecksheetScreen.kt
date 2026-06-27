@@ -1,6 +1,7 @@
 package com.primaraya.inspectra.fitur.checksheet.ui
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -30,11 +31,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.app.Application
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import com.primaraya.inspectra.core.common.AsyncData
 import com.primaraya.inspectra.core.ui.component.*
 import com.primaraya.inspectra.core.ui.viewmodel.pabrikViewModelAplikasi
 import com.primaraya.inspectra.fitur.checksheet.domain.*
 import com.primaraya.inspectra.fitur.checksheet.ui.ChecksheetContract.State.Step
+import kotlinx.collections.immutable.ImmutableList
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,97 +77,107 @@ fun ChecksheetScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = if (state.step == Step.PILIH_PART) "Pilih Part ${tipeProses.labelIndonesia()}" else "Inspeksi ${tipeProses.labelIndonesia()}",
-                            fontWeight = FontWeight.Black
-                        )
-                        Text(
-                            text = if (state.step == Step.PILIH_PART) "Cari dan pilih part yang akan dicek" else "Form pemeriksaan harian",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.78f)
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        if (state.step == Step.ISI_FORM) {
-                            viewModel.onIntent(ChecksheetContract.Intent.KembaliKePicker)
-                        } else {
-                            onBackClick()
+            if (!state.berhasil) {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                text = if (state.step == Step.PILIH_PART) "Pilih Part ${tipeProses.labelIndonesia()}" else "Inspeksi ${tipeProses.labelIndonesia()}",
+                                fontWeight = FontWeight.Black
+                            )
+                            Text(
+                                text = if (state.step == Step.PILIH_PART) "Cari dan pilih part yang akan dicek" else "Form pemeriksaan harian",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White.copy(alpha = 0.78f)
+                            )
                         }
-                    }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A365D),
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            if (state.step == Step.ISI_FORM) {
+                                viewModel.onIntent(ChecksheetContract.Intent.KembaliKePicker)
+                            } else {
+                                onBackClick()
+                            }
+                        }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color(0xFF1A365D),
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White
+                    )
                 )
-            )
+            }
         },
         bottomBar = {
-            Surface(shadowElevation = 10.dp) {
-                if (state.step == Step.PILIH_PART) {
-                    Button(
-                        onClick = { viewModel.onIntent(ChecksheetContract.Intent.LanjutKeForm) },
-                        enabled = state.partTerpilih.isNotEmpty(),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                            .height(54.dp),
-                        shape = RoundedCornerShape(18.dp)
-                    ) {
-                        Text("Mulai Cek (${state.partTerpilih.size} Part)", fontWeight = FontWeight.Black)
-                    }
-                } else {
-                    Button(
-                        onClick = { viewModel.onIntent(ChecksheetContract.Intent.Tinjau) },
-                        enabled = state.adaInput && !state.adaQtyTidakValid && !state.adaSlotTidakMatch && !state.mengirim,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                            .height(54.dp),
-                        shape = RoundedCornerShape(18.dp)
-                    ) {
-                        if (state.mengirim) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                                color = Color.White
-                            )
-                        } else {
-                            Icon(Icons.Default.TaskAlt, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(com.primaraya.inspectra.R.string.checksheet_review_submit), fontWeight = FontWeight.Black)
+            if (!state.berhasil) {
+                Surface(shadowElevation = 10.dp) {
+                    if (state.step == Step.PILIH_PART) {
+                        Button(
+                            onClick = { viewModel.onIntent(ChecksheetContract.Intent.LanjutKeForm) },
+                            enabled = state.partTerpilih.isNotEmpty(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                                .height(54.dp),
+                            shape = RoundedCornerShape(18.dp)
+                        ) {
+                            Text("Mulai Cek (${state.partTerpilih.size} Part)", fontWeight = FontWeight.Black)
+                        }
+                    } else {
+                        Button(
+                            onClick = { viewModel.onIntent(ChecksheetContract.Intent.Tinjau) },
+                            enabled = state.adaInput && !state.adaQtyTidakValid && !state.adaSlotTidakMatch && !state.mengirim,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                                .height(54.dp),
+                            shape = RoundedCornerShape(18.dp)
+                        ) {
+                            if (state.mengirim) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White
+                                )
+                            } else {
+                                Icon(Icons.Default.TaskAlt, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(com.primaraya.inspectra.R.string.checksheet_review_submit), fontWeight = FontWeight.Black)
+                            }
                         }
                     }
                 }
             }
         }
     ) { padding ->
-        AppResponsiveContent(modifier = Modifier.padding(padding)) { isTablet, contentModifier ->
-            if (state.step == Step.PILIH_PART) {
-                StepPilihPart(
-                    state = state,
-                    isTablet = isTablet,
-                    onCari = { viewModel.onIntent(ChecksheetContract.Intent.CariPart(it)) },
-                    onPilih = { uniqNo, pilih -> viewModel.onIntent(ChecksheetContract.Intent.PilihPart(uniqNo, pilih)) },
-                    onRetry = { viewModel.onIntent(ChecksheetContract.Intent.Retry) },
-                    modifier = contentModifier
-                )
-            } else {
-                StepIsiForm(
-                    state = state,
-                    tipeProses = tipeProses,
-                    onRetry = { viewModel.onIntent(ChecksheetContract.Intent.Retry) },
-                    viewModel = viewModel,
-                    isTablet = isTablet,
-                    modifier = contentModifier
-                )
+        if (state.berhasil) {
+            ChecksheetSuccessScreen(
+                onDone = { viewModel.onIntent(ChecksheetContract.Intent.TutupBerhasil) }
+            )
+        } else {
+            AppResponsiveContent(modifier = Modifier.padding(padding)) { isTablet, contentModifier ->
+                if (state.step == Step.PILIH_PART) {
+                    StepPilihPart(
+                        state = state,
+                        isTablet = isTablet,
+                        onCari = { viewModel.onIntent(ChecksheetContract.Intent.CariPart(it)) },
+                        onPilih = { uniqNo, pilih -> viewModel.onIntent(ChecksheetContract.Intent.PilihPart(uniqNo, pilih)) },
+                        onRetry = { viewModel.onIntent(ChecksheetContract.Intent.Retry) },
+                        modifier = contentModifier
+                    )
+                } else {
+                    StepIsiForm(
+                        state = state,
+                        tipeProses = tipeProses,
+                        onRetry = { viewModel.onIntent(ChecksheetContract.Intent.Retry) },
+                        viewModel = viewModel,
+                        isTablet = isTablet,
+                        modifier = contentModifier
+                    )
+                }
             }
         }
     }
@@ -188,8 +201,59 @@ fun ChecksheetScreen(
 }
 
 @Composable
+fun ChecksheetSuccessScreen(onDone: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Surface(
+            modifier = Modifier.size(120.dp),
+            shape = RoundedCornerShape(40.dp),
+            color = Color(0xFFDCFCE7)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    modifier = Modifier.size(72.dp),
+                    tint = Color(0xFF16A34A)
+                )
+            }
+        }
+        
+        Spacer(Modifier.height(32.dp))
+        
+        Text(
+            "Data Berhasil Disimpan",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Black,
+            color = Color(0xFF1E293B)
+        )
+        
+        Text(
+            "Pemeriksaan checksheet Anda telah tercatat ke sistem Supabase.",
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color(0xFF64748B),
+            modifier = Modifier.padding(top = 12.dp)
+        )
+        
+        Spacer(Modifier.height(48.dp))
+        
+        Button(
+            onClick = onDone,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(18.dp)
+        ) {
+            Text("Kembali ke Daftar Part", fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
 fun DialogTambahDefectLain(
-    defectsMaster: AsyncData<List<com.primaraya.inspectra.fitur.masterdata.domain.MasterDefectDto>>,
+    defectsMaster: AsyncData<ImmutableList<com.primaraya.inspectra.fitur.masterdata.domain.MasterDefectDto>>,
     onDismiss: () -> Unit,
     onConfirm: (com.primaraya.inspectra.fitur.masterdata.domain.MasterDefectDto) -> Unit
 ) {
@@ -197,55 +261,59 @@ fun DialogTambahDefectLain(
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Tambah Temuan Baru", fontWeight = FontWeight.Black) },
+        title = { Text("Tambah Temuan Baru", fontWeight = FontWeight.ExtraBold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Cari jenis defect yang belum muncul di daftar checksheet.", style = MaterialTheme.typography.bodyMedium)
+                Text("Pilih jenis defect tambahan yang belum ada di daftar acuan.")
                 
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    placeholder = { Text("Cetik nama defect...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
+                SearchBarElite(
+                    query = query,
+                    onQueryChange = { query = it },
+                    placeholder = "Cari nama atau kode defect..."
                 )
 
-                when (defectsMaster) {
-                    is AsyncData.Loading -> Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                    is AsyncData.Error -> Text(defectsMaster.message, color = MaterialTheme.colorScheme.error)
-                    is AsyncData.Success -> {
-                        val filtered = defectsMaster.data.filter { 
-                            it.nama_defect.contains(query, ignoreCase = true) || it.id_defect.contains(query, ignoreCase = true)
+                Surface(
+                    modifier = Modifier.heightIn(max = 350.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
+                    when (defectsMaster) {
+                        is AsyncData.Loading -> Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
                         }
-                        if (filtered.isEmpty()) {
-                            AppEmptyState("Tidak ditemukan", "Gunakan kata kunci lain.", modifier = Modifier.height(150.dp))
-                        } else {
-                            LazyColumn(
-                                modifier = Modifier.heightIn(max = 350.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                items(filtered, key = { it.id_defect }) { defect ->
-                                    ListItem(
-                                        headlineContent = { Text(defect.nama_defect, fontWeight = FontWeight.Bold) },
-                                        supportingContent = { 
-                                            Text(defect.kategori, style = MaterialTheme.typography.labelSmall)
-                                        },
-                                        trailingContent = {
-                                            IconButton(onClick = { onConfirm(defect) }) {
+                        is AsyncData.Error -> Text(defectsMaster.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
+                        is AsyncData.Success -> {
+                            val allDefects = defectsMaster.data
+                            val filtered = remember(query, allDefects) {
+                                allDefects.filter { 
+                                    it.nama_defect.contains(query, ignoreCase = true) || it.id_defect.contains(query, ignoreCase = true)
+                                }
+                            }
+                            
+                            if (filtered.isEmpty()) {
+                                AppEmptyState("Tidak ditemukan", "Coba kata kunci lain.", modifier = Modifier.height(200.dp))
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.padding(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    items(filtered, key = { it.id_defect }) { defect ->
+                                        ListItem(
+                                            headlineContent = { Text(defect.nama_defect, fontWeight = FontWeight.Bold) },
+                                            supportingContent = { Text(defect.id_defect, style = MaterialTheme.typography.labelSmall) },
+                                            trailingContent = {
                                                 Icon(Icons.Default.AddCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                            }
-                                        },
-                                        modifier = Modifier.clickable { onConfirm(defect) }
-                                    )
+                                            },
+                                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                            modifier = Modifier.clickable { onConfirm(defect) }
+                                        )
+                                    }
                                 }
                             }
                         }
+                        else -> Unit
                     }
-                    else -> Unit
                 }
             }
         },
@@ -337,42 +405,27 @@ fun KartuPartChecksheetRingkas(
                     )
 
                     Row(
-                        modifier = Modifier.padding(top = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        modifier = Modifier.padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.secondaryContainer,
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                "Cek: ${part.jumlahDiperiksa}",
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        BadgeElite(label = "Cek: ${part.jumlahDiperiksa}", color = MaterialTheme.colorScheme.secondaryContainer)
+                        BadgeElite(label = "OK: ${part.jumlahOk}", color = Color(0xFFDCFCE7), textColor = Color(0xFF166534))
                         if (part.jumlahNg > 0) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.errorContainer,
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text(
-                                    "NG: ${part.jumlahNg}",
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
+                            BadgeElite(label = "NG: ${part.jumlahNg}", color = MaterialTheme.colorScheme.errorContainer, textColor = MaterialTheme.colorScheme.error)
+                            BadgeElite(label = "${part.rasioNgSatuDesimal}%", color = Color(0xFFFEF3C7), textColor = Color(0xFF92400E))
                         }
                     }
                 }
 
-                IconButton(onClick = onBukaTutup) {
+                IconButton(
+                    onClick = onBukaTutup,
+                    modifier = Modifier.size(48.dp)
+                ) {
                     Icon(
-                        imageVector = if (part.terbuka) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        imageVector = if (part.terbuka) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = if (part.terbuka) "Tutup Detail" else "Buka Detail",
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -426,30 +479,39 @@ fun KartuPartChecksheetRingkas(
                     }
                 }
 
-                part.daftarDefectAktif
-                    .groupBy { it.kategori }
-                    .forEach { (kategori, defects) ->
+                val defectsByKategori = remember(part.daftarDefect, part.defectTersembunyi) {
+                    part.daftarDefect.filter { it.idDefect !in part.defectTersembunyi }
+                        .groupBy { it.kategori }
+                }
+
+                defectsByKategori.forEach { (kategori, defects) ->
+                    Surface(
+                        modifier = Modifier.padding(top = 18.dp, bottom = 6.dp),
+                        color = if (kategori == KategoriDefect.MATERIAL) Color(0xFFF0F9FF) else Color(0xFFF8FAFC),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
                         Text(
                             text = if (kategori == KategoriDefect.MATERIAL) "SUMBER: MATERIAL" else "SUMBER: PROSES",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Black,
-                            color = if (kategori == KategoriDefect.MATERIAL) Color(0xFF0284C7) else Color(0xFF475569),
-                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (kategori == KategoriDefect.MATERIAL) Color(0xFF0369A1) else Color(0xFF475569),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                         )
+                    }
 
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            defects.forEach { defect ->
-                                BarisDefectStepper(
-                                    defect = defect,
-                                    onMinus = { onDefectTambahKurang(defect.idDefect, false) },
-                                    onPlus = { onDefectTambahKurang(defect.idDefect, true) },
-                                    onManual = { qty -> onDefectInputManual(defect.idDefect, qty) },
-                                    onSlotUbah = { slotId, qty -> onSlotDefectUbah(defect.idDefect, slotId, qty) },
-                                    onSembunyikan = { onDefectSembunyikan(defect.idDefect) }
-                                )
-                            }
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        defects.forEach { defect ->
+                            BarisDefectStepper(
+                                defect = defect,
+                                onMinus = { onDefectTambahKurang(defect.idDefect, false) },
+                                onPlus = { onDefectTambahKurang(defect.idDefect, true) },
+                                onManual = { qty -> onDefectInputManual(defect.idDefect, qty) },
+                                onSlotUbah = { slotId, qty -> onSlotDefectUbah(defect.idDefect, slotId, qty) },
+                                onSembunyikan = { onDefectSembunyikan(defect.idDefect) }
+                            )
                         }
                     }
+                }
                 
                 Spacer(Modifier.height(16.dp))
                 
@@ -682,6 +744,22 @@ fun DialogInputJumlahNg(
             }
         }
     )
+}
+
+@Composable
+private fun BadgeElite(label: String, color: Color, textColor: Color = Color.Unspecified) {
+    Surface(
+        color = color,
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.ExtraBold,
+            color = textColor
+        )
+    }
 }
 
 fun TipeProses.labelIndonesia(): String {

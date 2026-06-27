@@ -13,9 +13,12 @@ import com.primaraya.inspectra.fitur.checksheet.domain.*
 import com.primaraya.inspectra.fitur.masterdata.data.MasterDataRepository
 import com.primaraya.inspectra.fitur.masterdata.data.SupabaseMasterDataRepository
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 /**
  * ViewModel MVI untuk E-Checksheet.
@@ -58,6 +61,7 @@ class ChecksheetMviViewModel(
             ChecksheetContract.Intent.Tinjau -> buatPreview()
             ChecksheetContract.Intent.TutupPreview -> _state.update { it.copy(preview = null) }
             ChecksheetContract.Intent.Kirim -> kirim()
+            ChecksheetContract.Intent.TutupBerhasil -> _state.update { it.copy(berhasil = false, step = ChecksheetContract.State.Step.PILIH_PART) }
             ChecksheetContract.Intent.Retry -> muat(_state.value.tipeProses)
         }
     }
@@ -162,13 +166,38 @@ class ChecksheetMviViewModel(
 
     private fun ubahJumlahDefect(uniqNo: String, idDefect: String, jumlah: Int) {
         _state.update { it.copy(preview = null) }
+        val jamSekarang = LocalTime.now()
+        
         updateDaftarPart(uniqNo) { part ->
             part.copy(
                 daftarDefect = part.daftarDefect.map { defect ->
-                    if (defect.idDefect == idDefect) defect.copy(jumlahNg = jumlah.coerceAtLeast(0)) else defect
+                    if (defect.idDefect == idDefect) {
+                        val inputBaru = defect.copy(jumlahNg = jumlah.coerceAtLeast(0))
+                        
+                        // Smart Slot Selection: Jika NG > 0 dan detail slot masih kosong (semua 0), 
+                        // otomatis isi slot yang sesuai dengan jam sekarang.
+                        if (jumlah > 0 && inputBaru.detailSlot.all { it.jumlah == 0 }) {
+                            val slotIdTarget = cariSlotIdSesuaiJam(jamSekarang, inputBaru.detailSlot)
+                            if (slotIdTarget != null) {
+                                inputBaru.copy(
+                                    detailSlot = inputBaru.detailSlot.map { slot ->
+                                        if (slot.slotId == slotIdTarget) slot.copy(jumlah = jumlah) else slot
+                                    }.toImmutableList()
+                                )
+                            } else inputBaru
+                        } else {
+                            inputBaru
+                        }
+                    } else defect
                 }.toImmutableList()
             )
         }
+    }
+
+    private fun cariSlotIdSesuaiJam(sekarang: LocalTime, slots: List<SlotNg>): String? {
+        val jamStr = sekarang.format(DateTimeFormatter.ofPattern("HH"))
+        // Cari slot yang labelnya mengandung jam sekarang, misal "08:00 - 09:00"
+        return slots.find { it.labelWaktu.startsWith(jamStr) }?.slotId ?: slots.firstOrNull()?.slotId
     }
 
     private fun ubahJumlahSlotDefect(intent: ChecksheetContract.Intent.UbahJumlahSlotDefect) {
@@ -321,6 +350,7 @@ class ChecksheetMviViewModel(
                     _state.update {
                         it.copy(
                             mengirim = false,
+                            berhasil = true, // Show success screen
                             preview = null,
                             dataChecksheet = AsyncData.Success(clearedList)
                         )

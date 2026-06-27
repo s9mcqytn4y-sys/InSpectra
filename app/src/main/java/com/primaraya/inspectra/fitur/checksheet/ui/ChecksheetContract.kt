@@ -21,6 +21,7 @@ object ChecksheetContract {
     @Immutable
     data class State(
         val mengirim: Boolean = false,
+        val berhasil: Boolean = false, // Success state
         val tipeProses: TipeProses = TipeProses.PRESS,
         val step: Step = Step.PILIH_PART,
         val dataPicker: AsyncData<ImmutableList<PartPickerItem>> = AsyncData.Idle,
@@ -80,6 +81,7 @@ object ChecksheetContract {
         data object Tinjau : Intent
         data object TutupPreview : Intent
         data object Kirim : Intent
+        data object TutupBerhasil : Intent
         data object Retry : Intent
     }
 

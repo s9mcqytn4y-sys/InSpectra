@@ -108,13 +108,11 @@ data class RingkasanPartChecksheet(
         get() = jumlahDiperiksa < 0 || jumlahNg > jumlahDiperiksa
 
     val rasioNg: Float
-        get() = if (totalDiperiksa > 0) {
+        get() = if (jumlahDiperiksa > 0) {
             (jumlahNg.toFloat() / jumlahDiperiksa.toFloat()) * 100f
         } else {
             0f
         }
-
-    private val totalDiperiksa: Int get() = jumlahDiperiksa
 
     val rasioNgSatuDesimal: Float
         get() = (rasioNg * 10f).roundToInt() / 10f
