@@ -1,6 +1,7 @@
 package com.primaraya.inspectra.fitur.masterdata.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -38,20 +39,23 @@ fun PartMasterCard(
     onRemoveMaterial: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    ElevatedCard(
-        shape = MaterialTheme.shapes.medium,
-        modifier = modifier.fillMaxWidth()
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        modifier = modifier.fillMaxWidth(),
+        color = Color.White,
+        border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
+        shadowElevation = 2.dp
     ) {
-        Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+        Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 // Thumbnail
                 Box(
                     modifier = Modifier
-                        .size(64.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp)),
+                        .size(72.dp)
+                        .background(Color(0xFFF8FAFC), RoundedCornerShape(16.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (part.lokasi_gambar != null) {

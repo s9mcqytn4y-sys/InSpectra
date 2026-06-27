@@ -14,6 +14,8 @@ data class PartFormState(
     val totalItemPerKanban: String = "",
     val sampleItemPerKanban: String = "",
     val sampleCycleNote: String = "",
+    val lokasiGambarRemote: String? = null,
+    val lokasiGambarLokal: String? = null,
     val submitted: Boolean = false
 ) {
     val uniqNoError: String?

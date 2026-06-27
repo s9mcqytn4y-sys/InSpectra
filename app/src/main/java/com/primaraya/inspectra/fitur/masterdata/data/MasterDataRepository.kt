@@ -27,6 +27,7 @@ interface MasterDataRepository {
 
     suspend fun upsertPart(part: MasterPartDto): NetworkResult<Unit>
     suspend fun deletePartSoft(id: String): NetworkResult<Unit>
+    suspend fun uploadPartImage(uniqNo: String, file: java.io.File): NetworkResult<String>
 
     suspend fun upsertMaterial(material: MasterMaterialDto): NetworkResult<Unit>
     suspend fun deleteMaterialSoft(id: String): NetworkResult<Unit>

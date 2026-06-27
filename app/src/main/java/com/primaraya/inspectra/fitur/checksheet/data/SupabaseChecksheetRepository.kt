@@ -5,14 +5,16 @@ import com.primaraya.inspectra.core.data.RemoteTable
 import com.primaraya.inspectra.core.data.SupabasePgRestDriver
 import com.primaraya.inspectra.core.network.NetworkResult
 import com.primaraya.inspectra.core.network.runNetworkCatching
+import com.primaraya.inspectra.core.common.CoroutineDispatchersProvider
+import com.primaraya.inspectra.core.common.DefaultDispatchersProvider
 import com.primaraya.inspectra.fitur.checksheet.domain.*
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
 class SupabaseChecksheetRepository(
-    private val driver: DatabaseDriver = SupabasePgRestDriver()
+    private val driver: DatabaseDriver = SupabasePgRestDriver(),
+    private val dispatchers: CoroutineDispatchersProvider = DefaultDispatchersProvider
 ) : ChecksheetRepository {
 
     private val json = Json {
@@ -24,7 +26,7 @@ class SupabaseChecksheetRepository(
 
     override suspend fun submitChecksheet(
         payload: PayloadChecksheet
-    ): NetworkResult<String> = withContext(Dispatchers.IO) {
+    ): NetworkResult<String> = withContext(dispatchers.io) {
         runNetworkCatching {
             require(payload.tipeProses != "CUTTING") {
                 "Cutting harus dikirim melalui form Cutting."
@@ -41,7 +43,7 @@ class SupabaseChecksheetRepository(
         }
     }
 
-    suspend fun getPartPickerItems(tipeProses: String): NetworkResult<List<PartPickerItem>> = withContext(Dispatchers.IO) {
+    suspend fun getPartPickerItems(tipeProses: String): NetworkResult<List<PartPickerItem>> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.getList(
                 table = RemoteTable.ViewChecksheetPartPicker,

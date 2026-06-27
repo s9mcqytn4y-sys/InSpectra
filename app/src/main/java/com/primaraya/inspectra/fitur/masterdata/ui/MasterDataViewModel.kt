@@ -8,9 +8,12 @@ import com.primaraya.inspectra.core.data.PageRequest
 import com.primaraya.inspectra.core.network.NetworkResult
 import com.primaraya.inspectra.core.ui.UserMessageMapper
 import com.primaraya.inspectra.core.ui.KonteksOperasi
+import com.primaraya.inspectra.core.ui.component.FeedbackType
 import com.primaraya.inspectra.fitur.masterdata.data.MasterDataRepository
 import com.primaraya.inspectra.fitur.masterdata.data.SupabaseMasterDataRepository
 import com.primaraya.inspectra.fitur.masterdata.domain.*
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -78,7 +81,8 @@ class MasterDataViewModel(
                     komoditas = data.komoditas,
                     totalItemPerKanban = data.total_item_per_kanban?.toString() ?: "",
                     sampleItemPerKanban = data.sample_item_per_kanban?.toString() ?: "",
-                    sampleCycleNote = data.sample_cycle_note ?: ""
+                    sampleCycleNote = data.sample_cycle_note ?: "",
+                    lokasiGambarRemote = data.lokasi_gambar
                 )
                 _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormPart(data), partFormDraft = form) }
             }
@@ -87,6 +91,7 @@ class MasterDataViewModel(
             }
             is MasterDataContract.Intent.SimpanPart -> simpanPart(intent.data)
             is MasterDataContract.Intent.HapusPart -> confirmHapus("Hapus Part", "Part akan dinonaktifkan.") { hapusPart(intent.data) }
+            is MasterDataContract.Intent.PilihGambarPart -> pilihGambarPart(intent.file)
             is MasterDataContract.Intent.TogglePartDetail -> togglePartDetail(intent.uniqNo)
 
             // Material
@@ -166,6 +171,7 @@ class MasterDataViewModel(
             is MasterDataContract.Intent.HapusDefectDariMaterial -> confirmHapus("Hapus Tautan", "Defect tidak lagi menjadi defect bawaan material ini.") { hapusDefectDariMaterial(intent.materialId, relationId = intent.relationId) }
 
             MasterDataContract.Intent.TutupDialog -> _state.update { it.copy(dialogForm = null) }
+            MasterDataContract.Intent.TutupFeedback -> _state.update { it.copy(feedback = null) }
             MasterDataContract.Intent.ClearUserMessage -> _state.update { it.copy(userMessage = null) }
             MasterDataContract.Intent.Retry -> muatDataTabAktif(reset = true)
         }
@@ -220,7 +226,7 @@ class MasterDataViewModel(
 
             when (result) {
                 is NetworkResult.Success -> {
-                    val newData = result.data
+                    val newData = result.data.toImmutableList()
                     val canMore = newData.size >= page.limit
                     _state.update { it.copy(canLoadMore = canMore) }
 
@@ -245,24 +251,24 @@ class MasterDataViewModel(
         _state.update { s ->
             when (tab) {
                 MasterDataContract.TabMasterData.PART -> {
-                    val currentParts = (s.parts as? AsyncData.Success<List<MasterPartDto>>)?.data ?: emptyList()
+                    val currentParts = (s.parts as? AsyncData.Success)?.data ?: emptyList()
                     val added = newData.filterIsInstance<MasterPartDto>()
-                    s.copy(parts = AsyncData.Success(currentParts + added))
+                    s.copy(parts = AsyncData.Success((currentParts + added).toImmutableList()))
                 }
                 MasterDataContract.TabMasterData.MATERIAL -> {
-                    val currentMaterials = (s.materials as? AsyncData.Success<List<MasterMaterialDto>>)?.data ?: emptyList()
+                    val currentMaterials = (s.materials as? AsyncData.Success)?.data ?: emptyList()
                     val added = newData.filterIsInstance<MasterMaterialDto>()
-                    s.copy(materials = AsyncData.Success(currentMaterials + added))
+                    s.copy(materials = AsyncData.Success((currentMaterials + added).toImmutableList()))
                 }
                 MasterDataContract.TabMasterData.SUPPLIER -> {
-                    val currentSuppliers = (s.suppliers as? AsyncData.Success<List<MasterSupplierDto>>)?.data ?: emptyList()
+                    val currentSuppliers = (s.suppliers as? AsyncData.Success)?.data ?: emptyList()
                     val added = newData.filterIsInstance<MasterSupplierDto>()
-                    s.copy(suppliers = AsyncData.Success(currentSuppliers + added))
+                    s.copy(suppliers = AsyncData.Success((currentSuppliers + added).toImmutableList()))
                 }
                 MasterDataContract.TabMasterData.DEFECT -> {
-                    val currentDefects = (s.defects as? AsyncData.Success<List<MasterDefectDto>>)?.data ?: emptyList()
+                    val currentDefects = (s.defects as? AsyncData.Success)?.data ?: emptyList()
                     val added = newData.filterIsInstance<MasterDefectDto>()
-                    s.copy(defects = AsyncData.Success(currentDefects + added))
+                    s.copy(defects = AsyncData.Success((currentDefects + added).toImmutableList()))
                 }
             }
         }
@@ -272,10 +278,10 @@ class MasterDataViewModel(
     private fun updateTabState(tab: MasterDataContract.TabMasterData, async: AsyncData<*>) {
         _state.update { s ->
             when (tab) {
-                MasterDataContract.TabMasterData.PART -> s.copy(parts = async as AsyncData<List<MasterPartDto>>)
-                MasterDataContract.TabMasterData.MATERIAL -> s.copy(materials = async as AsyncData<List<MasterMaterialDto>>)
-                MasterDataContract.TabMasterData.SUPPLIER -> s.copy(suppliers = async as AsyncData<List<MasterSupplierDto>>)
-                MasterDataContract.TabMasterData.DEFECT -> s.copy(defects = async as AsyncData<List<MasterDefectDto>>)
+                MasterDataContract.TabMasterData.PART -> s.copy(parts = async as AsyncData<ImmutableList<MasterPartDto>>)
+                MasterDataContract.TabMasterData.MATERIAL -> s.copy(materials = async as AsyncData<ImmutableList<MasterMaterialDto>>)
+                MasterDataContract.TabMasterData.SUPPLIER -> s.copy(suppliers = async as AsyncData<ImmutableList<MasterSupplierDto>>)
+                MasterDataContract.TabMasterData.DEFECT -> s.copy(defects = async as AsyncData<ImmutableList<MasterDefectDto>>)
             }
         }
     }
@@ -295,9 +301,9 @@ class MasterDataViewModel(
             val mRes = repository.getPartMaterials(uniqNo)
             updatePartRelation(uniqNo) { s ->
                 s.copy(
-                    defects = if (dRes is NetworkResult.Success) AsyncData.Success(dRes.data) else AsyncData.Error("Gagal", (dRes as? NetworkResult.Error)?.message ?: ""),
-                    effectiveDefects = if (eRes is NetworkResult.Success) AsyncData.Success(eRes.data) else AsyncData.Error("Gagal", (eRes as? NetworkResult.Error)?.message ?: ""),
-                    materials = if (mRes is NetworkResult.Success) AsyncData.Success(mRes.data) else AsyncData.Error("Gagal", (mRes as? NetworkResult.Error)?.message ?: "")
+                    defects = if (dRes is NetworkResult.Success) AsyncData.Success(dRes.data.toImmutableList()) else AsyncData.Error("Gagal", (dRes as? NetworkResult.Error)?.message ?: ""),
+                    effectiveDefects = if (eRes is NetworkResult.Success) AsyncData.Success(eRes.data.toImmutableList()) else AsyncData.Error("Gagal", (eRes as? NetworkResult.Error)?.message ?: ""),
+                    materials = if (mRes is NetworkResult.Success) AsyncData.Success(mRes.data.toImmutableList()) else AsyncData.Error("Gagal", (mRes as? NetworkResult.Error)?.message ?: "")
                 )
             }
         }
@@ -321,8 +327,8 @@ class MasterDataViewModel(
             val uRes = repository.getMaterialUsages(materialId)
             updateMaterialRelation(materialId) {
                 it.copy(
-                    defects = if (dRes is NetworkResult.Success) AsyncData.Success(dRes.data) else AsyncData.Error("Gagal", (dRes as? NetworkResult.Error)?.message ?: ""),
-                    usageParts = if (uRes is NetworkResult.Success) AsyncData.Success(uRes.data) else AsyncData.Error("Gagal", (uRes as? NetworkResult.Error)?.message ?: "")
+                    defects = if (dRes is NetworkResult.Success) AsyncData.Success(dRes.data.toImmutableList()) else AsyncData.Error("Gagal", (dRes as? NetworkResult.Error)?.message ?: ""),
+                    usageParts = if (uRes is NetworkResult.Success) AsyncData.Success(uRes.data.toImmutableList()) else AsyncData.Error("Gagal", (uRes as? NetworkResult.Error)?.message ?: "")
                 )
             }
         }
@@ -362,7 +368,7 @@ class MasterDataViewModel(
             _state.update { it.copy(defects = AsyncData.Loading) }
             when (val result = repository.getDefectsPage(PageRequest(limit = 100, cursorColumn = "nama_defect"))) {
                 is NetworkResult.Success -> _state.update {
-                    it.copy(defects = AsyncData.Success(result.data), dialogForm = buatDialog())
+                    it.copy(defects = AsyncData.Success(result.data.toImmutableList()), dialogForm = buatDialog())
                 }
                 is NetworkResult.Error -> tampilkanError(result.message)
                 else -> Unit
@@ -381,7 +387,7 @@ class MasterDataViewModel(
             _state.update { it.copy(materials = AsyncData.Loading) }
             when (val result = repository.getMaterialsPage(PageRequest(limit = 100, cursorColumn = "nama_material"))) {
                 is NetworkResult.Success -> _state.update {
-                    it.copy(materials = AsyncData.Success(result.data), dialogForm = MasterDataContract.DialogForm.PilihMaterialUntukPart(uniqNo))
+                    it.copy(materials = AsyncData.Success(result.data.toImmutableList()), dialogForm = MasterDataContract.DialogForm.PilihMaterialUntukPart(uniqNo))
                 }
                 is NetworkResult.Error -> tampilkanError(result.message)
                 else -> Unit
@@ -400,7 +406,7 @@ class MasterDataViewModel(
             _state.update { it.copy(suppliers = AsyncData.Loading) }
             when (val result = repository.getSuppliersPage(PageRequest(limit = 100, cursorColumn = "nama_supplier"))) {
                 is NetworkResult.Success -> _state.update {
-                    it.copy(suppliers = AsyncData.Success(result.data), dialogForm = MasterDataContract.DialogForm.PilihSupplier(context))
+                    it.copy(suppliers = AsyncData.Success(result.data.toImmutableList()), dialogForm = MasterDataContract.DialogForm.PilihSupplier(context))
                 }
                 is NetworkResult.Error -> tampilkanError(result.message)
                 else -> Unit
@@ -422,9 +428,34 @@ class MasterDataViewModel(
         }
     }
 
+    private fun pilihGambarPart(file: java.io.File) {
+        _state.update { 
+            it.copy(
+                partFormDraft = it.partFormDraft.copy(lokasiGambarLokal = file.absolutePath)
+            )
+        }
+    }
+
     private fun simpanPart(f: PartFormState) {
         viewModelScope.launch {
             _state.update { it.copy(menyimpan = true) }
+
+            var remoteUrl = f.lokasiGambarRemote
+            
+            // Upload gambar jika ada file lokal baru
+            if (f.lokasiGambarLokal != null) {
+                val file = java.io.File(f.lokasiGambarLokal)
+                when (val uploadRes = repository.uploadPartImage(f.uniqNo, file)) {
+                    is NetworkResult.Success -> remoteUrl = uploadRes.data
+                    is NetworkResult.Error -> {
+                        tampilkanError("Gagal upload gambar: ${uploadRes.message}")
+                        _state.update { it.copy(menyimpan = false) }
+                        return@launch
+                    }
+                    else -> Unit
+                }
+            }
+
             val dto = MasterPartDto(
                 id = f.id,
                 uniq_no = f.uniqNo,
@@ -435,11 +466,12 @@ class MasterDataViewModel(
                 komoditas = f.komoditas,
                 total_item_per_kanban = f.totalItemPerKanban.toIntOrNull(),
                 sample_item_per_kanban = f.sampleItemPerKanban.toIntOrNull(),
-                sample_cycle_note = f.sampleCycleNote
+                sample_cycle_note = f.sampleCycleNote,
+                lokasi_gambar = remoteUrl
             )
+
             if (repository.upsertPart(dto) is NetworkResult.Success) {
-                _state.update { it.copy(menyimpan = false, dialogForm = null) }
-                _effect.emit(MasterDataContract.Effect.TampilPesan("Part disimpan."))
+                _state.update { it.copy(menyimpan = false, dialogForm = null, feedback = MasterDataContract.FeedbackState("Part berhasil disimpan", FeedbackType.Success)) }
                 muatDataTabAktif(reset = true)
             } else tampilkanError("Gagal simpan part")
         }
@@ -463,8 +495,7 @@ class MasterDataViewModel(
                 catatan_spesifikasi = f.catatanSpesifikasi
             )
             if (repository.upsertMaterial(dto) is NetworkResult.Success) {
-                _state.update { it.copy(menyimpan = false, dialogForm = null) }
-                _effect.emit(MasterDataContract.Effect.TampilPesan("Material disimpan."))
+                _state.update { it.copy(menyimpan = false, dialogForm = null, feedback = MasterDataContract.FeedbackState("Material disimpan", FeedbackType.Success)) }
                 muatDataTabAktif(reset = true)
             } else tampilkanError("Gagal simpan material")
         }
@@ -475,8 +506,7 @@ class MasterDataViewModel(
             _state.update { it.copy(menyimpan = true) }
             val dto = MasterSupplierDto(id = f.id, kode_supplier = f.kodeSupplier, nama_supplier = f.namaSupplier, kategori = f.kategori)
             if (repository.upsertSupplier(dto) is NetworkResult.Success) {
-                _state.update { it.copy(menyimpan = false, dialogForm = null) }
-                _effect.emit(MasterDataContract.Effect.TampilPesan("Supplier disimpan."))
+                _state.update { it.copy(menyimpan = false, dialogForm = null, feedback = MasterDataContract.FeedbackState("Supplier disimpan", FeedbackType.Success)) }
                 muatDataTabAktif(reset = true)
             } else tampilkanError("Gagal simpan supplier")
         }
@@ -487,8 +517,7 @@ class MasterDataViewModel(
             _state.update { it.copy(menyimpan = true) }
             val dto = MasterDefectDto(id_defect = f.idDefect, nama_defect = f.namaDefect, kategori = f.kategori)
             if (repository.upsertDefect(dto) is NetworkResult.Success) {
-                _state.update { it.copy(menyimpan = false, dialogForm = null) }
-                _effect.emit(MasterDataContract.Effect.TampilPesan("Defect disimpan."))
+                _state.update { it.copy(menyimpan = false, dialogForm = null, feedback = MasterDataContract.FeedbackState("Defect disimpan", FeedbackType.Success)) }
                 muatDataTabAktif(reset = true)
             } else tampilkanError("Gagal simpan defect")
         }

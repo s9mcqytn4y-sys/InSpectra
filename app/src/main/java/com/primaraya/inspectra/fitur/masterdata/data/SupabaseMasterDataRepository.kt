@@ -9,6 +9,8 @@ import com.primaraya.inspectra.core.network.NetworkResult
 import com.primaraya.inspectra.core.network.runNetworkCatching
 import com.primaraya.inspectra.core.common.AsyncData
 import com.primaraya.inspectra.core.common.ReferenceCache
+import com.primaraya.inspectra.core.common.CoroutineDispatchersProvider
+import com.primaraya.inspectra.core.common.DefaultDispatchersProvider
 import com.primaraya.inspectra.fitur.checksheet.domain.PartPickerItem
 import com.primaraya.inspectra.fitur.masterdata.domain.*
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +19,9 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.*
 
 class SupabaseMasterDataRepository(
-    private val driver: DatabaseDriver = SupabasePgRestDriver()
+    private val driver: DatabaseDriver = SupabasePgRestDriver(),
+    private val storageDriver: com.primaraya.inspectra.core.data.SupabaseStorageDriver = com.primaraya.inspectra.core.data.SupabaseStorageDriver(),
+    private val dispatchers: CoroutineDispatchersProvider = DefaultDispatchersProvider
 ) : MasterDataRepository {
 
     private val json = InspectraHttpClient.json
@@ -30,7 +34,7 @@ class SupabaseMasterDataRepository(
     private var lastChecksheetVersion = -1L
     private var lastPickerVersion = -1L
 
-    override suspend fun healthCheck(): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun healthCheck(): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.getList(
                 table = RemoteTable.Part,
@@ -41,7 +45,7 @@ class SupabaseMasterDataRepository(
     }
 
     private suspend fun isCacheStale(kode: String, lastVersion: Long): Boolean {
-        val cachedVersion = versionCache.getOrNull()?.get(kode)
+        val cachedVersion = versionCache.getIfValid()?.get(kode)
         if (cachedVersion != null) return cachedVersion > lastVersion
 
         return try {
@@ -51,8 +55,8 @@ class SupabaseMasterDataRepository(
                 decode = { json.decodeFromString<List<JsonObject>>(it) }
             )
             val serverVersion = res.firstOrNull()?.get("versi")?.jsonPrimitive?.longOrNull ?: 0L
-            val newCache = (versionCache.getOrNull() ?: emptyMap()) + (kode to serverVersion)
-            versionCache.put(newCache)
+            val currentVersions = versionCache.getIfValid() ?: emptyMap()
+            versionCache.put(currentVersions + (kode to serverVersion))
             serverVersion > lastVersion
         } catch (e: Exception) {
             true
@@ -61,10 +65,10 @@ class SupabaseMasterDataRepository(
 
     override suspend fun getChecksheetData(
         komoditas: String
-    ): NetworkResult<List<ChecksheetPartDefectViewDto>> = withContext(Dispatchers.IO) {
+    ): NetworkResult<List<ChecksheetPartDefectViewDto>> = withContext(dispatchers.io) {
         runNetworkCatching {
-            val cached = checksheetCache.getOrNull()
-            if (cached != null && !isCacheStale("CHECKSHEET_REFERENCE", lastChecksheetVersion)) {
+            val cached = checksheetCache.getIfValid(lastChecksheetVersion)
+            if (cached != null) {
                 cached[komoditas]?.let { return@runNetworkCatching it }
             }
 
@@ -81,16 +85,16 @@ class SupabaseMasterDataRepository(
             )
             
             lastChecksheetVersion = latestVer
-            val newCache = (checksheetCache.getOrNull() ?: emptyMap()) + (komoditas to data)
-            checksheetCache.put(newCache)
+            val newCache = (checksheetCache.getIfValid() ?: emptyMap()) + (komoditas to data)
+            checksheetCache.put(newCache, latestVer)
             data
         }
     }
 
-    override suspend fun getPartPickerItems(tipeProses: String): NetworkResult<List<PartPickerItem>> = withContext(Dispatchers.IO) {
+    override suspend fun getPartPickerItems(tipeProses: String): NetworkResult<List<PartPickerItem>> = withContext(dispatchers.io) {
         runNetworkCatching {
-            val cached = pickerCache.getOrNull()
-            if (cached != null && !isCacheStale("CHECKSHEET_REFERENCE", lastPickerVersion)) {
+            val cached = pickerCache.getIfValid(lastPickerVersion)
+            if (cached != null) {
                 cached[tipeProses]?.let { return@runNetworkCatching it }
             }
 
@@ -107,8 +111,8 @@ class SupabaseMasterDataRepository(
             )
 
             lastPickerVersion = latestVer
-            val newCache = (pickerCache.getOrNull() ?: emptyMap()) + (tipeProses to data)
-            pickerCache.put(newCache)
+            val newCache = (pickerCache.getIfValid() ?: emptyMap()) + (tipeProses to data)
+            pickerCache.put(newCache, latestVer)
             data
         }
     }
@@ -117,7 +121,7 @@ class SupabaseMasterDataRepository(
     override suspend fun getPartsPage(
         page: PageRequest,
         filter: FilterDataInduk
-    ): NetworkResult<List<MasterPartDto>> = withContext(Dispatchers.IO) {
+    ): NetworkResult<List<MasterPartDto>> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.getList(
                 table = RemoteTable.ViewDataIndukPart,
@@ -138,7 +142,7 @@ class SupabaseMasterDataRepository(
 
     override suspend fun getSuppliersPage(
         page: PageRequest
-    ): NetworkResult<List<MasterSupplierDto>> = withContext(Dispatchers.IO) {
+    ): NetworkResult<List<MasterSupplierDto>> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.getList(
                 table = RemoteTable.Supplier,
@@ -150,7 +154,7 @@ class SupabaseMasterDataRepository(
 
     override suspend fun getMaterialsPage(
         page: PageRequest
-    ): NetworkResult<List<MasterMaterialDto>> = withContext(Dispatchers.IO) {
+    ): NetworkResult<List<MasterMaterialDto>> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.getList(
                 table = RemoteTable.Material,
@@ -162,7 +166,7 @@ class SupabaseMasterDataRepository(
 
     override suspend fun getDefectsPage(
         page: PageRequest
-    ): NetworkResult<List<MasterDefectDto>> = withContext(Dispatchers.IO) {
+    ): NetworkResult<List<MasterDefectDto>> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.getList(
                 table = RemoteTable.Defect,
@@ -172,7 +176,7 @@ class SupabaseMasterDataRepository(
         }
     }
 
-    override suspend fun getSlotWaktu(tipeProses: String): NetworkResult<List<MasterSlotWaktuDto>> = withContext(Dispatchers.IO) {
+    override suspend fun getSlotWaktu(tipeProses: String): NetworkResult<List<MasterSlotWaktuDto>> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.getList(
                 table = RemoteTable.SlotWaktu,
@@ -182,7 +186,7 @@ class SupabaseMasterDataRepository(
         }
     }
 
-    override suspend fun upsertSupplier(supplier: MasterSupplierDto): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun upsertSupplier(supplier: MasterSupplierDto): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.upsert(
                 table = RemoteTable.Supplier,
@@ -193,13 +197,13 @@ class SupabaseMasterDataRepository(
         }
     }
 
-    override suspend fun deleteSupplierSoft(id: String): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun deleteSupplierSoft(id: String): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.softDelete(table = RemoteTable.Supplier, idColumn = "id", id = id)
         }
     }
 
-    override suspend fun upsertPart(part: MasterPartDto): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun upsertPart(part: MasterPartDto): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.upsert(
                 table = RemoteTable.Part,
@@ -210,13 +214,23 @@ class SupabaseMasterDataRepository(
         }
     }
 
-    override suspend fun deletePartSoft(id: String): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun deletePartSoft(id: String): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.softDelete(table = RemoteTable.Part, idColumn = "id", id = id)
         }
     }
 
-    override suspend fun upsertMaterial(material: MasterMaterialDto): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun uploadPartImage(uniqNo: String, file: java.io.File): NetworkResult<String> = withContext(dispatchers.io) {
+        runNetworkCatching {
+            storageDriver.uploadFile(
+                bucket = "part-images",
+                path = "parts/$uniqNo.jpg",
+                file = file
+            )
+        }
+    }
+
+    override suspend fun upsertMaterial(material: MasterMaterialDto): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.upsert(
                 table = RemoteTable.Material,
@@ -226,13 +240,13 @@ class SupabaseMasterDataRepository(
         }
     }
 
-    override suspend fun deleteMaterialSoft(id: String): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun deleteMaterialSoft(id: String): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.softDelete(table = RemoteTable.Material, idColumn = "id", id = id)
         }
     }
 
-    override suspend fun upsertDefect(defect: MasterDefectDto): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun upsertDefect(defect: MasterDefectDto): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.upsert(
                 table = RemoteTable.Defect,
@@ -243,13 +257,13 @@ class SupabaseMasterDataRepository(
         }
     }
 
-    override suspend fun deleteDefectSoft(idDefect: String): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun deleteDefectSoft(idDefect: String): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.softDelete(table = RemoteTable.Defect, idColumn = "id_defect", id = idDefect)
         }
     }
 
-    override suspend fun getPartDefects(uniqNo: String): NetworkResult<List<MasterPartDefectDto>> = withContext(Dispatchers.IO) {
+    override suspend fun getPartDefects(uniqNo: String): NetworkResult<List<MasterPartDefectDto>> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.getList(
                 table = RemoteTable.PartDefect,
@@ -259,7 +273,7 @@ class SupabaseMasterDataRepository(
         }
     }
 
-    override suspend fun getPartEffectiveDefects(uniqNo: String): NetworkResult<List<MasterPartEffectiveDefectDto>> = withContext(Dispatchers.IO) {
+    override suspend fun getPartEffectiveDefects(uniqNo: String): NetworkResult<List<MasterPartEffectiveDefectDto>> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.getList(
                 table = RemoteTable.ViewPartDefectEfektif,
@@ -269,7 +283,7 @@ class SupabaseMasterDataRepository(
         }
     }
 
-    override suspend fun upsertPartDefect(data: MasterPartDefectDto): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun upsertPartDefect(data: MasterPartDefectDto): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.upsert(
                 table = RemoteTable.PartDefect,
@@ -279,13 +293,13 @@ class SupabaseMasterDataRepository(
         }
     }
 
-    override suspend fun deletePartDefect(id: String): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun deletePartDefect(id: String): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.softDelete(table = RemoteTable.PartDefect, idColumn = "id", id = id)
         }
     }
 
-    override suspend fun getPartMaterials(uniqNo: String): NetworkResult<List<MasterPartMaterialDto>> = withContext(Dispatchers.IO) {
+    override suspend fun getPartMaterials(uniqNo: String): NetworkResult<List<MasterPartMaterialDto>> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.getList(
                 table = RemoteTable.PartMaterial,
@@ -295,7 +309,7 @@ class SupabaseMasterDataRepository(
         }
     }
 
-    override suspend fun getMaterialUsages(materialId: String): NetworkResult<List<MasterPartMaterialDto>> = withContext(Dispatchers.IO) {
+    override suspend fun getMaterialUsages(materialId: String): NetworkResult<List<MasterPartMaterialDto>> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.getList(
                 table = RemoteTable.PartMaterial,
@@ -305,7 +319,7 @@ class SupabaseMasterDataRepository(
         }
     }
 
-    override suspend fun upsertPartMaterial(data: MasterPartMaterialDto): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun upsertPartMaterial(data: MasterPartMaterialDto): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.upsert(
                 table = RemoteTable.PartMaterial,
@@ -315,7 +329,7 @@ class SupabaseMasterDataRepository(
         }
     }
 
-    override suspend fun deletePartMaterial(id: String): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun deletePartMaterial(id: String): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.softDelete(table = RemoteTable.PartMaterial, idColumn = "id", id = id)
         }
@@ -323,7 +337,7 @@ class SupabaseMasterDataRepository(
 
     override suspend fun getMaterialDefects(
         materialId: String
-    ): NetworkResult<List<MasterMaterialDefectDto>> = withContext(Dispatchers.IO) {
+    ): NetworkResult<List<MasterMaterialDefectDto>> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.getList(
                 table = RemoteTable.MaterialDefect,
@@ -333,7 +347,7 @@ class SupabaseMasterDataRepository(
         }
     }
 
-    override suspend fun upsertMaterialDefect(data: MasterMaterialDefectDto): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun upsertMaterialDefect(data: MasterMaterialDefectDto): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.upsert(
                 table = RemoteTable.MaterialDefect,
@@ -344,7 +358,7 @@ class SupabaseMasterDataRepository(
         }
     }
 
-    override suspend fun deleteMaterialDefect(id: String): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun deleteMaterialDefect(id: String): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.softDelete(table = RemoteTable.MaterialDefect, idColumn = "id", id = id)
         }

@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -336,24 +337,32 @@ fun KartuPartChecksheetRingkas(
     onBukaTambahDefect: () -> Unit
 ) {
     val containerColor = if (part.kuantitasTidakValid) {
-        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+        Color(0xFFFEF2F2)
     } else if (part.jumlahNg > 0) {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        Color(0xFFF8FAFC)
     } else {
-        MaterialTheme.colorScheme.surface
+        Color.White
     }
 
-    ElevatedCard(
+    val borderColor = if (part.kuantitasTidakValid) {
+        Color(0xFFFCA5A5)
+    } else if (part.jumlahNg > 0) {
+        Color(0xFFE2E8F0)
+    } else {
+        Color(0xFFF1F5F9)
+    }
+
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .animateContentSize(),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = containerColor
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp)
+            .animateContentSize()
+            .padding(horizontal = 4.dp, vertical = 2.dp),
+        shape = RoundedCornerShape(24.dp),
+        color = containerColor,
+        border = BorderStroke(1.dp, borderColor),
+        shadowElevation = if (part.terbuka) 4.dp else 1.dp
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -361,9 +370,9 @@ fun KartuPartChecksheetRingkas(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    modifier = Modifier.size(60.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.surfaceDim
+                    modifier = Modifier.size(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color(0xFFF1F5F9)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         if (part.lokasiGambar != null) {
@@ -379,105 +388,97 @@ fun KartuPartChecksheetRingkas(
                             Icon(
                                 imageVector = Icons.Default.Inventory2,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(32.dp)
+                                tint = Color(0xFF64748B),
+                                modifier = Modifier.size(28.dp)
                             )
                         }
                     }
                 }
 
-                Spacer(Modifier.width(18.dp))
+                Spacer(Modifier.width(16.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = part.uniqNo,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Black,
+                        color = Color(0xFF1E293B)
                     )
 
                     Text(
-                        text = "${part.nomorPart ?: "-"} • ${part.namaPart}",
+                        text = part.namaPart,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = Color(0xFF64748B),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
 
                     Row(
-                        modifier = Modifier.padding(top = 8.dp),
+                        modifier = Modifier.padding(top = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        BadgeElite(label = "Cek: ${part.jumlahDiperiksa}", color = MaterialTheme.colorScheme.secondaryContainer)
-                        BadgeElite(label = "OK: ${part.jumlahOk}", color = Color(0xFFDCFCE7), textColor = Color(0xFF166534))
+                        SmallBadgeElite(label = "${part.jumlahDiperiksa} Cek", color = Color(0xFFF1F5F9), textColor = Color(0xFF475569))
+                        SmallBadgeElite(label = "${part.jumlahOk} OK", color = Color(0xFFF0FDF4), textColor = Color(0xFF166534))
                         if (part.jumlahNg > 0) {
-                            BadgeElite(label = "NG: ${part.jumlahNg}", color = MaterialTheme.colorScheme.errorContainer, textColor = MaterialTheme.colorScheme.error)
-                            BadgeElite(label = "${part.rasioNgSatuDesimal}%", color = Color(0xFFFEF3C7), textColor = Color(0xFF92400E))
+                            SmallBadgeElite(label = "${part.jumlahNg} NG", color = Color(0xFFFEF2F2), textColor = Color(0xFF991B1B))
                         }
                     }
                 }
 
                 IconButton(
                     onClick = onBukaTutup,
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
                         imageVector = if (part.terbuka) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (part.terbuka) "Tutup Detail" else "Buka Detail",
-                        tint = MaterialTheme.colorScheme.primary
+                        contentDescription = null,
+                        tint = Color(0xFF94A3B8)
                     )
                 }
             }
 
             if (part.terbuka) {
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(20.dp))
+                HorizontalDivider(thickness = 1.dp, color = Color(0xFFF1F5F9))
+                Spacer(Modifier.height(20.dp))
 
                 OutlinedTextField(
                     value = if (part.jumlahDiperiksa == 0) "" else part.jumlahDiperiksa.toString(),
                     onValueChange = { onJumlahDiperiksaUbah(it.toIntOrNull() ?: 0) },
-                    label = { Text(stringResource(com.primaraya.inspectra.R.string.checksheet_input_checked_qty)) },
-                    placeholder = { Text("0 Pcs") },
-                    supportingText = {
-                        if (part.kuantitasTidakValid) {
-                            Text("Peringatan: Jumlah NG melebihi jumlah diperiksa.", color = MaterialTheme.colorScheme.error)
-                        } else {
-                            Text("Total item fisik yang sudah diperiksa")
-                        }
-                    },
+                    label = { Text("Jumlah Diperiksa", style = MaterialTheme.typography.labelMedium) },
+                    placeholder = { Text("0") },
                     isError = part.kuantitasTidakValid,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(12.dp),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                        focusedBorderColor = Color(0xFF1A365D),
+                        unfocusedBorderColor = Color(0xFFE2E8F0),
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
                     )
                 )
 
-                Spacer(Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                if (part.kuantitasTidakValid) {
                     Text(
-                        text = stringResource(com.primaraya.inspectra.R.string.checksheet_ng_findings_list),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        "NG melebihi jumlah diperiksa!",
+                        color = Color(0xFFDC2626),
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+                        fontWeight = FontWeight.Bold
                     )
-                    
-                    if (part.daftarDefectAktif.isNotEmpty()) {
-                        Text(
-                            "${part.daftarDefectAktif.size} Jenis",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
                 }
+
+                Spacer(Modifier.height(20.dp))
+
+                Text(
+                    text = "Daftar Temuan NG",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFF1E293B)
+                )
 
                 val defectsByKategori = remember(part.daftarDefect, part.defectTersembunyi) {
                     part.daftarDefect.filter { it.idDefect !in part.defectTersembunyi }
@@ -485,21 +486,24 @@ fun KartuPartChecksheetRingkas(
                 }
 
                 defectsByKategori.forEach { (kategori, defects) ->
+                    val isMaterial = kategori == KategoriDefect.MATERIAL
+                    
                     Surface(
-                        modifier = Modifier.padding(top = 18.dp, bottom = 6.dp),
-                        color = if (kategori == KategoriDefect.MATERIAL) Color(0xFFF0F9FF) else Color(0xFFF8FAFC),
-                        shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
+                        color = if (isMaterial) Color(0xFFF0F9FF) else Color(0xFFF8FAFC),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            text = if (kategori == KategoriDefect.MATERIAL) "SUMBER: MATERIAL" else "SUMBER: PROSES",
+                            text = if (isMaterial) "DEFECT MATERIAL" else "DEFECT PROSES",
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (kategori == KategoriDefect.MATERIAL) Color(0xFF0369A1) else Color(0xFF475569),
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                            fontWeight = FontWeight.Black,
+                            color = if (isMaterial) Color(0xFF0369A1) else Color(0xFF64748B),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            letterSpacing = 0.5.sp
                         )
                     }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         defects.forEach { defect ->
                             BarisDefectStepper(
                                 defect = defect,
@@ -515,18 +519,34 @@ fun KartuPartChecksheetRingkas(
                 
                 Spacer(Modifier.height(16.dp))
                 
-                FilledTonalButton(
+                OutlinedButton(
                     onClick = onBukaTambahDefect,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    contentPadding = PaddingValues(16.dp)
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, Color(0xFFE2E8F0))
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text(stringResource(com.primaraya.inspectra.R.string.checksheet_add_other_defect), fontWeight = FontWeight.Bold)
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFF1A365D))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Tambah Jenis Lain", fontWeight = FontWeight.Bold, color = Color(0xFF1A365D))
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SmallBadgeElite(label: String, color: Color, textColor: Color) {
+    Surface(
+        color = color,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = textColor
+        )
     }
 }
 

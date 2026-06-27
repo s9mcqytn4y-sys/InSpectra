@@ -1,6 +1,9 @@
 package com.primaraya.inspectra.fitur.masterdata.ui.components
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Delete
@@ -9,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.primaraya.inspectra.core.ui.component.AppStatusBadge
@@ -22,22 +26,26 @@ fun DefectMasterCard(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    ElevatedCard(
-        shape = MaterialTheme.shapes.medium,
-        modifier = modifier.fillMaxWidth()
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        modifier = modifier.fillMaxWidth(),
+        color = Color.White,
+        border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
+        shadowElevation = 2.dp
     ) {
-        Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.Top) {
                 Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    modifier = Modifier.size(40.dp)
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color(0xFFFEF2F2),
+                    modifier = Modifier.size(56.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.BugReport,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onErrorContainer
+                            tint = Color(0xFFDC2626),
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                 }
@@ -45,23 +53,26 @@ fun DefectMasterCard(
                 Spacer(Modifier.width(16.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = defect.nama_defect,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = defect.nama_defect,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Black,
+                            color = Color(0xFF1E293B)
+                        )
+                        Spacer(Modifier.weight(1f))
+                        IconButton(onClick = onEdit) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(20.dp))
+                        }
+                        IconButton(onClick = onDelete) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFDC2626), modifier = Modifier.size(20.dp))
+                        }
+                    }
                     Text(
                         text = "ID: ${defect.id_defect}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color(0xFF64748B)
                     )
-                }
-
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit")
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                 }
             }
 

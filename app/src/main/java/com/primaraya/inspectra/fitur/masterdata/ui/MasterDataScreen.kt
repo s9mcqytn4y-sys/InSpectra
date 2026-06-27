@@ -18,6 +18,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.primaraya.inspectra.core.common.AsyncData
 import com.primaraya.inspectra.core.ui.component.AppFriendlyDialog
 import com.primaraya.inspectra.core.ui.component.AppResponsiveContent
+import com.primaraya.inspectra.core.ui.component.InspectraFeedback
 import com.primaraya.inspectra.core.ui.component.ResponsiveFormHost
 import com.primaraya.inspectra.core.ui.viewmodel.pabrikViewModelAplikasi
 import com.primaraya.inspectra.fitur.masterdata.domain.*
@@ -90,6 +91,14 @@ fun MasterDataScreen(
                         filterAktif = state.filterAktif,
                         onFilterSelected = { viewModel.onIntent(MasterDataContract.Intent.PilihFilter(it)) }
                     )
+
+                    state.feedback?.let { fb ->
+                        InspectraFeedback(
+                            message = fb.message,
+                            type = fb.type,
+                            onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupFeedback) }
+                        )
+                    }
 
                     Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8FAFC))) {
                         when (state.tabAktif) {
@@ -234,6 +243,7 @@ private fun MasterDataFormContent(
             onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
             onUpdate = { viewModel.onIntent(MasterDataContract.Intent.UbahFormPart(it)) },
             onSave = { viewModel.onIntent(MasterDataContract.Intent.SimpanPart(it)) },
+            onImageSelect = { viewModel.onIntent(MasterDataContract.Intent.PilihGambarPart(it)) },
             isSaving = state.menyimpan
         )
         is MasterDataContract.DialogForm.FormMaterial -> MaterialFormSheet(

@@ -3,6 +3,7 @@ package com.primaraya.inspectra.fitur.masterdata.ui
 import com.primaraya.inspectra.core.common.AsyncData
 import com.primaraya.inspectra.core.ui.UserMessage
 import com.primaraya.inspectra.fitur.masterdata.domain.*
+import kotlinx.collections.immutable.ImmutableList
 
 /**
  * Kontrak MVI untuk layar Master Data.
@@ -19,15 +20,16 @@ object MasterDataContract {
     data class State(
         val tabAktif: TabMasterData = TabMasterData.PART,
         val filterAktif: FilterDataInduk = FilterDataInduk.SEMUA,
-        val parts: AsyncData<List<MasterPartDto>> = AsyncData.Idle,
-        val materials: AsyncData<List<MasterMaterialDto>> = AsyncData.Idle,
-        val suppliers: AsyncData<List<MasterSupplierDto>> = AsyncData.Idle,
-        val defects: AsyncData<List<MasterDefectDto>> = AsyncData.Idle,
+        val parts: AsyncData<ImmutableList<MasterPartDto>> = AsyncData.Idle,
+        val materials: AsyncData<ImmutableList<MasterMaterialDto>> = AsyncData.Idle,
+        val suppliers: AsyncData<ImmutableList<MasterSupplierDto>> = AsyncData.Idle,
+        val defects: AsyncData<ImmutableList<MasterDefectDto>> = AsyncData.Idle,
         val partDetails: Map<String, PartRelationState> = emptyMap(),
         val materialDetails: Map<String, MaterialRelationState> = emptyMap(),
         val menyimpan: Boolean = false,
         val kataKunci: String = "",
         val dialogForm: DialogForm? = null,
+        val feedback: FeedbackState? = null,
         val userMessage: UserMessage? = null,
         val partFormDraft: PartFormState = PartFormState(),
         val materialFormDraft: MaterialFormState = MaterialFormState(),
@@ -37,16 +39,21 @@ object MasterDataContract {
         val loadingMore: Boolean = false
     )
 
+    data class FeedbackState(
+        val message: String,
+        val type: com.primaraya.inspectra.core.ui.component.FeedbackType = com.primaraya.inspectra.core.ui.component.FeedbackType.Info
+    )
+
     data class PartRelationState(
-        val defects: AsyncData<List<MasterPartDefectDto>> = AsyncData.Idle,
-        val effectiveDefects: AsyncData<List<MasterPartEffectiveDefectDto>> = AsyncData.Idle,
-        val materials: AsyncData<List<MasterPartMaterialDto>> = AsyncData.Idle,
+        val defects: AsyncData<ImmutableList<MasterPartDefectDto>> = AsyncData.Idle,
+        val effectiveDefects: AsyncData<ImmutableList<MasterPartEffectiveDefectDto>> = AsyncData.Idle,
+        val materials: AsyncData<ImmutableList<MasterPartMaterialDto>> = AsyncData.Idle,
         val expanded: Boolean = false
     )
 
     data class MaterialRelationState(
-        val defects: AsyncData<List<MasterMaterialDefectDto>> = AsyncData.Idle,
-        val usageParts: AsyncData<List<MasterPartMaterialDto>> = AsyncData.Idle,
+        val defects: AsyncData<ImmutableList<MasterMaterialDefectDto>> = AsyncData.Idle,
+        val usageParts: AsyncData<ImmutableList<MasterPartMaterialDto>> = AsyncData.Idle,
         val expanded: Boolean = false
     )
 
@@ -61,6 +68,7 @@ object MasterDataContract {
         data class UbahFormPart(val data: PartFormState) : Intent
         data class SimpanPart(val data: PartFormState) : Intent
         data class HapusPart(val data: MasterPartDto) : Intent
+        data class PilihGambarPart(val file: java.io.File) : Intent
         data class TogglePartDetail(val uniqNo: String) : Intent
 
         data object TambahMaterial : Intent
@@ -101,6 +109,7 @@ object MasterDataContract {
 
         data object MuatLebihBanyak : Intent
         data object TutupDialog : Intent
+        data object TutupFeedback : Intent
         data object ClearUserMessage : Intent
         data object Retry : Intent
     }

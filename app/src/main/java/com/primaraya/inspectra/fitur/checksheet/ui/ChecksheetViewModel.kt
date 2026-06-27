@@ -143,7 +143,7 @@ class ChecksheetMviViewModel(
                                             KategoriDefect.valueOf(defect.kategori.uppercase())
                                         }.getOrDefault(KategoriDefect.PROSES),
                                         jumlahNg = 0,
-                                        detailSlot = slots.map { SlotNg(it.kode_slot, it.label_waktu) }.toImmutableList()
+                                        detailSlot = slots.map { SlotNg(it.id, it.label_waktu) }.toImmutableList()
                                     )
                                 }.toImmutableList(),
                                 lokasiGambar = dto.lokasi_gambar,
@@ -276,7 +276,7 @@ class ChecksheetMviViewModel(
                         namaDefect = defect.nama_defect,
                         kategori = runCatching { KategoriDefect.valueOf(defect.kategori.uppercase()) }.getOrDefault(KategoriDefect.PROSES),
                         jumlahNg = 0,
-                        detailSlot = slots.map { SlotNg(it.kode_slot, it.label_waktu) }.toImmutableList()
+                        detailSlot = slots.map { SlotNg(it.id, it.label_waktu) }.toImmutableList()
                     )
                     part.copy(daftarDefect = (part.daftarDefect + input).toImmutableList())
                 }
