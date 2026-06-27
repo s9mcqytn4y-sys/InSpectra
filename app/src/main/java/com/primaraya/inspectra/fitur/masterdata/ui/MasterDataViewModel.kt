@@ -1,3 +1,4 @@
+@file:Suppress("UNCHECKED_CAST")
 package com.primaraya.inspectra.fitur.masterdata.ui
 
 import android.app.Application

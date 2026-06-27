@@ -54,6 +54,7 @@ fun ChecksheetScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     LaunchedEffect(tipeProses) {
         viewModel.onIntent(ChecksheetContract.Intent.Muat(tipeProses))
@@ -66,9 +67,11 @@ fun ChecksheetScreen(
                     snackbarHostState.showSnackbar(effect.pesan)
                 }
                 is ChecksheetContract.Effect.PesanError -> {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                     snackbarHostState.showSnackbar("${effect.judul}: ${effect.pesan}")
                 }
                 is ChecksheetContract.Effect.KirimBerhasil -> {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                     snackbarHostState.showSnackbar("Data tersimpan. ID: ${effect.idSesi.take(8)}")
                 }
             }
@@ -621,7 +624,7 @@ fun BarisDefectStepper(
                 Surface(
                     modifier = Modifier
                         .width(60.dp)
-                        .height(44.dp)
+                        .height(48.dp)
                         .clickable { showManualDialog = true },
                     shape = RoundedCornerShape(12.dp),
                     tonalElevation = 2.dp,
@@ -689,7 +692,7 @@ fun DialogInputSlotNg(
                 
                 Box(modifier = Modifier.heightIn(max = 300.dp)) {
                     LazyColumn {
-                        items(defect.detailSlot) { slot ->
+                        items(defect.detailSlot, key = { it.slotId }) { slot ->
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,

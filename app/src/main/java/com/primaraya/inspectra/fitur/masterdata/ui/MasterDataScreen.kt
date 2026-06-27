@@ -3,8 +3,9 @@ package com.primaraya.inspectra.fitur.masterdata.ui
 import android.app.Application
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
@@ -108,9 +109,11 @@ fun MasterDataScreen(
                                 loadingMore = state.loadingMore,
                                 onLoadMore = { viewModel.onIntent(MasterDataContract.Intent.MuatLebihBanyak) },
                                 content = { list ->
-                                    LazyColumn(
+                                    LazyVerticalGrid(
+                                        columns = GridCells.Adaptive(minSize = 350.dp),
                                         contentPadding = PaddingValues(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
                                         items(list, key = { it.uniq_no }) { part ->
                                             PartMasterCard(
@@ -134,9 +137,11 @@ fun MasterDataScreen(
                                 loadingMore = state.loadingMore,
                                 onLoadMore = { viewModel.onIntent(MasterDataContract.Intent.MuatLebihBanyak) },
                                 content = { list ->
-                                    LazyColumn(
+                                    LazyVerticalGrid(
+                                        columns = GridCells.Adaptive(minSize = 350.dp),
                                         contentPadding = PaddingValues(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
                                         items(list, key = { it.id ?: it.nama_material }) { mat ->
                                             MaterialMasterCard(
@@ -158,9 +163,11 @@ fun MasterDataScreen(
                                 loadingMore = state.loadingMore,
                                 onLoadMore = { viewModel.onIntent(MasterDataContract.Intent.MuatLebihBanyak) },
                                 content = { list ->
-                                    LazyColumn(
+                                    LazyVerticalGrid(
+                                        columns = GridCells.Adaptive(minSize = 350.dp),
                                         contentPadding = PaddingValues(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
                                         items(list, key = { it.id ?: it.nama_supplier }) { supplier ->
                                             SupplierMasterCard(
@@ -178,9 +185,11 @@ fun MasterDataScreen(
                                 loadingMore = state.loadingMore,
                                 onLoadMore = { viewModel.onIntent(MasterDataContract.Intent.MuatLebihBanyak) },
                                 content = { list ->
-                                    LazyColumn(
+                                    LazyVerticalGrid(
+                                        columns = GridCells.Adaptive(minSize = 350.dp),
                                         contentPadding = PaddingValues(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
                                         items(list, key = { it.id_defect }) { defect ->
                                             DefectMasterCard(

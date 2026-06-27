@@ -1,3 +1,4 @@
+@file:OptIn(kotlinx.coroutines.FlowPreview::class)
 package com.primaraya.inspectra.fitur.checksheet.ui
 
 import android.app.Application
@@ -333,9 +334,9 @@ class ChecksheetMviViewModel(
                     jumlahOk = part.jumlahOk,
                     jumlahNg = part.jumlahNg,
                     rasioNg = part.rasioNgSatuDesimal,
-                    daftarDefectNg = part.daftarDefect.filter { it.jumlahNg > 0 }.toImmutableList()
+                    daftarDefectNg = part.daftarDefect.filter { it.jumlahNg > 0 }.toList()
                 )
-            }.toImmutableList()
+            }.toList()
         )
 
         _state.update { it.copy(preview = payload) }

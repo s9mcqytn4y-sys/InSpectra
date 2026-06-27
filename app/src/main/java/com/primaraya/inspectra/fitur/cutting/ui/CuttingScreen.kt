@@ -421,7 +421,7 @@ private fun FormBatchCutting(
                 if (ringkasanHariIni.isNotEmpty()) {
                     Text("Ringkasan Harian", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     LazyColumn(modifier = Modifier.height(200.dp)) {
-                        items(ringkasanHariIni) { data ->
+                        items(ringkasanHariIni, key = { it.nama_line ?: it.hashCode() }) { data ->
                             Text(
                                 text = "• ${data.nama_line ?: "Line"}: ${data.total_batch} batch | OK ${data.total_layer_ok} | NG ${data.total_layer_ng}",
                                 style = MaterialTheme.typography.bodySmall

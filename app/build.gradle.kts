@@ -108,6 +108,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.navigation.compose)
 
     implementation(libs.ktor.client.android)
     implementation(libs.ktor.client.okhttp)
@@ -120,7 +121,9 @@ dependencies {
 
     runtimeOnly("org.slf4j:slf4j-nop:2.0.13")
 
-    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation(libs.coil.compose)
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

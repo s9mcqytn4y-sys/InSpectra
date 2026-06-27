@@ -68,7 +68,9 @@ object UserMessageMapper {
             )
 
             message.contains("Unable to resolve host", ignoreCase = true) ||
-                message.contains("UnknownHost", ignoreCase = true) -> UserMessage(
+                message.contains("UnknownHost", ignoreCase = true) ||
+                message.contains("Failed to connect", ignoreCase = true) ||
+                message.contains("ConnectException", ignoreCase = true) -> UserMessage(
                 title = "Tidak ada koneksi",
                 body = "Periksa koneksi internet perangkat, lalu coba lagi.",
                 actionLabel = "Coba Lagi"

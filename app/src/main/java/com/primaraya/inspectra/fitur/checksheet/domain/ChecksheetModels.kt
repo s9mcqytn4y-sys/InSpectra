@@ -142,7 +142,7 @@ data class PayloadChecksheet(
     val totalOk: Int,
     val totalNg: Int,
     val rasioNgGlobal: Float,
-    val daftarPart: ImmutableList<PayloadPartDiperiksa>
+    val daftarPart: List<PayloadPartDiperiksa>
 )
 
 @Serializable
@@ -155,6 +155,6 @@ data class PayloadPartDiperiksa(
     val jumlahOk: Int,
     val jumlahNg: Int,
     val rasioNg: Float,
-    val daftarMaterial: ImmutableList<String> = persistentListOf(),
-    val daftarDefectNg: ImmutableList<InputDefect>
+    val daftarMaterial: List<String> = emptyList(),
+    val daftarDefectNg: List<InputDefect>
 )
