@@ -187,7 +187,16 @@ class MasterDataViewModel(
             val tab = s.tabAktif
             val search = s.kataKunci
             
-            if (reset) updateTabState(tab, AsyncData.Loading)
+            if (reset) {
+                _state.update { s ->
+                    when (tab) {
+                        MasterDataContract.TabMasterData.PART -> s.copy(parts = AsyncData.Loading)
+                        MasterDataContract.TabMasterData.MATERIAL -> s.copy(materials = AsyncData.Loading)
+                        MasterDataContract.TabMasterData.SUPPLIER -> s.copy(suppliers = AsyncData.Loading)
+                        MasterDataContract.TabMasterData.DEFECT -> s.copy(defects = AsyncData.Loading)
+                    }
+                }
+            }
             else _state.update { it.copy(loadingMore = true) }
 
             val cursorVal = if (reset) null else when (tab) {
@@ -232,15 +241,44 @@ class MasterDataViewModel(
                     _state.update { it.copy(canLoadMore = canMore) }
 
                     if (reset) {
-                        if (newData.isEmpty()) updateTabState(tab, AsyncData.Empty("Belum ada data", "Data aktif belum tersedia."))
-                        else updateTabState(tab, AsyncData.Success(newData))
+                        if (newData.isEmpty()) {
+                            val empty = AsyncData.Empty("Belum ada data", "Data aktif belum tersedia.")
+                            _state.update { s ->
+                                when (tab) {
+                                    MasterDataContract.TabMasterData.PART -> s.copy(parts = empty)
+                                    MasterDataContract.TabMasterData.MATERIAL -> s.copy(materials = empty)
+                                    MasterDataContract.TabMasterData.SUPPLIER -> s.copy(suppliers = empty)
+                                    MasterDataContract.TabMasterData.DEFECT -> s.copy(defects = empty)
+                                }
+                            }
+                        }
+                        else {
+                            _state.update { s ->
+                                when (tab) {
+                                    MasterDataContract.TabMasterData.PART -> s.copy(parts = AsyncData.Success(newData.filterIsInstance<MasterPartDto>().toImmutableList()))
+                                    MasterDataContract.TabMasterData.MATERIAL -> s.copy(materials = AsyncData.Success(newData.filterIsInstance<MasterMaterialDto>().toImmutableList()))
+                                    MasterDataContract.TabMasterData.SUPPLIER -> s.copy(suppliers = AsyncData.Success(newData.filterIsInstance<MasterSupplierDto>().toImmutableList()))
+                                    MasterDataContract.TabMasterData.DEFECT -> s.copy(defects = AsyncData.Success(newData.filterIsInstance<MasterDefectDto>().toImmutableList()))
+                                }
+                            }
+                        }
                     } else {
                         appendDataToTab(tab, newData)
                     }
                 }
                 is NetworkResult.Error -> {
                     val msg = UserMessageMapper.fromThrowableMessage(result.message, KonteksOperasi.MASTER_DATA)
-                    if (reset) updateTabState(tab, AsyncData.Error(msg.title, msg.body))
+                    if (reset) {
+                        val error = AsyncData.Error(msg.title, msg.body)
+                        _state.update { s ->
+                            when (tab) {
+                                MasterDataContract.TabMasterData.PART -> s.copy(parts = error)
+                                MasterDataContract.TabMasterData.MATERIAL -> s.copy(materials = error)
+                                MasterDataContract.TabMasterData.SUPPLIER -> s.copy(suppliers = error)
+                                MasterDataContract.TabMasterData.DEFECT -> s.copy(defects = error)
+                            }
+                        }
+                    }
                     else _state.update { it.copy(userMessage = msg) }
                 }
                 else -> Unit
@@ -252,37 +290,25 @@ class MasterDataViewModel(
         _state.update { s ->
             when (tab) {
                 MasterDataContract.TabMasterData.PART -> {
-                    val currentParts = (s.parts as? AsyncData.Success)?.data ?: emptyList()
+                    val currentParts = if (s.parts is AsyncData.Success) s.parts.data else emptyList()
                     val added = newData.filterIsInstance<MasterPartDto>()
                     s.copy(parts = AsyncData.Success((currentParts + added).toImmutableList()))
                 }
                 MasterDataContract.TabMasterData.MATERIAL -> {
-                    val currentMaterials = (s.materials as? AsyncData.Success)?.data ?: emptyList()
+                    val currentMaterials = if (s.materials is AsyncData.Success) s.materials.data else emptyList()
                     val added = newData.filterIsInstance<MasterMaterialDto>()
                     s.copy(materials = AsyncData.Success((currentMaterials + added).toImmutableList()))
                 }
                 MasterDataContract.TabMasterData.SUPPLIER -> {
-                    val currentSuppliers = (s.suppliers as? AsyncData.Success)?.data ?: emptyList()
+                    val currentSuppliers = if (s.suppliers is AsyncData.Success) s.suppliers.data else emptyList()
                     val added = newData.filterIsInstance<MasterSupplierDto>()
                     s.copy(suppliers = AsyncData.Success((currentSuppliers + added).toImmutableList()))
                 }
                 MasterDataContract.TabMasterData.DEFECT -> {
-                    val currentDefects = (s.defects as? AsyncData.Success)?.data ?: emptyList()
+                    val currentDefects = if (s.defects is AsyncData.Success) s.defects.data else emptyList()
                     val added = newData.filterIsInstance<MasterDefectDto>()
                     s.copy(defects = AsyncData.Success((currentDefects + added).toImmutableList()))
                 }
-            }
-        }
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun updateTabState(tab: MasterDataContract.TabMasterData, async: AsyncData<*>) {
-        _state.update { s ->
-            when (tab) {
-                MasterDataContract.TabMasterData.PART -> s.copy(parts = async as AsyncData<ImmutableList<MasterPartDto>>)
-                MasterDataContract.TabMasterData.MATERIAL -> s.copy(materials = async as AsyncData<ImmutableList<MasterMaterialDto>>)
-                MasterDataContract.TabMasterData.SUPPLIER -> s.copy(suppliers = async as AsyncData<ImmutableList<MasterSupplierDto>>)
-                MasterDataContract.TabMasterData.DEFECT -> s.copy(defects = async as AsyncData<ImmutableList<MasterDefectDto>>)
             }
         }
     }
