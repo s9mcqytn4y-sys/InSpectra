@@ -9,8 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -64,63 +63,126 @@ fun CuttingScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Input Cutting", fontWeight = FontWeight.Black)
-                        Text("Satu batch untuk setiap lot atau roll", style = MaterialTheme.typography.labelMedium)
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Kembali")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A365D),
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
+            if (!state.berhasil) {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text("Input Cutting", fontWeight = FontWeight.Black)
+                            Text("Satu batch untuk setiap lot atau roll", style = MaterialTheme.typography.labelMedium)
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Kembali")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color(0xFF1A365D),
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White
+                    )
                 )
-            )
+            }
         }
     ) { padding ->
-        when (val statusMaterial = state.material) {
-            is AsyncData.Loading -> AppListSkeleton()
-            is AsyncData.Error -> AppEmptyState("Material Cutting gagal dimuat", statusMaterial.message)
-            else -> {
-                AppResponsiveContent(modifier = Modifier.padding(padding)) { isTablet, contentModifier ->
-                    FormBatchCutting(
-                        input = state.input,
-                        material = (state.material as? AsyncData.Success)?.data ?: persistentListOf(),
-                        partUkuran = (state.partUkuran as? AsyncData.Success)?.data ?: persistentListOf(),
-                        defect = (state.defect as? AsyncData.Success)?.data ?: persistentListOf(),
-                        slotWaktu = state.slotWaktu,
-                        ringkasan = state.ringkasan,
-                        daftarPesanValidasi = state.daftarPesanValidasi,
-                        menyimpan = state.menyimpan,
-                        isTablet = isTablet,
-                        onUbah = { viewModel.onIntent(CuttingContract.Intent.UbahInput(it)) },
-                        onPilihMaterial = { viewModel.onIntent(CuttingContract.Intent.PilihMaterial(it)) },
-                        onPilihPartUkuran = { viewModel.onIntent(CuttingContract.Intent.PilihPartAcuanUkuran(it)) },
-                        onTambahDefect = { viewModel.onIntent(CuttingContract.Intent.TambahDefect(it)) },
-                        onUbahJumlahDefect = { id, jumlah -> viewModel.onIntent(CuttingContract.Intent.UbahJumlahDefect(id, jumlah)) },
-                        onUbahPanjangDefect = { id, panjang -> viewModel.onIntent(CuttingContract.Intent.UbahPanjangDefect(id, panjang)) },
-                        onUbahSlotDefect = { id, slot -> viewModel.onIntent(CuttingContract.Intent.UbahSlotDefect(id, slot)) },
-                        onHapusDefect = { viewModel.onIntent(CuttingContract.Intent.HapusDefect(it)) },
-                        onSimpan = { viewModel.onIntent(CuttingContract.Intent.BukaPreview) },
-                        modifier = contentModifier
-                    )
-                }
+        if (state.berhasil) {
+            CuttingSuccessScreen(
+                onDone = { viewModel.onIntent(CuttingContract.Intent.TutupBerhasil) }
+            )
+        } else {
+            when (val statusMaterial = state.material) {
+                is AsyncData.Loading -> AppListSkeleton()
+                is AsyncData.Error -> AppEmptyState(
+                    title = "Material Cutting gagal dimuat", 
+                    message = statusMaterial.message,
+                    onRetry = { viewModel.onIntent(CuttingContract.Intent.Muat) }
+                )
+                else -> {
+                    AppResponsiveContent(modifier = Modifier.padding(padding)) { isTablet, contentModifier ->
+                        FormBatchCutting(
+                            input = state.input,
+                            material = (state.material as? AsyncData.Success)?.data ?: persistentListOf(),
+                            partUkuran = (state.partUkuran as? AsyncData.Success)?.data ?: persistentListOf(),
+                            defect = (state.defect as? AsyncData.Success)?.data ?: persistentListOf(),
+                            slotWaktu = state.slotWaktu,
+                            ringkasan = state.ringkasan,
+                            daftarPesanValidasi = state.daftarPesanValidasi,
+                            menyimpan = state.menyimpan,
+                            isTablet = isTablet,
+                            onUbah = { viewModel.onIntent(CuttingContract.Intent.UbahInput(it)) },
+                            onPilihMaterial = { viewModel.onIntent(CuttingContract.Intent.PilihMaterial(it)) },
+                            onPilihPartUkuran = { viewModel.onIntent(CuttingContract.Intent.PilihPartAcuanUkuran(it)) },
+                            onTambahDefect = { viewModel.onIntent(CuttingContract.Intent.TambahDefect(it)) },
+                            onUbahJumlahDefect = { id, jumlah -> viewModel.onIntent(CuttingContract.Intent.UbahJumlahDefect(id, jumlah)) },
+                            onUbahPanjangDefect = { id, panjang -> viewModel.onIntent(CuttingContract.Intent.UbahPanjangDefect(id, panjang)) },
+                            onUbahSlotDefect = { id, slot -> viewModel.onIntent(CuttingContract.Intent.UbahSlotDefect(id, slot)) },
+                            onHapusDefect = { viewModel.onIntent(CuttingContract.Intent.HapusDefect(it)) },
+                            onSimpan = { viewModel.onIntent(CuttingContract.Intent.BukaPreview) },
+                            modifier = contentModifier
+                        )
+                    }
 
-                if (state.menampilkanPreview) {
-                    DialogPreviewCutting(
-                        input = state.input,
-                        menyimpan = state.menyimpan,
-                        onBatal = { viewModel.onIntent(CuttingContract.Intent.TutupPreview) },
-                        onSimpan = { viewModel.onIntent(CuttingContract.Intent.Simpan) }
-                    )
+                    if (state.menampilkanPreview) {
+                        DialogPreviewCutting(
+                            input = state.input,
+                            menyimpan = state.menyimpan,
+                            onBatal = { viewModel.onIntent(CuttingContract.Intent.TutupPreview) },
+                            onSimpan = { viewModel.onIntent(CuttingContract.Intent.Simpan) }
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun CuttingSuccessScreen(onDone: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Surface(
+            modifier = Modifier.size(120.dp),
+            shape = RoundedCornerShape(40.dp),
+            color = Color(0xFFDCFCE7)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    modifier = Modifier.size(72.dp),
+                    tint = Color(0xFF16A34A)
+                )
+            }
+        }
+        
+        Spacer(Modifier.height(32.dp))
+        
+        Text(
+            "Batch Berhasil Disimpan",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Black,
+            color = Color(0xFF1E293B)
+        )
+        
+        Text(
+            "Data pemotongan (Cutting) telah berhasil diunggah ke server.",
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color(0xFF64748B),
+            modifier = Modifier.padding(top = 12.dp)
+        )
+        
+        Spacer(Modifier.height(48.dp))
+        
+        Button(
+            onClick = onDone,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(18.dp)
+        ) {
+            Text("Siapkan Batch Baru", fontWeight = FontWeight.Bold)
         }
     }
 }

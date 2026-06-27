@@ -36,6 +36,18 @@ class ChecksheetMviViewModel(
     val effect: SharedFlow<ChecksheetContract.Effect> = _effect.asSharedFlow()
 
     private var loadJob: Job? = null
+    
+    init {
+        // Search Debouncing: Hanya filter picker saat pencarian stabil (300ms)
+        _state.map { it.pencarian }
+            .distinctUntilChanged()
+            .debounce(300)
+            .onEach { query ->
+                // Jika butuh trigger reload server bisa di sini, 
+                // tapi saat ini filter dilakukan di UI State (pickerFiltered).
+            }
+            .launchIn(viewModelScope)
+    }
 
     fun onIntent(intent: ChecksheetContract.Intent) {
         when (intent) {

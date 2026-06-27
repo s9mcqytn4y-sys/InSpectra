@@ -82,6 +82,7 @@ class CuttingViewModel(
             CuttingContract.Intent.BukaPreview -> bukaPreview()
             CuttingContract.Intent.TutupPreview -> _state.update { it.copy(menampilkanPreview = false) }
             CuttingContract.Intent.Simpan -> simpan()
+            CuttingContract.Intent.TutupBerhasil -> _state.update { it.copy(berhasil = false) }
             CuttingContract.Intent.HapusPesan -> _state.update { it.copy(pesan = null) }
         }
     }
@@ -181,6 +182,7 @@ class CuttingViewModel(
                             input = inputAwal(),
                             menampilkanPreview = false,
                             menyimpan = false,
+                            berhasil = true, // Show success screen
                             daftarPesanValidasi = persistentListOf(),
                             pesan = "Batch Cutting berhasil disimpan."
                         )

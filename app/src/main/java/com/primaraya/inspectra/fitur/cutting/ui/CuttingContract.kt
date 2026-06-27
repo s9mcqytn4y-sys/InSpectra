@@ -23,6 +23,7 @@ object CuttingContract {
         val daftarPesanValidasi: ImmutableList<String> = persistentListOf(),
         val menampilkanPreview: Boolean = false,
         val menyimpan: Boolean = false,
+        val berhasil: Boolean = false, // Success state
         val pesan: String? = null
     )
 
@@ -39,6 +40,7 @@ object CuttingContract {
         data object BukaPreview : Intent
         data object TutupPreview : Intent
         data object Simpan : Intent
+        data object TutupBerhasil : Intent
         data object HapusPesan : Intent
     }
 }
