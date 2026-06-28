@@ -44,11 +44,15 @@ Setiap layar atau modul wajib menerapkan *Unidirectional Data Flow* (UDF) murni 
 
 * Pisahkan secara tegas berkas skrip DDL (definisi skema tabel/view) dan berkas DML (data pembenihan/*seed data*).
 
-### Single Source of Truth (SSOT):
+### Single Source of Truth (SSOT) & Caching:
 
 * Arsitektur data wajib mengutamakan *Offline-First*. Komponen UI hanya diperbolehkan membaca data dari database lokal (Room/DataStore). Supabase bertindak sebagai repositori remote yang disinkronkan secara asinkron di latar belakang melalui *Worker* atau *Coroutine Scope* terisolasi.
+* **Master Data (ReadOnly):** Pengambilan tabel Data Induk wajib dibungkus dengan *In-Memory Cache* (TTL 5 Menit) untuk mencegah duplikasi *HTTP GET* dan meminimalisir risiko penalti kuota batas penggunaan wajar (Fair Use) dari *Supabase Free Plan*. Lakukan *Cache Invalidation* setiap kali terjadi update atau insert data.
 
----
+### Kuota Storage & Payload Objek Media:
+
+* **Proteksi Media:** Semua fitur yang melibatkan kamera atau unggah foto/lampiran *wajib* disaring melalui proses kompresi gambar lokal (resolusi maks 1024x1024, JPEG, kualitas 80%) menggunakan modul utilitas bawaan Android (`android.media.ExifInterface`) guna mencegah lonjakan memori OOM (Out Of Memory) dan perlindungan pemakaian *storage Supabase*.
+* **Driver Quota Handling:** Ktor Client pada tingkat driver *wajib* secara eksplisit menangkap response kode `429` dan `503`. Kegagalan pada kode ini tidak boleh menimbulkan System Crash, melainkan dikembalikan sebagai *Exception* transparan untuk ditampilkan ke layar UI.
 
 ## 4. Optimasi Build & Emulator Lingkungan Kerja
 

@@ -70,6 +70,8 @@ Aturan:
   workbook dan jangan membaca workbook saat aplikasi berjalan.
 - Relasi part-material hanya boleh dibuat bila `UNIQ NO` ada di `m_part` dan material,
   supplier, serta spesifikasi dapat diidentifikasi.
+- Seluruh pengambilan Data Induk wajib melewati In-Memory Caching (TTL 5 Menit) via `ReferenceCache`. Cache harus dibersihkan secara eksplisit setiap kali terjadi operasi mutasi (Upsert/Delete) untuk menjamin kekonsistenan data *(Cache Invalidation)*.
+- Penanganan Batas Kuota *(Quota Control)*: Driver database harus menangkap `429 (TooManyRequests)` dan `503 (ServiceUnavailable)` agar aplikasi tidak crash dan memberikan pesan user-friendly saat _Free Plan_ Supabase terkendala.
 
 Contoh `local.properties`:
 
@@ -92,6 +94,7 @@ Istilah utama:
 - Material Utama berarti parent material.
 - Bahan Penyusun berarti child material.
 - Data diproses langsung ke server. Jangan menjanjikan Draft Lokal atau Mode Offline di UI.
+- Semua proses input formulir harus dapat mengukur Takt Time pengguna secara transparan dengan mencatat selisih durasi _start time_ hingga _submit time_.
 
 Material 3:
 
@@ -136,6 +139,8 @@ File IDE yang tidak boleh di-commit atau dimodifikasi oleh AI Agent:
 - `local.properties`.
 - personal device state.
 - local deployment target state.
+- `*.xlsx` (Workbook Seed)
+- `.env`
 - File-file ini telah didaftarkan dalam `.aiexclude` untuk mencegah modifikasi yang tidak disengaja.
 
 Penting: Fitur dashboard/statistik telah dihapus secara sengaja untuk mengutamakan fokus *Hardening Input*. Jangan meregenerasi komponen dashboard/statistik tanpa persetujuan eksplisit.

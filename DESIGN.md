@@ -55,9 +55,9 @@ Istilah standar:
 
 Nama teknis seperti Kotlin, Supabase, PostgREST, Material 3, dan API boleh tetap dipakai di dokumentasi teknis.
 
-## Warna (Industrial Dark SaaS)
+## Warna (Industrial Dark SaaS & Google Stitch Friendly)
 
-Gunakan token dari `core/ui/theme/Color.kt`. Desain mengutamakan skema "Industrial Dark SaaS" yang _Stitch Friendly_ (cocok untuk environment operasional modern dengan _low eye-strain_):
+Gunakan token dari `core/ui/theme/Color.kt`. Desain mengutamakan skema "Industrial Dark SaaS" yang _Google Stitch Friendly_ (cocok untuk environment operasional modern dengan _low eye-strain_ dan batasan ruang layar tablet):
 
 - Background & Surface: Gunakan turunan `surfaceContainer`, `surfaceContainerHigh` dengan gaya gelap keabu-abuan (slate/charcoal).
 - Outline & Border: Gunakan `outlineVariant` (1.dp) untuk memisahkan _card_ dan _surface_.
@@ -140,6 +140,11 @@ Empty state harus menjelaskan kondisi nyata:
 - "Belum ada data part aktif."
 - "Data belum tersedia dari Supabase."
 - "Data riwayat belum cukup untuk membuat Pareto."
+
+- "Data riwayat belum cukup untuk membuat Pareto."
+
+**Aturan Placeholder & Dummy Data:**
+Dilarang keras menggunakan dummy data, placeholder *Lorem Ipsum*, atau visual marketing palsu. Sistem tidak boleh menampilkan komponen grafis atau fitur yang belum memiliki logika back-end.
 
 Jangan tampilkan dummy production data.
 

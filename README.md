@@ -9,7 +9,9 @@ Tujuan produk: menyediakan workspace QC yang rapi, operasional, dan siap tumbuh 
 - **Input Hardening**: Form validasi yang ketat dan persisten (memastikan *atomicity* melalui RPC PostgREST Supabase) demi keandalan data 100%.
 - **Checksheet Elite Picker**: Alur pemilihan part cerdas dengan status kesiapan "SIAP_INPUT" dan validasi data acuan real-time.
 - **Dynamic Defect Sources**: Integrasi defect material otomatis ke dalam checksheet proses (Press/Sewing) berdasarkan mapping data induk.
-- **Supabase Media Storage**: Upload dan kelola gambar part langsung dari aplikasi menggunakan Supabase Storage.
+- **Supabase Media Storage**: Upload dan kelola gambar part secara cerdas dengan kompresi lokal (JPEG, resolusi batas 1024x1024) menggunakan Supabase Storage tanpa _Out-Of-Memory_.
+- **Performance & Quota Resilience**: In-Memory Caching untuk Master Data (TTL 5 menit) dan pencegatan batas _Rate Limit/Quota_ secara otomatis (HTTP 429/503) di level driver Ktor.
+- **Takt Time Evaluation**: Perekaman durasi _start-to-submit_ yang tersembunyi namun presisi (di level Android Log) untuk analitik durasi _data-entry_ staf operasional.
 - **Modern Splash & Home**: Implementasi Android 12 Splash Screen API dan UI navigasi yang berfokus pada operasional.
 - **Responsive Tablet UX**: Desain "Elite Industrial Dark SaaS" dengan batas kontras yang jelas dan layout adaptif tablet.
 

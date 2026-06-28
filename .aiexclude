@@ -9,3 +9,5 @@ app/build/
 *.iml
 *.keystore
 local-deployment-targets.xml
+*.xlsx
+.env
