@@ -38,6 +38,9 @@ class ChecksheetMviViewModel(
 
     private var loadJob: Job? = null
     
+    // Takt Time tracking
+    private var startTimeMillis: Long = 0L
+    
     init {
         // Search Debouncing: Hanya filter picker saat pencarian stabil (300ms)
         _state.map { it.pencarian }
@@ -158,6 +161,7 @@ class ChecksheetMviViewModel(
                             step = ChecksheetContract.State.Step.ISI_FORM
                         )
                     }
+                    startTimeMillis = System.currentTimeMillis() // Start Takt Time
                 }
                 is NetworkResult.Error -> {
                     val msg = UserMessageMapper.fromThrowableMessage(result.message, KonteksOperasi.CHECKSHEET)
@@ -344,6 +348,9 @@ class ChecksheetMviViewModel(
 
     private fun kirim() {
         val payload = _state.value.preview ?: return
+
+        val durationSeconds = (System.currentTimeMillis() - startTimeMillis) / 1000
+        android.util.Log.i("TAKT_TIME", "Evaluasi Waktu Input (Takt Time) - Proses: ${payload.tipeProses}, Total Diperiksa: ${payload.totalDiperiksa}, Waktu: $durationSeconds detik")
 
         viewModelScope.launch {
             _state.update { it.copy(mengirim = true) }

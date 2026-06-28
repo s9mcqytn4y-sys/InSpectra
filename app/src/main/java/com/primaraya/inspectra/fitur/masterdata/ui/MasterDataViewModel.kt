@@ -472,7 +472,8 @@ class MasterDataViewModel(
             // Upload gambar jika ada file lokal baru
             if (f.lokasiGambarLokal != null) {
                 val file = java.io.File(f.lokasiGambarLokal)
-                when (val uploadRes = repository.uploadPartImage(f.uniqNo, file)) {
+                val compressedFile = com.primaraya.inspectra.core.util.ImageCompressor.compressImage(getApplication(), file)
+                when (val uploadRes = repository.uploadPartImage(f.uniqNo, compressedFile)) {
                     is NetworkResult.Success -> remoteUrl = uploadRes.data
                     is NetworkResult.Error -> {
                         tampilkanError("Gagal upload gambar: ${uploadRes.message}")
@@ -480,6 +481,11 @@ class MasterDataViewModel(
                         return@launch
                     }
                     else -> Unit
+                }
+                
+                // Cleanup temp file
+                if (compressedFile.exists()) {
+                    compressedFile.delete()
                 }
             }
 

@@ -31,6 +31,11 @@ class SupabaseMasterDataRepository(
     private val pickerCache = ReferenceCache<Map<String, List<PartPickerItem>>>()
     private val versionCache = ReferenceCache<Map<String, Long>>()
     
+    private val partsCache = ReferenceCache<Map<String, List<MasterPartDto>>>()
+    private val suppliersCache = ReferenceCache<Map<String, List<MasterSupplierDto>>>()
+    private val materialsCache = ReferenceCache<Map<String, List<MasterMaterialDto>>>()
+    private val defectsCache = ReferenceCache<Map<String, List<MasterDefectDto>>>()
+    
     private var lastChecksheetVersion = -1L
     private var lastPickerVersion = -1L
 
@@ -123,11 +128,21 @@ class SupabaseMasterDataRepository(
         filter: FilterDataInduk
     ): NetworkResult<List<MasterPartDto>> = withContext(dispatchers.io) {
         runNetworkCatching {
-            driver.getList(
+            val queryKey = page.toPostgrestQuery() + filter.toPostgrestFilter()
+            val cached = partsCache.getIfValid()
+            if (cached != null) {
+                cached[queryKey]?.let { return@runNetworkCatching it }
+            }
+
+            val data = driver.getList(
                 table = RemoteTable.ViewDataIndukPart,
-                query = page.toPostgrestQuery() + filter.toPostgrestFilter(),
+                query = queryKey,
                 decode = { json.decodeFromString(ListSerializer(MasterPartDto.serializer()), it) }
             )
+            
+            val newCache = (partsCache.getIfValid() ?: emptyMap()) + (queryKey to data)
+            partsCache.put(newCache)
+            data
         }
     }
 
@@ -144,11 +159,21 @@ class SupabaseMasterDataRepository(
         page: PageRequest
     ): NetworkResult<List<MasterSupplierDto>> = withContext(dispatchers.io) {
         runNetworkCatching {
-            driver.getList(
+            val queryKey = page.toPostgrestQuery() + "&aktif=eq.true"
+            val cached = suppliersCache.getIfValid()
+            if (cached != null) {
+                cached[queryKey]?.let { return@runNetworkCatching it }
+            }
+
+            val data = driver.getList(
                 table = RemoteTable.Supplier,
-                query = page.toPostgrestQuery() + "&aktif=eq.true",
+                query = queryKey,
                 decode = { json.decodeFromString(ListSerializer(MasterSupplierDto.serializer()), it) }
             )
+            
+            val newCache = (suppliersCache.getIfValid() ?: emptyMap()) + (queryKey to data)
+            suppliersCache.put(newCache)
+            data
         }
     }
 
@@ -156,11 +181,21 @@ class SupabaseMasterDataRepository(
         page: PageRequest
     ): NetworkResult<List<MasterMaterialDto>> = withContext(dispatchers.io) {
         runNetworkCatching {
-            driver.getList(
+            val queryKey = page.toPostgrestQuery() + "&aktif=eq.true"
+            val cached = materialsCache.getIfValid()
+            if (cached != null) {
+                cached[queryKey]?.let { return@runNetworkCatching it }
+            }
+
+            val data = driver.getList(
                 table = RemoteTable.Material,
-                query = page.toPostgrestQuery() + "&aktif=eq.true",
+                query = queryKey,
                 decode = { json.decodeFromString(ListSerializer(MasterMaterialDto.serializer()), it) }
             )
+            
+            val newCache = (materialsCache.getIfValid() ?: emptyMap()) + (queryKey to data)
+            materialsCache.put(newCache)
+            data
         }
     }
 
@@ -168,11 +203,21 @@ class SupabaseMasterDataRepository(
         page: PageRequest
     ): NetworkResult<List<MasterDefectDto>> = withContext(dispatchers.io) {
         runNetworkCatching {
-            driver.getList(
+            val queryKey = page.toPostgrestQuery() + "&aktif=eq.true"
+            val cached = defectsCache.getIfValid()
+            if (cached != null) {
+                cached[queryKey]?.let { return@runNetworkCatching it }
+            }
+
+            val data = driver.getList(
                 table = RemoteTable.Defect,
-                query = page.toPostgrestQuery() + "&aktif=eq.true",
+                query = queryKey,
                 decode = { json.decodeFromString(ListSerializer(MasterDefectDto.serializer()), it) }
             )
+            
+            val newCache = (defectsCache.getIfValid() ?: emptyMap()) + (queryKey to data)
+            defectsCache.put(newCache)
+            data
         }
     }
 
@@ -194,12 +239,14 @@ class SupabaseMasterDataRepository(
                 encode = { json.encodeToString(MasterSupplierDto.serializer(), it) },
                 onConflict = "nama_supplier"
             )
+            suppliersCache.clear()
         }
     }
 
     override suspend fun deleteSupplierSoft(id: String): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.softDelete(table = RemoteTable.Supplier, idColumn = "id", id = id)
+            suppliersCache.clear()
         }
     }
 
@@ -211,12 +258,14 @@ class SupabaseMasterDataRepository(
                 encode = { json.encodeToString(MasterPartDto.serializer(), it) },
                 onConflict = "uniq_no"
             )
+            partsCache.clear()
         }
     }
 
     override suspend fun deletePartSoft(id: String): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.softDelete(table = RemoteTable.Part, idColumn = "id", id = id)
+            partsCache.clear()
         }
     }
 
@@ -237,12 +286,14 @@ class SupabaseMasterDataRepository(
                 body = material,
                 encode = { json.encodeToString(MasterMaterialDto.serializer(), it) }
             )
+            materialsCache.clear()
         }
     }
 
     override suspend fun deleteMaterialSoft(id: String): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.softDelete(table = RemoteTable.Material, idColumn = "id", id = id)
+            materialsCache.clear()
         }
     }
 
@@ -254,12 +305,14 @@ class SupabaseMasterDataRepository(
                 encode = { json.encodeToString(MasterDefectDto.serializer(), it) },
                 onConflict = "id_defect"
             )
+            defectsCache.clear()
         }
     }
 
     override suspend fun deleteDefectSoft(idDefect: String): NetworkResult<Unit> = withContext(dispatchers.io) {
         runNetworkCatching {
             driver.softDelete(table = RemoteTable.Defect, idColumn = "id_defect", id = idDefect)
+            defectsCache.clear()
         }
     }
 

@@ -4,6 +4,7 @@ import com.primaraya.inspectra.BuildConfig
 import com.primaraya.inspectra.core.network.InspectraHttpClient
 import io.ktor.client.request.*
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.isSuccess
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.Serializable
@@ -13,7 +14,7 @@ import kotlinx.serialization.SerializationException
  * Implementasi DatabaseDriver berbasis Supabase PostgREST.
  *
  * Semua response diperiksa HTTP status-nya sebelum decode agar error dari server
- * tidak membuat UI crash.
+ * tidak membuat UI crash. Termasuk quota limit 429 dan 503 dari Free Plan.
  */
 class SupabasePgRestDriver : DatabaseDriver {
 
@@ -24,6 +25,15 @@ class SupabasePgRestDriver : DatabaseDriver {
 
     private val json = InspectraHttpClient.json
 
+    private fun checkQuotaLimits(status: HttpStatusCode) {
+        if (status == HttpStatusCode.TooManyRequests || status == HttpStatusCode.ServiceUnavailable) {
+            throw DatabaseDriverException(
+                "Sistem sedang sibuk karena batas penggunaan gratis. Mohon coba beberapa saat lagi.",
+                status.value.toString()
+            )
+        }
+    }
+
     override suspend fun <T> getList(
         table: RemoteTable,
         query: String,
@@ -33,6 +43,7 @@ class SupabasePgRestDriver : DatabaseDriver {
         val body = response.bodyAsText()
 
         if (!response.status.isSuccess()) {
+            checkQuotaLimits(response.status)
             throw DatabaseDriverException.fromSupabase(body)
         }
 
@@ -53,6 +64,7 @@ class SupabasePgRestDriver : DatabaseDriver {
         val responseText = response.bodyAsText()
 
         if (!response.status.isSuccess()) {
+            checkQuotaLimits(response.status)
             throw DatabaseDriverException.fromSupabase(responseText)
         }
 
@@ -75,6 +87,7 @@ class SupabasePgRestDriver : DatabaseDriver {
         val responseText = response.bodyAsText()
 
         if (!response.status.isSuccess()) {
+            checkQuotaLimits(response.status)
             throw DatabaseDriverException.fromSupabase(responseText)
         }
     }
@@ -91,6 +104,7 @@ class SupabasePgRestDriver : DatabaseDriver {
         val responseText = response.bodyAsText()
 
         if (!response.status.isSuccess()) {
+            checkQuotaLimits(response.status)
             throw DatabaseDriverException.fromSupabase(responseText)
         }
     }
@@ -108,6 +122,7 @@ class SupabasePgRestDriver : DatabaseDriver {
         val responseText = response.bodyAsText()
 
         if (!response.status.isSuccess()) {
+            checkQuotaLimits(response.status)
             throw DatabaseDriverException.fromSupabase(responseText)
         }
 

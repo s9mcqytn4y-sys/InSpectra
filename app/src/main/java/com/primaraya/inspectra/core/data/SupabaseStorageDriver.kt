@@ -19,6 +19,15 @@ class SupabaseStorageDriver {
 
     private val client = InspectraHttpClient.client
 
+    private fun checkQuotaLimits(status: HttpStatusCode) {
+        if (status == HttpStatusCode.TooManyRequests || status == HttpStatusCode.ServiceUnavailable) {
+            throw DatabaseDriverException(
+                "Sistem sedang sibuk karena batas penggunaan gratis. Mohon coba beberapa saat lagi.",
+                status.value.toString()
+            )
+        }
+    }
+
     /**
      * Upload file ke bucket tertentu.
      * Mengembalikan URL publik jika berhasil.
@@ -36,6 +45,7 @@ class SupabaseStorageDriver {
         }
 
         if (!response.status.isSuccess()) {
+            checkQuotaLimits(response.status)
             val error = response.bodyAsText()
             throw Exception("Gagal upload file: $error")
         }
@@ -48,6 +58,7 @@ class SupabaseStorageDriver {
         val response = client.delete("$baseUrl/storage/v1/object/$bucket/$path")
         
         if (!response.status.isSuccess() && response.status != HttpStatusCode.NotFound) {
+            checkQuotaLimits(response.status)
             val error = response.bodyAsText()
             throw Exception("Gagal hapus file: $error")
         }
