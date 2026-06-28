@@ -1,6 +1,8 @@
 package com.primaraya.inspectra.fitur.dashboard.ui
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -22,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Brush
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.primaraya.inspectra.core.ui.component.AppResponsiveContent
@@ -29,9 +32,12 @@ import com.primaraya.inspectra.core.ui.viewmodel.AppViewModel
 import com.primaraya.inspectra.fitur.checksheet.domain.TipeProses
 import com.primaraya.inspectra.fitur.checksheet.ui.labelIndonesia
 
+import androidx.compose.material.icons.filled.Assessment
+
 @Composable
 fun DashboardScreen(
     onChecksheetClick: () -> Unit,
+    onLaporanClick: () -> Unit,
     onMasterDataClick: () -> Unit,
     viewModel: AppViewModel = viewModel()
 ) {
@@ -60,21 +66,36 @@ fun DashboardScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 ModuleCard(
-                    title = "Checksheet",
-                    subtitle = "Inspeksi Produksi",
+                    title = "E-Checksheet",
+                    subtitle = "Inspeksi Kualitas",
                     icon = Icons.AutoMirrored.Filled.Assignment,
-                    color = Color(0xFF1A365D),
+                    gradient = Brush.linearGradient(listOf(Color(0xFF1E3A8A), Color(0xFF3B82F6))),
                     onClick = onChecksheetClick,
                     modifier = Modifier.weight(1f)
                 )
                 ModuleCard(
+                    title = "Laporan",
+                    subtitle = "Produksi Harian & Cutting",
+                    icon = Icons.Default.Assessment,
+                    gradient = Brush.linearGradient(listOf(Color(0xFF065F46), Color(0xFF10B981))),
+                    onClick = onLaporanClick,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                ModuleCard(
                     title = "Master Data",
                     subtitle = "Kelola Referensi",
                     icon = Icons.Default.Dataset,
-                    color = Color(0xFFD97706),
+                    gradient = Brush.linearGradient(listOf(Color(0xFF92400E), Color(0xFFF59E0B))),
                     onClick = onMasterDataClick,
                     modifier = Modifier.weight(1f)
                 )
+                Spacer(modifier = Modifier.weight(1f))
             }
             
             QuickStatsSection()
@@ -142,22 +163,28 @@ private fun ModuleCard(
     title: String,
     subtitle: String,
     icon: ImageVector,
-    color: Color,
+    gradient: Brush,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    Card(
         modifier = modifier
             .height(180.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(28.dp),
-        color = color,
-        shadowElevation = 4.dp
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(gradient)
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = Color.White.copy(alpha = 0.2f),
@@ -168,9 +195,10 @@ private fun ModuleCard(
                 }
             }
             
-            Column {
-                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, color = Color.White)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f))
+                Column {
+                    Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, color = Color.White)
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f))
+                }
             }
         }
     }
@@ -236,7 +264,7 @@ fun MenuChecksheetScreen(
                 Text("Pilih Departemen", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
             }
 
-            val list = listOf(TipeProses.PRESS, TipeProses.SEWING, TipeProses.CUTTING)
+            val list = listOf(TipeProses.PRESS, TipeProses.SEWING)
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(if (isTablet) 3 else 1),

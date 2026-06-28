@@ -39,12 +39,10 @@ fun PartMasterCard(
     onRemoveMaterial: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    ElevatedCard(
         shape = RoundedCornerShape(24.dp),
         modifier = modifier.fillMaxWidth(),
-        color = Color.White,
-        border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
-        shadowElevation = 2.dp
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
             Row(

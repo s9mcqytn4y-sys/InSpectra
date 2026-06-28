@@ -58,6 +58,9 @@ fun AppNavGraph(
                 onChecksheetClick = {
                     navController.navigate(Screen.MenuChecksheet)
                 },
+                onLaporanClick = {
+                    navController.navigate(Screen.MenuLaporan)
+                },
                 onMasterDataClick = {
                     navController.navigate(Screen.MasterData)
                 }
@@ -79,13 +82,34 @@ fun AppNavGraph(
             val route = backStackEntry.toRoute<Screen.FormChecksheet>()
             val tipeProses = TipeProses.valueOf(route.tipeProses)
             
+            ChecksheetScreen(
+                tipeProses = tipeProses,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable<Screen.MenuLaporan> {
+            com.primaraya.inspectra.fitur.laporan.ui.MenuLaporanScreen(
+                onProcessSelect = { type ->
+                    navController.navigate(Screen.FormLaporan(type.name))
+                },
+                onBack = { 
+                    navController.popBackStack() 
+                }
+            )
+        }
+
+        composable<Screen.FormLaporan> { backStackEntry ->
+            val route = backStackEntry.toRoute<Screen.FormLaporan>()
+            val tipeProses = TipeProses.valueOf(route.tipeProses)
+            
             if (tipeProses == TipeProses.CUTTING) {
                 CuttingScreen(
                     onBackClick = { navController.popBackStack() }
                 )
             } else {
-                ChecksheetScreen(
-                    tipeProses = tipeProses,
+                com.primaraya.inspectra.fitur.laporan.ui.LaporanProduksiScreen(
+                    tipeProses = tipeProses.name,
                     onBackClick = { navController.popBackStack() }
                 )
             }

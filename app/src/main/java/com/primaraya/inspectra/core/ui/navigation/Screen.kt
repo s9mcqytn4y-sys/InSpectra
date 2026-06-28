@@ -16,5 +16,11 @@ sealed interface Screen {
     data class FormChecksheet(val tipeProses: String) : Screen
 
     @Serializable
+    data object MenuLaporan : Screen
+
+    @Serializable
+    data class FormLaporan(val tipeProses: String) : Screen
+
+    @Serializable
     data object MasterData : Screen
 }

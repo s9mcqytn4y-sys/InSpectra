@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import com.primaraya.inspectra.R
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -72,7 +73,7 @@ fun ChecksheetScreen(
                 }
                 is ChecksheetContract.Effect.KirimBerhasil -> {
                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    snackbarHostState.showSnackbar("Data tersimpan. ID: ${effect.idSesi.take(8)}")
+                    snackbarHostState.showSnackbar(stringResource(R.string.checksheet_success_desc) + " ID: ${effect.idSesi.take(8)}")
                 }
             }
         }
@@ -86,11 +87,11 @@ fun ChecksheetScreen(
                     title = {
                         Column {
                             Text(
-                                text = if (state.step == Step.PILIH_PART) "Pilih Part ${tipeProses.labelIndonesia()}" else "Inspeksi ${tipeProses.labelIndonesia()}",
+                                text = if (state.step == Step.PILIH_PART) stringResource(R.string.checksheet_title_pilih_part, tipeProses.labelIndonesia()) else stringResource(R.string.checksheet_title_inspeksi, tipeProses.labelIndonesia()),
                                 fontWeight = FontWeight.Black
                             )
                             Text(
-                                text = if (state.step == Step.PILIH_PART) "Cari dan pilih part yang akan dicek" else "Form pemeriksaan harian",
+                                text = if (state.step == Step.PILIH_PART) stringResource(R.string.checksheet_desc_pilih_part) else stringResource(R.string.checksheet_desc_inspeksi),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = Color.White.copy(alpha = 0.78f)
                             )
@@ -104,7 +105,7 @@ fun ChecksheetScreen(
                                 onBackClick()
                             }
                         }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -128,7 +129,7 @@ fun ChecksheetScreen(
                                 .height(54.dp),
                             shape = RoundedCornerShape(18.dp)
                         ) {
-                            Text("Mulai Cek (${state.partTerpilih.size} Part)", fontWeight = FontWeight.Black)
+                            Text(stringResource(R.string.checksheet_mulai_cek, state.partTerpilih.size), fontWeight = FontWeight.Black)
                         }
                     } else {
                         Button(
@@ -229,14 +230,14 @@ fun ChecksheetSuccessScreen(onDone: () -> Unit) {
         Spacer(Modifier.height(32.dp))
         
         Text(
-            "Data Berhasil Disimpan",
+            stringResource(R.string.checksheet_success_title),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Black,
             color = Color(0xFF1E293B)
         )
         
         Text(
-            "Pemeriksaan checksheet Anda telah tercatat ke sistem Supabase.",
+            stringResource(R.string.checksheet_success_desc),
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyLarge,
             color = Color(0xFF64748B),
@@ -250,7 +251,7 @@ fun ChecksheetSuccessScreen(onDone: () -> Unit) {
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(18.dp)
         ) {
-            Text("Kembali ke Daftar Part", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.checksheet_back_to_list), fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -265,15 +266,15 @@ fun DialogTambahDefectLain(
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Tambah Temuan Baru", fontWeight = FontWeight.ExtraBold) },
+        title = { Text(stringResource(R.string.checksheet_add_temuan), fontWeight = FontWeight.ExtraBold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Pilih jenis defect tambahan yang belum ada di daftar acuan.")
+                Text(stringResource(R.string.checksheet_add_temuan_desc))
                 
                 SearchBarElite(
                     query = query,
                     onQueryChange = { query = it },
-                    placeholder = "Cari nama atau kode defect..."
+                    placeholder = stringResource(R.string.checksheet_search_defect)
                 )
 
                 Surface(
@@ -296,7 +297,7 @@ fun DialogTambahDefectLain(
                             }
                             
                             if (filtered.isEmpty()) {
-                                AppEmptyState("Tidak ditemukan", "Coba kata kunci lain.", modifier = Modifier.height(200.dp))
+                                AppEmptyState(stringResource(R.string.checksheet_empty_state_title), stringResource(R.string.checksheet_empty_state_desc), modifier = Modifier.height(200.dp))
                             } else {
                                 LazyColumn(
                                     modifier = Modifier.padding(8.dp),
@@ -322,7 +323,7 @@ fun DialogTambahDefectLain(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Selesai") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.checksheet_btn_selesai)) }
         }
     )
 }
@@ -421,10 +422,10 @@ fun KartuPartChecksheetRingkas(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        SmallBadgeElite(label = "${part.jumlahDiperiksa} Cek", color = Color(0xFFF1F5F9), textColor = Color(0xFF475569))
-                        SmallBadgeElite(label = "${part.jumlahOk} OK", color = Color(0xFFF0FDF4), textColor = Color(0xFF166534))
+                        SmallBadgeElite(label = stringResource(R.string.checksheet_badge_cek, part.jumlahDiperiksa.toString()), color = Color(0xFFF1F5F9), textColor = Color(0xFF475569))
+                        SmallBadgeElite(label = stringResource(R.string.checksheet_badge_ok, part.jumlahOk.toString()), color = Color(0xFFF0FDF4), textColor = Color(0xFF166534))
                         if (part.jumlahNg > 0) {
-                            SmallBadgeElite(label = "${part.jumlahNg} NG", color = Color(0xFFFEF2F2), textColor = Color(0xFF991B1B))
+                            SmallBadgeElite(label = stringResource(R.string.checksheet_badge_ng, part.jumlahNg.toString()), color = Color(0xFFFEF2F2), textColor = Color(0xFF991B1B))
                         }
                     }
                 }
@@ -449,7 +450,7 @@ fun KartuPartChecksheetRingkas(
                 OutlinedTextField(
                     value = if (part.jumlahDiperiksa == 0) "" else part.jumlahDiperiksa.toString(),
                     onValueChange = { onJumlahDiperiksaUbah(it.toIntOrNull() ?: 0) },
-                    label = { Text("Jumlah Diperiksa", style = MaterialTheme.typography.labelMedium) },
+                    label = { Text(stringResource(R.string.checksheet_label_jumlah_diperiksa), style = MaterialTheme.typography.labelMedium) },
                     placeholder = { Text("0") },
                     isError = part.kuantitasTidakValid,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -466,7 +467,7 @@ fun KartuPartChecksheetRingkas(
 
                 if (part.kuantitasTidakValid) {
                     Text(
-                        "NG melebihi jumlah diperiksa!",
+                        stringResource(R.string.checksheet_error_ng_exceeds),
                         color = Color(0xFFDC2626),
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(start = 4.dp, top = 4.dp),

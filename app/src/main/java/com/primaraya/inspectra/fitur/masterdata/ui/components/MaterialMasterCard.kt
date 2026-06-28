@@ -3,6 +3,7 @@ package com.primaraya.inspectra.fitur.masterdata.ui.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -30,8 +31,9 @@ fun MaterialMasterCard(
     modifier: Modifier = Modifier
 ) {
     ElevatedCard(
-        shape = MaterialTheme.shapes.medium,
-        modifier = modifier.fillMaxWidth()
+        shape = RoundedCornerShape(20.dp),
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
             Row(

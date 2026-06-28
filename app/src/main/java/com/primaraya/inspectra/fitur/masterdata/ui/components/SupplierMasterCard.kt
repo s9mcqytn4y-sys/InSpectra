@@ -23,8 +23,9 @@ fun SupplierMasterCard(
     modifier: Modifier = Modifier
 ) {
     ElevatedCard(
-        shape = MaterialTheme.shapes.medium,
-        modifier = modifier.fillMaxWidth()
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically) {

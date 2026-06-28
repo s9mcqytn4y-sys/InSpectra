@@ -14,5 +14,45 @@
     <string name="dashboard_workspace_subtitle">Quality Control Digital Mandate</string>
     <string name="card_action_edit">Ubah</string>
     <string name="card_action_delete">Hapus</string>
+    
+    <string name="laporan_produksi_title">Laporan Produksi %s</string>
+    <string name="laporan_kirim">Kirim Laporan</string>
+    <string name="laporan_pilih_part">Pilih Part Produksi</string>
+    <string name="laporan_tenaga_kerja">Data Tenaga Kerja &amp; Jam</string>
+    <string name="laporan_mp_direct">MP Direct</string>
+    <string name="laporan_mp_indirect">MP Indirect</string>
+    <string name="laporan_jkn_jam">JKN (Jam)</string>
+    <string name="laporan_jkn_menit">JKN (Menit)</string>
+    <string name="laporan_ot_prod">OT Prod</string>
+    <string name="laporan_ot_non">OT Non</string>
+    <string name="laporan_bantuan_keluar">Bantuan Keluar</string>
+    <string name="laporan_bantuan_masuk">Bantuan Masuk</string>
+    <string name="laporan_total_planning">Total Planning</string>
+    <string name="laporan_total_actual">Total Actual</string>
+    <string name="laporan_total_ng">Total NG</string>
+    <string name="laporan_planning">Planning</string>
+    <string name="laporan_actual">Actual</string>
+    <string name="laporan_ng">NG</string>
+    <string name="action_back">Kembali</string>
+    
+    <!-- Checksheet Strings -->
+    <string name="checksheet_title_pilih_part">Pilih Part %s</string>
+    <string name="checksheet_title_inspeksi">Inspeksi %s</string>
+    <string name="checksheet_desc_pilih_part">Cari dan pilih part yang akan dicek</string>
+    <string name="checksheet_desc_inspeksi">Form pemeriksaan harian</string>
+    <string name="checksheet_mulai_cek">Mulai Cek (%d Part)</string>
+    <string name="checksheet_success_title">Data Berhasil Disimpan</string>
+    <string name="checksheet_success_desc">Pemeriksaan checksheet Anda telah tercatat ke sistem Supabase.</string>
+    <string name="checksheet_back_to_list">Kembali ke Daftar Part</string>
+    <string name="checksheet_add_temuan">Tambah Temuan Baru</string>
+    <string name="checksheet_add_temuan_desc">Pilih jenis defect tambahan yang belum ada di daftar acuan.</string>
+    <string name="checksheet_search_defect">Cari nama atau kode defect...</string>
+    <string name="checksheet_empty_state_title">Tidak ditemukan</string>
+    <string name="checksheet_empty_state_desc">Coba kata kunci lain.</string>
+    <string name="checksheet_btn_selesai">Selesai</string>
+    <string name="checksheet_badge_cek">%s Cek</string>
+    <string name="checksheet_badge_ok">%s OK</string>
+    <string name="checksheet_badge_ng">%s NG</string>
+    <string name="checksheet_label_jumlah_diperiksa">Jumlah Diperiksa</string>
+    <string name="checksheet_error_ng_exceeds">NG melebihi jumlah diperiksa!</string>
 </resources>
-

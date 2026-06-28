@@ -26,12 +26,10 @@ fun DefectMasterCard(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        shape = RoundedCornerShape(24.dp),
+    ElevatedCard(
+        shape = RoundedCornerShape(20.dp),
         modifier = modifier.fillMaxWidth(),
-        color = Color.White,
-        border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
-        shadowElevation = 2.dp
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
             Row(verticalAlignment = Alignment.Top) {
