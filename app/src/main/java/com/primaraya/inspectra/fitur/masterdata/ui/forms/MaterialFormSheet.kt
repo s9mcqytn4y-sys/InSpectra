@@ -1,6 +1,7 @@
 package com.primaraya.inspectra.fitur.masterdata.ui.forms
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -45,19 +46,28 @@ fun MaterialFormSheet(
             singleLine = true
         )
 
-        OutlinedTextField(
-            value = state.supplierNama,
-            onValueChange = { },
-            readOnly = true,
-            label = { Text("Supplier") },
-            placeholder = { Text("Pilih Supplier...") },
-            trailingIcon = {
-                IconButton(onClick = onOpenSupplierPicker) {
+        Box(modifier = Modifier.fillMaxWidth().clickable { onOpenSupplierPicker() }) {
+            OutlinedTextField(
+                value = state.supplierNama,
+                onValueChange = { },
+                readOnly = true,
+                enabled = false, // Allow clicks to pass to Box
+                label = { Text("Supplier") },
+                placeholder = { Text("Pilih Supplier...") },
+                trailingIcon = {
                     Icon(Icons.Default.Store, contentDescription = "Pilih Supplier")
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        )
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                    disabledBorderColor = MaterialTheme.colorScheme.outline,
+                    disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         OutlinedTextField(
             value = state.spec,

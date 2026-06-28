@@ -7,53 +7,76 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryBlueContainer,
-    onPrimary = PrimaryBlue,
-    secondary = SecondaryOrangeContainer,
-    onSecondary = TextDark,
-    tertiary = SuccessGreenContainer,
-    onTertiary = TextDark,
-    background = TextDark,
-    onBackground = BackgroundLight,
-    surface = TextDark,
-    onSurface = BackgroundLight,
-    error = ErrorRed,
-    errorContainer = ErrorContainer
+    primary = BluePrimary,
+    onPrimary = Color.White,
+    primaryContainer = BlueContainer,
+    onPrimaryContainer = OnBlueContainer,
+    secondary = AmberAccent,
+    onSecondary = Color.Black,
+    secondaryContainer = AmberContainer,
+    onSecondaryContainer = OnAmberContainer,
+    tertiary = EmeraldSuccess,
+    onTertiary = Color.White,
+    tertiaryContainer = EmeraldContainer,
+    onTertiaryContainer = OnEmeraldContainer,
+    background = SlateBg,
+    onBackground = SlateBright,
+    surface = SlateBase,
+    onSurface = SlateBright,
+    surfaceVariant = SlateCard,
+    onSurfaceVariant = SlateText,
+    surfaceContainerLowest = SlateBg,
+    surfaceContainerLow = SlateBase,
+    surfaceContainer = SlateCard,
+    surfaceContainerHigh = SlateElevated,
+    surfaceContainerHighest = SlateElevated,
+    error = StatusNg,
+    onError = Color.White,
+    errorContainer = StatusNgContainer,
+    onErrorContainer = OnStatusNg,
+    outline = SlateOutline,
+    outlineVariant = SlateElevated
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = PrimaryBlue,
-    onPrimary = androidx.compose.ui.graphics.Color.White,
-    primaryContainer = PrimaryBlueContainer,
-    onPrimaryContainer = PrimaryBlue,
-    secondary = SecondaryOrange,
-    onSecondary = androidx.compose.ui.graphics.Color.White,
-    secondaryContainer = SecondaryOrangeContainer,
-    onSecondaryContainer = TextDark,
-    tertiary = SuccessGreen,
-    onTertiary = androidx.compose.ui.graphics.Color.White,
-    tertiaryContainer = SuccessGreenContainer,
-    onTertiaryContainer = TextDark,
-    background = BackgroundLight,
-    surface = CardBackground,
-    onBackground = TextDark,
-    onSurface = TextDark,
-    surfaceVariant = PrimaryBlueContainer,
-    onSurfaceVariant = TextGray,
-    error = ErrorRed,
-    errorContainer = ErrorContainer,
-    onErrorContainer = TextDark,
-    outline = OutlineDark,
-    outlineVariant = OutlineLight
+    primary = BluePrimaryDark,
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFDBEAFE),
+    onPrimaryContainer = Color(0xFF1E3A8A),
+    secondary = AmberDark,
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFFEF3C7),
+    onSecondaryContainer = Color(0xFF78350F),
+    tertiary = EmeraldSuccess,
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFD1FAE5),
+    onTertiaryContainer = Color(0xFF064E3B),
+    background = LightBg,
+    onBackground = LightTextPrimary,
+    surface = LightSurface,
+    onSurface = LightTextPrimary,
+    surfaceVariant = LightCard,
+    onSurfaceVariant = LightTextSecondary,
+    error = StatusNg,
+    errorContainer = Color(0xFFFEE2E2),
+    onErrorContainer = Color(0xFF991B1B),
+    outline = Color(0xFF94A3B8),
+    outlineVariant = LightOutline
 )
 
+/**
+ * Tema utama InSpectra.
+ * Default ke Dark mode (Industrial Dark) untuk lingkungan pabrik.
+ * Light mode tersedia untuk preferensi pengguna.
+ */
 @Composable
 fun InSpectraTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = true, // Force dark untuk factory environment
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme

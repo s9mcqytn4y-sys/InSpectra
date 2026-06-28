@@ -21,7 +21,7 @@ fun DataIndukTopBar(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        color = Color(0xFF1A365D),
+        color = MaterialTheme.colorScheme.primary,
         contentColor = Color.White,
         modifier = modifier.fillMaxWidth()
     ) {

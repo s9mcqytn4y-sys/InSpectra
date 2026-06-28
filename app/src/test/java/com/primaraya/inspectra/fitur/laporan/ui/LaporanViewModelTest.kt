@@ -67,8 +67,8 @@ class LaporanViewModelTest {
 
         val tipeProses = "PRESS"
         val mockParts = listOf(
-            PartAcuan(1, "P1", "123", "Part1", "Model1", null, TipeProses.PRESS),
-            PartAcuan(2, "P2", "124", "Part2", "Model1", null, TipeProses.PRESS)
+            PartAcuan(0, "P1", "123", "Part1", "Model1", null, TipeProses.PRESS),
+            PartAcuan(0, "P2", "124", "Part2", "Model1", null, TipeProses.PRESS)
         )
         coEvery { repository.getPartsForProcess(tipeProses) } returns mockParts
 
@@ -136,7 +136,7 @@ class LaporanViewModelTest {
     fun `submitLaporan should call repository when state is valid`() = runTest(testDispatcher) {
         // Setup initial state to be valid
         val tipeProses = "PRESS"
-        val mockParts = listOf(PartAcuan(1, "P1", "123", "Part1", "Model1", null, TipeProses.PRESS))
+        val mockParts = listOf(PartAcuan(0, "P1", "123", "Part1", "Model1", null, TipeProses.PRESS))
         coEvery { repository.getPartsForProcess(tipeProses) } returns mockParts
         coEvery { repository.submitLaporan(any()) } returns Unit
 

@@ -1,0 +1,11 @@
+# .aiexclude
+# Ignored files for AI context and modifications
+
+local.properties
+.idea/
+.gradle/
+build/
+app/build/
+*.iml
+*.keystore
+local-deployment-targets.xml

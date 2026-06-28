@@ -2,6 +2,7 @@ package com.primaraya.inspectra.fitur.checksheet.domain
 
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.math.roundToInt
 
@@ -23,14 +24,14 @@ enum class KategoriDefect {
 
 @Serializable
 data class PartAcuan(
-    val no: Int,
-    val nomorPart: String?,
-    val uniqNo: String,
-    val namaPart: String,
+    val no: Int = 0,
+    @SerialName("part_no") val nomorPart: String?,
+    @SerialName("uniq_no") val uniqNo: String,
+    @SerialName("nama_part") val namaPart: String,
     val model: String?,
     val customer: String?,
     val komoditas: TipeProses,
-    val lokasiGambar: String? = null
+    @SerialName("image_url") val lokasiGambar: String? = null
 )
 
 @Serializable

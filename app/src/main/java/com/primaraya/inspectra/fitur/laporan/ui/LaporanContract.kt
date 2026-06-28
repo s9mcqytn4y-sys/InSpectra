@@ -1,7 +1,10 @@
 package com.primaraya.inspectra.fitur.laporan.ui
 
+import androidx.compose.runtime.Immutable
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 
 object LaporanContract {
     enum class Step {
@@ -9,11 +12,12 @@ object LaporanContract {
         ISI_FORM
     }
 
+    @Immutable
     data class State(
         val step: Step = Step.PILIH_PART,
         val isLoading: Boolean = false,
-        val masterParts: PersistentList<com.primaraya.inspectra.fitur.checksheet.domain.PartAcuan> = persistentListOf(),
-        val selectedPartIds: Set<String> = emptySet(),
+        val masterParts: ImmutableList<com.primaraya.inspectra.fitur.checksheet.domain.PartAcuan> = persistentListOf(),
+        val selectedPartIds: Set<String> = persistentSetOf(),
         val tanggal: String = "",
         val tipeProses: String = "",
         val mpDirect: String = "",
@@ -33,6 +37,7 @@ object LaporanContract {
         val isValid: Boolean get() = tipeProses.isNotBlank() && tanggal.isNotBlank() && details.isNotEmpty()
     }
 
+    @Immutable
     data class DetailLaporanState(
         val idPart: String,
         val namaPart: String,

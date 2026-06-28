@@ -77,7 +77,7 @@ fun CuttingScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color(0xFF1A365D),
+                        containerColor = MaterialTheme.colorScheme.primary,
                         titleContentColor = Color.White,
                         navigationIconContentColor = Color.White
                     )
@@ -146,14 +146,14 @@ fun CuttingSuccessScreen(onDone: () -> Unit) {
         Surface(
             modifier = Modifier.size(120.dp),
             shape = RoundedCornerShape(40.dp),
-            color = Color(0xFFDCFCE7)
+            color = MaterialTheme.colorScheme.tertiaryContainer
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
                     modifier = Modifier.size(72.dp),
-                    tint = Color(0xFF16A34A)
+                    tint = MaterialTheme.colorScheme.tertiary
                 )
             }
         }
@@ -164,14 +164,14 @@ fun CuttingSuccessScreen(onDone: () -> Unit) {
             "Batch Berhasil Disimpan",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Black,
-            color = Color(0xFF1E293B)
+            color = MaterialTheme.colorScheme.onSurface
         )
         
         Text(
             "Data pemotongan (Cutting) telah berhasil diunggah ke server.",
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyLarge,
-            color = Color(0xFF64748B),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 12.dp)
         )
         
@@ -356,10 +356,10 @@ private fun FormBatchCutting(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9))
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Kalkulasi Real-time", fontWeight = FontWeight.Black, color = Color(0xFF1E293B))
+                        Text("Kalkulasi Real-time", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
                         HorizontalDivider(color = Color.White)
                         
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -562,7 +562,7 @@ private fun FormBatchCutting(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9))
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text("Ringkasan: OK ${input.estimasiPanjangOkCm} cm | NG ${input.estimasiPanjangNgCm} cm", style = MaterialTheme.typography.labelMedium)
@@ -642,14 +642,14 @@ private fun BarisDefectCutting(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFFF8FAFC), RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(defect.namaDefect, modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+            Text(defect.namaDefect, modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             IconButton(onClick = onHapus) {
-                Icon(Icons.Filled.DeleteOutline, "Hapus defect", tint = Color(0xFFDC2626))
+                Icon(Icons.Filled.DeleteOutline, "Hapus defect", tint = MaterialTheme.colorScheme.error)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

@@ -55,28 +55,20 @@ Istilah standar:
 
 Nama teknis seperti Kotlin, Supabase, PostgREST, Material 3, dan API boleh tetap dipakai di dokumentasi teknis.
 
-## Warna
+## Warna (Industrial Dark SaaS)
 
-Gunakan token dari `core/ui/theme/Color.kt`.
+Gunakan token dari `core/ui/theme/Color.kt`. Desain mengutamakan skema "Industrial Dark SaaS" yang _Stitch Friendly_ (cocok untuk environment operasional modern dengan _low eye-strain_):
 
-Palet operasional:
-
-- Primary: biru tua untuk struktur, navigasi, dan heading.
-- Secondary: kuning/oranye sebagai aksen tindakan utama.
-- Background: abu sangat terang.
-- Surface: putih.
-- Error: merah.
-- Success: hijau.
-- Text primary: abu gelap.
-- Text secondary: abu slate.
+- Background & Surface: Gunakan turunan `surfaceContainer`, `surfaceContainerHigh` dengan gaya gelap keabu-abuan (slate/charcoal).
+- Outline & Border: Gunakan `outlineVariant` (1.dp) untuk memisahkan _card_ dan _surface_.
+- Primary & Secondary: Aksen amber/kuning atau biru terang hanya untuk CTA (Call-To-Action) atau status aktif.
+- Error & Peringatan: Gunakan _errorContainer_ semi-transparan dipadu dengan icon tegas (Material 3).
 
 Aturan:
 
-- Jangan membuat layar didominasi satu warna.
-- Jangan overuse aksen kuning/oranye.
-- Hindari gradient dekoratif.
-- Hindari shadow besar.
-- Gunakan border dan tonal elevation rendah.
+- Jangan membuat layar didominasi satu warna solid yang terlalu terang.
+- Hindari shadow besar; gunakan border dan kontras background untuk hierarki visual (_Tonal Elevation_ atau pemisahan container).
+- Pastikan rasio kontras teks (WCAG 2.1) terpenuhi pada layar _dark mode_.
 
 ## Layout SaaS
 

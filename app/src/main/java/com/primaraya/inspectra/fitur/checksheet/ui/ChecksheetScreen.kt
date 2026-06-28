@@ -20,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -56,10 +57,20 @@ fun ChecksheetScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    @Suppress("DEPRECATION")
+    val vibrator = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+        val vibratorManager = context.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as android.os.VibratorManager
+        vibratorManager.defaultVibrator
+    } else {
+        context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as android.os.Vibrator
+    }
 
     LaunchedEffect(tipeProses) {
         viewModel.onIntent(ChecksheetContract.Intent.Muat(tipeProses))
     }
+
+    val successDesc = stringResource(R.string.checksheet_success_desc)
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
@@ -68,19 +79,29 @@ fun ChecksheetScreen(
                     snackbarHostState.showSnackbar(effect.pesan)
                 }
                 is ChecksheetContract.Effect.PesanError -> {
-                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        vibrator.vibrate(android.os.VibrationEffect.createOneShot(200, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        vibrator.vibrate(200)
+                    }
                     snackbarHostState.showSnackbar("${effect.judul}: ${effect.pesan}")
                 }
                 is ChecksheetContract.Effect.KirimBerhasil -> {
                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    snackbarHostState.showSnackbar(stringResource(R.string.checksheet_success_desc) + " ID: ${effect.idSesi.take(8)}")
+                    snackbarHostState.showSnackbar("$successDesc ID: ${effect.idSesi.take(8)}")
                 }
             }
         }
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { 
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.zIndex(1f)
+            ) 
+        },
         topBar = {
             if (!state.berhasil) {
                 TopAppBar(
@@ -109,7 +130,7 @@ fun ChecksheetScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color(0xFF1A365D),
+                        containerColor = MaterialTheme.colorScheme.primary,
                         titleContentColor = Color.White,
                         navigationIconContentColor = Color.White
                     )
@@ -215,14 +236,14 @@ fun ChecksheetSuccessScreen(onDone: () -> Unit) {
         Surface(
             modifier = Modifier.size(120.dp),
             shape = RoundedCornerShape(40.dp),
-            color = Color(0xFFDCFCE7)
+            color = MaterialTheme.colorScheme.tertiaryContainer
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
                     modifier = Modifier.size(72.dp),
-                    tint = Color(0xFF16A34A)
+                    tint = MaterialTheme.colorScheme.tertiary
                 )
             }
         }
@@ -233,14 +254,14 @@ fun ChecksheetSuccessScreen(onDone: () -> Unit) {
             stringResource(R.string.checksheet_success_title),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Black,
-            color = Color(0xFF1E293B)
+            color = MaterialTheme.colorScheme.onSurface
         )
         
         Text(
             stringResource(R.string.checksheet_success_desc),
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyLarge,
-            color = Color(0xFF64748B),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 12.dp)
         )
         
@@ -341,19 +362,19 @@ fun KartuPartChecksheetRingkas(
     onBukaTambahDefect: () -> Unit
 ) {
     val containerColor = if (part.kuantitasTidakValid) {
-        Color(0xFFFEF2F2)
+        MaterialTheme.colorScheme.errorContainer
     } else if (part.jumlahNg > 0) {
-        Color(0xFFF8FAFC)
+        MaterialTheme.colorScheme.surface
     } else {
         Color.White
     }
 
     val borderColor = if (part.kuantitasTidakValid) {
-        Color(0xFFFCA5A5)
+        MaterialTheme.colorScheme.error
     } else if (part.jumlahNg > 0) {
-        Color(0xFFE2E8F0)
+        MaterialTheme.colorScheme.outlineVariant
     } else {
-        Color(0xFFF1F5F9)
+        MaterialTheme.colorScheme.surfaceVariant
     }
 
     Surface(
@@ -376,7 +397,7 @@ fun KartuPartChecksheetRingkas(
                 Surface(
                     modifier = Modifier.size(52.dp),
                     shape = RoundedCornerShape(14.dp),
-                    color = Color(0xFFF1F5F9)
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         if (part.lokasiGambar != null) {
@@ -392,7 +413,7 @@ fun KartuPartChecksheetRingkas(
                             Icon(
                                 imageVector = Icons.Default.Inventory2,
                                 contentDescription = null,
-                                tint = Color(0xFF64748B),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(28.dp)
                             )
                         }
@@ -406,13 +427,13 @@ fun KartuPartChecksheetRingkas(
                         text = part.uniqNo,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Black,
-                        color = Color(0xFF1E293B)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
                     Text(
                         text = part.namaPart,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF64748B),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -422,10 +443,10 @@ fun KartuPartChecksheetRingkas(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        SmallBadgeElite(label = stringResource(R.string.checksheet_badge_cek, part.jumlahDiperiksa.toString()), color = Color(0xFFF1F5F9), textColor = Color(0xFF475569))
-                        SmallBadgeElite(label = stringResource(R.string.checksheet_badge_ok, part.jumlahOk.toString()), color = Color(0xFFF0FDF4), textColor = Color(0xFF166534))
+                        SmallBadgeElite(label = stringResource(R.string.checksheet_badge_cek, part.jumlahDiperiksa.toString()), color = MaterialTheme.colorScheme.surfaceVariant, textColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                        SmallBadgeElite(label = stringResource(R.string.checksheet_badge_ok, part.jumlahOk.toString()), color = MaterialTheme.colorScheme.tertiaryContainer, textColor = MaterialTheme.colorScheme.onTertiaryContainer)
                         if (part.jumlahNg > 0) {
-                            SmallBadgeElite(label = stringResource(R.string.checksheet_badge_ng, part.jumlahNg.toString()), color = Color(0xFFFEF2F2), textColor = Color(0xFF991B1B))
+                            SmallBadgeElite(label = stringResource(R.string.checksheet_badge_ng, part.jumlahNg.toString()), color = MaterialTheme.colorScheme.errorContainer, textColor = MaterialTheme.colorScheme.onErrorContainer)
                         }
                     }
                 }
@@ -437,14 +458,14 @@ fun KartuPartChecksheetRingkas(
                     Icon(
                         imageVector = if (part.terbuka) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                         contentDescription = null,
-                        tint = Color(0xFF94A3B8)
+                        tint = MaterialTheme.colorScheme.outline
                     )
                 }
             }
 
             if (part.terbuka) {
                 Spacer(Modifier.height(20.dp))
-                HorizontalDivider(thickness = 1.dp, color = Color(0xFFF1F5F9))
+                HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.surfaceVariant)
                 Spacer(Modifier.height(20.dp))
 
                 OutlinedTextField(
@@ -458,8 +479,8 @@ fun KartuPartChecksheetRingkas(
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF1A365D),
-                        unfocusedBorderColor = Color(0xFFE2E8F0),
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                         focusedContainerColor = Color.White,
                         unfocusedContainerColor = Color.White
                     )
@@ -468,7 +489,7 @@ fun KartuPartChecksheetRingkas(
                 if (part.kuantitasTidakValid) {
                     Text(
                         stringResource(R.string.checksheet_error_ng_exceeds),
-                        color = Color(0xFFDC2626),
+                        color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(start = 4.dp, top = 4.dp),
                         fontWeight = FontWeight.Bold
@@ -481,7 +502,7 @@ fun KartuPartChecksheetRingkas(
                     text = "Daftar Temuan NG",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Black,
-                    color = Color(0xFF1E293B)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 val defectsByKategori = remember(part.daftarDefect, part.defectTersembunyi) {
@@ -494,14 +515,14 @@ fun KartuPartChecksheetRingkas(
                     
                     Surface(
                         modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
-                        color = if (isMaterial) Color(0xFFF0F9FF) else Color(0xFFF8FAFC),
+                        color = if (isMaterial) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
                             text = if (isMaterial) "DEFECT MATERIAL" else "DEFECT PROSES",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Black,
-                            color = if (isMaterial) Color(0xFF0369A1) else Color(0xFF64748B),
+                            color = if (isMaterial) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             letterSpacing = 0.5.sp
                         )
@@ -527,11 +548,11 @@ fun KartuPartChecksheetRingkas(
                     onClick = onBukaTambahDefect,
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFF1A365D))
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(8.dp))
-                    Text("Tambah Jenis Lain", fontWeight = FontWeight.Bold, color = Color(0xFF1A365D))
+                    Text("Tambah Jenis Lain", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -586,19 +607,19 @@ fun BarisDefectStepper(
                 Text(
                     text = defect.namaDefect,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = if (defect.jumlahNg > 0) Color(0xFF1E293B) else Color(0xFF64748B),
+                    color = if (defect.jumlahNg > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = if (defect.jumlahNg > 0) FontWeight.Bold else FontWeight.Medium
                 )
                 if (defect.detailSlot.isNotEmpty()) {
                     Surface(
                         onClick = { showSlotDialog = true },
-                        color = if (defect.slotMatch) Color(0xFFF0FDF4) else Color(0xFFFEF2F2),
+                        color = if (defect.slotMatch) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.errorContainer,
                         shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
                             text = if (defect.slotMatch) "✓ Slot OK: ${defect.totalNgDariSlot}" else "⚠ Slot: ${defect.totalNgDariSlot}/${defect.jumlahNg}",
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (defect.slotMatch) Color(0xFF16A34A) else Color(0xFFDC2626),
+                            color = if (defect.slotMatch) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             fontWeight = FontWeight.Bold
                         )
@@ -617,7 +638,7 @@ fun BarisDefectStepper(
                     Icon(
                         Icons.Default.RemoveCircle,
                         contentDescription = "Kurangi",
-                        tint = if (defect.jumlahNg > 0) Color(0xFFDC2626) else Color(0xFFE2E8F0),
+                        tint = if (defect.jumlahNg > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant,
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -629,13 +650,13 @@ fun BarisDefectStepper(
                         .clickable { showManualDialog = true },
                     shape = RoundedCornerShape(12.dp),
                     tonalElevation = 2.dp,
-                    color = if (defect.jumlahNg > 0) Color(0xFF1A365D) else Color(0xFFF1F5F9)
+                    color = if (defect.jumlahNg > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             text = defect.jumlahNg.toString(),
                             fontWeight = FontWeight.Black,
-                            color = if (defect.jumlahNg > 0) Color.White else Color(0xFF64748B),
+                            color = if (defect.jumlahNg > 0) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
@@ -645,7 +666,7 @@ fun BarisDefectStepper(
                     Icon(
                         Icons.Default.AddCircle,
                         contentDescription = "Tambah",
-                        tint = Color(0xFF16A34A),
+                        tint = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -717,7 +738,7 @@ fun DialogInputSlotNg(
                 HorizontalDivider()
                 Text(
                     text = "Total Slot: ${defect.totalNgDariSlot}",
-                    color = if (defect.slotMatch) Color(0xFF16A34A) else Color(0xFFDC2626)
+                    color = if (defect.slotMatch) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
                 )
             }
         },
@@ -746,7 +767,7 @@ fun DialogInputJumlahNg(
         },
         text = {
             Column {
-                Text(title, color = Color(0xFF64748B))
+                Text(title, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = value,
@@ -891,7 +912,7 @@ private fun ItemKartuPicker(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .background(Color(0xFFF1F5F9), RoundedCornerShape(8.dp)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 if (item.image_url != null) {
@@ -907,7 +928,7 @@ private fun ItemKartuPicker(
                     Icon(
                         imageVector = Icons.Default.Inventory2,
                         contentDescription = null,
-                        tint = Color(0xFF64748B),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(24.dp)
                     )
                 }

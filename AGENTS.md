@@ -129,12 +129,16 @@ File IDE yang boleh dibuat atau diubah:
 - `.vscode/launch.json`.
 - `.vscode/extensions.json`.
 
-File IDE yang tidak boleh di-commit:
+File IDE yang tidak boleh di-commit atau dimodifikasi oleh AI Agent:
 
 - `.idea/workspace.xml`.
 - `.idea/caches`.
+- `local.properties`.
 - personal device state.
 - local deployment target state.
+- File-file ini telah didaftarkan dalam `.aiexclude` untuk mencegah modifikasi yang tidak disengaja.
+
+Penting: Fitur dashboard/statistik telah dihapus secara sengaja untuk mengutamakan fokus *Hardening Input*. Jangan meregenerasi komponen dashboard/statistik tanpa persetujuan eksplisit.
 
 ## Verifikasi
 

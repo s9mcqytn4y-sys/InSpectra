@@ -63,7 +63,14 @@ Setiap layar atau modul wajib menerapkan *Unidirectional Data Flow* (UDF) murni 
 
 ---
 
-## 5. Protokol Verifikasi Mandat
+## 5. Prioritas "Hardening Input" (No Dashboard/Stats)
+
+* Fitur Dashboard dan Statistik komprehensif **telah dihapus secara sengaja** untuk memfokuskan repository pada ketahanan dan stabilitas input data (Hardening Input).
+* Dilarang menambahkan kembali visualisasi statistik, *dashboard widget*, atau analitik kompleks tanpa instruksi/persetujuan eksplisit dari pengguna. Fokus pada validasi form, atomicity Supabase RPC, dan kemudahan _data entry_.
+
+---
+
+## 6. Protokol Verifikasi Mandat
 
 Sebelum perubahan kode dianggap selesai dan siap untuk dibuatkan *Pull Request*, jalankan rangkaian pemeriksaan berikut pada terminal lokal:
 

@@ -31,16 +31,16 @@ fun AppNavGraph(
         startDestination = startDestination,
         modifier = modifier,
         enterTransition = {
-            slideInHorizontally(initialOffsetX = { 1000 }, animationSpec = tween(400)) + fadeIn(animationSpec = tween(400))
+            fadeIn(animationSpec = tween(300))
         },
         exitTransition = {
-            slideOutHorizontally(targetOffsetX = { -1000 }, animationSpec = tween(400)) + fadeOut(animationSpec = tween(400))
+            fadeOut(animationSpec = tween(300))
         },
         popEnterTransition = {
-            slideInHorizontally(initialOffsetX = { -1000 }, animationSpec = tween(400)) + fadeIn(animationSpec = tween(400))
+            fadeIn(animationSpec = tween(300))
         },
         popExitTransition = {
-            slideOutHorizontally(targetOffsetX = { 1000 }, animationSpec = tween(400)) + fadeOut(animationSpec = tween(400))
+            fadeOut(animationSpec = tween(300))
         }
     ) {
         composable<Screen.Splash> {
@@ -52,36 +52,39 @@ fun AppNavGraph(
                 }
             )
         }
-        
+
         composable<Screen.Dashboard> {
-            DashboardScreen(
-                onChecksheetClick = {
-                    navController.navigate(Screen.MenuChecksheet)
-                },
-                onLaporanClick = {
-                    navController.navigate(Screen.MenuLaporan)
-                },
-                onMasterDataClick = {
-                    navController.navigate(Screen.MasterData)
-                }
-            )
+            DashboardScreen()
         }
-        
+
         composable<Screen.MenuChecksheet> {
             MenuChecksheetScreen(
                 onProcessSelect = { type ->
                     navController.navigate(Screen.FormChecksheet(type.name))
                 },
-                onBack = { 
-                    navController.popBackStack() 
+                onBack = {
+                    navController.popBackStack()
                 }
             )
         }
-        
-        composable<Screen.FormChecksheet> { backStackEntry ->
+
+        composable<Screen.FormChecksheet>(
+            enterTransition = {
+                slideInHorizontally(initialOffsetX = { 1000 }, animationSpec = tween(350)) + fadeIn(animationSpec = tween(350))
+            },
+            exitTransition = {
+                slideOutHorizontally(targetOffsetX = { -1000 }, animationSpec = tween(350)) + fadeOut(animationSpec = tween(350))
+            },
+            popEnterTransition = {
+                slideInHorizontally(initialOffsetX = { -1000 }, animationSpec = tween(350)) + fadeIn(animationSpec = tween(350))
+            },
+            popExitTransition = {
+                slideOutHorizontally(targetOffsetX = { 1000 }, animationSpec = tween(350)) + fadeOut(animationSpec = tween(350))
+            }
+        ) { backStackEntry ->
             val route = backStackEntry.toRoute<Screen.FormChecksheet>()
             val tipeProses = TipeProses.valueOf(route.tipeProses)
-            
+
             ChecksheetScreen(
                 tipeProses = tipeProses,
                 onBackClick = { navController.popBackStack() }
@@ -93,16 +96,29 @@ fun AppNavGraph(
                 onProcessSelect = { type ->
                     navController.navigate(Screen.FormLaporan(type.name))
                 },
-                onBack = { 
-                    navController.popBackStack() 
+                onBack = {
+                    navController.popBackStack()
                 }
             )
         }
 
-        composable<Screen.FormLaporan> { backStackEntry ->
+        composable<Screen.FormLaporan>(
+            enterTransition = {
+                slideInHorizontally(initialOffsetX = { 1000 }, animationSpec = tween(350)) + fadeIn(animationSpec = tween(350))
+            },
+            exitTransition = {
+                slideOutHorizontally(targetOffsetX = { -1000 }, animationSpec = tween(350)) + fadeOut(animationSpec = tween(350))
+            },
+            popEnterTransition = {
+                slideInHorizontally(initialOffsetX = { -1000 }, animationSpec = tween(350)) + fadeIn(animationSpec = tween(350))
+            },
+            popExitTransition = {
+                slideOutHorizontally(targetOffsetX = { 1000 }, animationSpec = tween(350)) + fadeOut(animationSpec = tween(350))
+            }
+        ) { backStackEntry ->
             val route = backStackEntry.toRoute<Screen.FormLaporan>()
             val tipeProses = TipeProses.valueOf(route.tipeProses)
-            
+
             if (tipeProses == TipeProses.CUTTING) {
                 CuttingScreen(
                     onBackClick = { navController.popBackStack() }
@@ -114,7 +130,7 @@ fun AppNavGraph(
                 )
             }
         }
-        
+
         composable<Screen.MasterData> {
             MasterDataScreen(
                 onBackClick = { navController.popBackStack() }

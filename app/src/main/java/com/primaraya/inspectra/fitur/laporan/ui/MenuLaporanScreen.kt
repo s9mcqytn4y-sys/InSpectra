@@ -70,9 +70,9 @@ fun MenuLaporanScreen(
 @Composable
 private fun DepartemenLaporanCard(proses: TipeProses, desc: String, onClick: () -> Unit) {
     val (icon, color) = when (proses) {
-        TipeProses.PRESS -> Icons.Default.PrecisionManufacturing to Color(0xFF1E293B)
+        TipeProses.PRESS -> Icons.Default.PrecisionManufacturing to MaterialTheme.colorScheme.onSurface
         TipeProses.SEWING -> Icons.Default.Layers to Color(0xFF334155)
-        TipeProses.CUTTING -> Icons.Default.ContentCut to Color(0xFF475569)
+        TipeProses.CUTTING -> Icons.Default.ContentCut to MaterialTheme.colorScheme.onSurfaceVariant
         else -> Icons.Default.Inventory to Color.Gray
     }
 
@@ -83,7 +83,7 @@ private fun DepartemenLaporanCard(proses: TipeProses, desc: String, onClick: () 
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(24.dp),
         color = Color.White,
-        border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
         shadowElevation = 2.dp
     ) {
         Row(
@@ -110,7 +110,7 @@ private fun DepartemenLaporanCard(proses: TipeProses, desc: String, onClick: () 
                 Text(
                     text = desc,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF64748B)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             

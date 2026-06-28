@@ -6,6 +6,8 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 
 /**
  * Implementasi DatabaseDriver berbasis Supabase PostgREST.
@@ -121,20 +123,32 @@ class DatabaseDriverException(
     val code: String? = null
 ) : RuntimeException(message) {
 
+    @Serializable
+    private data class SupabaseErrorResponse(
+        val message: String? = null,
+        val code: String? = null,
+        val details: String? = null,
+        val hint: String? = null
+    )
+
     companion object {
         fun fromSupabase(body: String): DatabaseDriverException {
-            val code = Regex("\"code\"\\s*:\\s*\"([^\"]+)\"")
-                .find(body)
-                ?.groupValues
-                ?.getOrNull(1)
+            if (body.isBlank()) {
+                return DatabaseDriverException("Permintaan database gagal tanpa pesan error dari server.")
+            }
 
-            val message = Regex("\"message\"\\s*:\\s*\"([^\"]+)\"")
-                .find(body)
-                ?.groupValues
-                ?.getOrNull(1)
-                ?: "Permintaan database belum berhasil."
-
-            return DatabaseDriverException(message, code)
+            return try {
+                val error = InspectraHttpClient.json.decodeFromString<SupabaseErrorResponse>(body)
+                DatabaseDriverException(
+                    message = error.message ?: "Permintaan database belum berhasil.",
+                    code = error.code
+                )
+            } catch (e: SerializationException) {
+                // Fallback if the body is not standard JSON (e.g., 502 Bad Gateway HTML)
+                DatabaseDriverException("Terjadi kesalahan pada server (Respon tidak dikenali).")
+            } catch (e: Exception) {
+                DatabaseDriverException("Terjadi kesalahan sistem: ${e.message}")
+            }
         }
     }
 }

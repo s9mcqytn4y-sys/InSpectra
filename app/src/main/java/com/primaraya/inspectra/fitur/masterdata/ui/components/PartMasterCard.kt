@@ -53,7 +53,7 @@ fun PartMasterCard(
                 Box(
                     modifier = Modifier
                         .size(72.dp)
-                        .background(Color(0xFFF8FAFC), RoundedCornerShape(16.dp)),
+                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (part.lokasi_gambar != null) {

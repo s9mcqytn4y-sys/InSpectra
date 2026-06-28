@@ -1,110 +1,75 @@
 package com.primaraya.inspectra.fitur.dashboard.ui
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.graphics.Brush
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.primaraya.inspectra.core.ui.component.AppResponsiveContent
 import com.primaraya.inspectra.core.ui.viewmodel.AppViewModel
 import com.primaraya.inspectra.fitur.checksheet.domain.TipeProses
 import com.primaraya.inspectra.fitur.checksheet.ui.labelIndonesia
+import androidx.compose.ui.platform.LocalContext
 
-import androidx.compose.material.icons.filled.Assessment
-
+/**
+ * Dashboard — Command Center.
+ * Menampilkan ringkasan hari ini dan status konektivitas.
+ * Navigasi ke modul dilakukan via Bottom Nav / Navigation Rail.
+ */
 @Composable
 fun DashboardScreen(
-    onChecksheetClick: () -> Unit,
-    onLaporanClick: () -> Unit,
-    onMasterDataClick: () -> Unit,
-    viewModel: AppViewModel = viewModel()
+    appViewModel: AppViewModel = viewModel()
 ) {
-    val isSchemaCompatible by viewModel.isSchemaCompatible.collectAsStateWithLifecycle()
+    val isSchemaCompatible by appViewModel.isSchemaCompatible.collectAsStateWithLifecycle()
 
     AppResponsiveContent { isTablet, contentModifier ->
         Column(
-            modifier = contentModifier.padding(top = 32.dp, bottom = 32.dp),
+            modifier = contentModifier.padding(top = 32.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            // ── Header ──
             HeaderDashboard()
 
+            // ── Schema Warning ──
             if (!isSchemaCompatible) {
                 SchemaWarning()
             }
 
-            Text(
-                text = "Workspace Utama",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Black,
-                color = Color(0xFF1E293B)
-            )
+            // ── Status Konektivitas ──
+            ConnectivityStatus()
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                ModuleCard(
-                    title = "E-Checksheet",
-                    subtitle = "Inspeksi Kualitas",
-                    icon = Icons.AutoMirrored.Filled.Assignment,
-                    gradient = Brush.linearGradient(listOf(Color(0xFF1E3A8A), Color(0xFF3B82F6))),
-                    onClick = onChecksheetClick,
-                    modifier = Modifier.weight(1f)
-                )
-                ModuleCard(
-                    title = "Laporan",
-                    subtitle = "Produksi Harian & Cutting",
-                    icon = Icons.Default.Assessment,
-                    gradient = Brush.linearGradient(listOf(Color(0xFF065F46), Color(0xFF10B981))),
-                    onClick = onLaporanClick,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                ModuleCard(
-                    title = "Master Data",
-                    subtitle = "Kelola Referensi",
-                    icon = Icons.Default.Dataset,
-                    gradient = Brush.linearGradient(listOf(Color(0xFF92400E), Color(0xFFF59E0B))),
-                    onClick = onMasterDataClick,
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.weight(1f))
-            }
-            
-            QuickStatsSection()
+            // ── Info Card ──
+            InformationCard()
         }
     }
 }
 
 @Composable
 private fun HeaderDashboard() {
+    val calendar = java.util.Calendar.getInstance()
+    val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+    val greeting = when (hour) {
+        in 0..11 -> "Selamat Pagi"
+        in 12..14 -> "Selamat Siang"
+        in 15..17 -> "Selamat Sore"
+        else -> "Selamat Malam"
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -112,26 +77,35 @@ private fun HeaderDashboard() {
     ) {
         Column {
             Text(
+                text = "$greeting,",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
                 text = stringResource(com.primaraya.inspectra.R.string.dashboard_workspace_title),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Black,
-                color = Color(0xFF1A365D),
-                letterSpacing = (-0.5).sp
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = stringResource(com.primaraya.inspectra.R.string.dashboard_workspace_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF64748B)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        
+
         Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = Color(0xFFF1F5F9),
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier.size(48.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFF475569))
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -140,107 +114,115 @@ private fun HeaderDashboard() {
 @Composable
 private fun SchemaWarning() {
     Surface(
-        color = Color(0xFFFEF2F2),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color(0xFFFCA5A5))
+        color = MaterialTheme.colorScheme.errorContainer,
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFDC2626))
+            Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
             Column {
-                Text("Database Outdated", fontWeight = FontWeight.Black, color = Color(0xFF991B1B))
-                Text("Versi skema tidak sesuai. Harap update aplikasi.", style = MaterialTheme.typography.bodySmall, color = Color(0xFF991B1B))
+                Text(
+                    "Database Outdated",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+                Text(
+                    "Versi skema tidak sesuai. Harap update aplikasi.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ModuleCard(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    gradient: Brush,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .height(180.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(28.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(gradient)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = Color.White.copy(alpha = 0.2f),
-                modifier = Modifier.size(48.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
-                }
-            }
-            
-                Column {
-                    Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, color = Color.White)
-                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun QuickStatsSection() {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = stringResource(com.primaraya.inspectra.R.string.dashboard_quick_summary),
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF475569)
-        )
-        
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatItem("Checksheet", "12", Icons.Default.DoneAll, Color(0xFF16A34A), Modifier.weight(1f))
-            StatItem("Defect", "4", Icons.Default.ErrorOutline, Color(0xFFDC2626), Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-private fun StatItem(label: String, value: String, icon: ImageVector, tint: Color, modifier: Modifier = Modifier) {
+private fun ConnectivityStatus() {
     Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, Color(0xFFF1F5F9))
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
-            Column {
-                Text(value, fontWeight = FontWeight.Black, style = MaterialTheme.typography.titleMedium)
-                Text(label, style = MaterialTheme.typography.labelSmall, color = Color(0xFF64748B))
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.CloudDone,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Terhubung ke Supabase",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    "Data diproses langsung ke server",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
 }
+
+
+
+@Composable
+private fun InformationCard() {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                Icons.Default.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(24.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Gunakan menu navigasi di bawah",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Text(
+                    "Akses Checksheet, Laporan, dan Data Induk melalui tab navigasi.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                )
+            }
+        }
+    }
+}
+
+// ── Menu Checksheet Screen (tetap di sini agar import NavGraph tidak berubah) ──
 
 @Composable
 fun MenuChecksheetScreen(
@@ -253,16 +235,13 @@ fun MenuChecksheetScreen(
                 .fillMaxSize()
                 .padding(top = 24.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            Text(
+                "Pilih Departemen",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 24.dp)
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                }
-                Text("Pilih Departemen", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
-            }
+            )
 
             val list = listOf(TipeProses.PRESS, TipeProses.SEWING)
 
@@ -271,7 +250,7 @@ fun MenuChecksheetScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(list) { proses ->
+                items(list, key = { it.name }) { proses ->
                     DepartemenCard(proses, onClick = { onProcessSelect(proses) })
                 }
             }
@@ -281,22 +260,21 @@ fun MenuChecksheetScreen(
 
 @Composable
 private fun DepartemenCard(proses: TipeProses, onClick: () -> Unit) {
-    val (icon, color) = when (proses) {
-        TipeProses.PRESS -> Icons.Default.PrecisionManufacturing to Color(0xFF1E293B)
-        TipeProses.SEWING -> Icons.Default.Layers to Color(0xFF334155)
-        TipeProses.CUTTING -> Icons.Default.ContentCut to Color(0xFF475569)
-        else -> Icons.Default.Inventory to Color.Gray
+    val icon = when (proses) {
+        TipeProses.PRESS -> Icons.Default.PrecisionManufacturing
+        TipeProses.SEWING -> Icons.Default.Layers
+        TipeProses.CUTTING -> Icons.Default.ContentCut
+        else -> Icons.Default.Inventory
     }
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(110.dp)
+            .height(100.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
-        shadowElevation = 2.dp
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(
             modifier = Modifier.padding(20.dp),
@@ -304,29 +282,39 @@ private fun DepartemenCard(proses: TipeProses, onClick: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = color.copy(alpha = 0.1f),
-                modifier = Modifier.size(56.dp)
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(52.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(30.dp))
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(28.dp)
+                    )
                 }
             }
-            
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = proses.labelIndonesia(),
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Black
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "Akses form pemeriksaan harian",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF64748B)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFFCBD5E1))
+
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.outlineVariant
+            )
         }
     }
 }

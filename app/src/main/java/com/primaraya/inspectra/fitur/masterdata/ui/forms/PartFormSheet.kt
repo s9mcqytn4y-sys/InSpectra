@@ -22,10 +22,16 @@ import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Image
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
 import com.primaraya.inspectra.core.ui.component.AppDropdownField
+import com.primaraya.inspectra.core.ui.component.AppAutocompleteField
 import com.primaraya.inspectra.fitur.masterdata.ui.PartFormState
 import java.io.File
 import java.io.FileOutputStream
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 @Composable
 fun PartFormSheet(
@@ -37,7 +43,10 @@ fun PartFormSheet(
     isSaving: Boolean
 ) {
     val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(
+    var showImageSourceDialog by remember { mutableStateOf(false) }
+    var tempCameraFile by remember { mutableStateOf<File?>(null) }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
@@ -49,6 +58,25 @@ fun PartFormSheet(
             }
             onImageSelect(file)
         }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            tempCameraFile?.let { onImageSelect(it) }
+        }
+    }
+
+    val openCamera = {
+        val file = File(context.cacheDir, "part_upload_cam_${System.currentTimeMillis()}.jpg")
+        tempCameraFile = file
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        cameraLauncher.launch(uri)
     }
 
     Column(
@@ -70,9 +98,9 @@ fun PartFormSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(180.dp)
-                .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(16.dp)),
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
             shape = RoundedCornerShape(16.dp),
-            color = Color(0xFFF8FAFC)
+            color = MaterialTheme.colorScheme.surface
         ) {
             Box(contentAlignment = Alignment.Center) {
                 val imageSource = state.lokasiGambarLokal ?: state.lokasiGambarRemote
@@ -93,7 +121,7 @@ fun PartFormSheet(
                             .padding(12.dp),
                         color = Color.Black.copy(alpha = 0.6f),
                         shape = RoundedCornerShape(8.dp),
-                        onClick = { launcher.launch("image/*") }
+                        onClick = { showImageSourceDialog = true }
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -108,10 +136,10 @@ fun PartFormSheet(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.clickable { launcher.launch("image/*") }
+                        modifier = Modifier.clickable { showImageSourceDialog = true }
                     ) {
-                        Icon(Icons.Default.Image, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(48.dp))
-                        Text("Tambah Foto Part", style = MaterialTheme.typography.labelSmall, color = Color(0xFF64748B))
+                        Icon(Icons.Default.Image, contentDescription = null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(48.dp))
+                        Text("Tambah Foto Part", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -150,12 +178,12 @@ fun PartFormSheet(
             singleLine = true
         )
 
-        OutlinedTextField(
+        AppAutocompleteField(
+            label = "Customer",
             value = state.customer,
+            options = emptyList(), // TBD: Bisa diisi list dari viewModel
             onValueChange = { onUpdate(state.copy(customer = it)) },
-            label = { Text("Customer") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            modifier = Modifier.fillMaxWidth()
         )
 
         AppDropdownField(
@@ -215,5 +243,25 @@ fun PartFormSheet(
                 Text("Simpan Data")
             }
         }
+    }
+
+    if (showImageSourceDialog) {
+        AlertDialog(
+            onDismissRequest = { showImageSourceDialog = false },
+            title = { Text("Pilih Sumber Foto") },
+            text = { Text("Pilih sumber foto part untuk diupload.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showImageSourceDialog = false
+                    openCamera()
+                }) { Text("Kamera") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showImageSourceDialog = false
+                    galleryLauncher.launch("image/*")
+                }) { Text("Galeri") }
+            }
+        )
     }
 }

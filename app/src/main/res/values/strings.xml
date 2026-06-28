@@ -18,7 +18,8 @@
     <string name="laporan_produksi_title">Laporan Produksi %s</string>
     <string name="laporan_kirim">Kirim Laporan</string>
     <string name="laporan_pilih_part">Pilih Part Produksi</string>
-    <string name="laporan_tenaga_kerja">Data Tenaga Kerja &amp; Jam</string>
+    <string name="laporan_tenaga_kerja">Tenaga Kerja &amp; Jam</string>
+    <string name="laporan_overtime_bantuan">Overtime &amp; Bantuan</string>
     <string name="laporan_mp_direct">MP Direct</string>
     <string name="laporan_mp_indirect">MP Indirect</string>
     <string name="laporan_jkn_jam">JKN (Jam)</string>

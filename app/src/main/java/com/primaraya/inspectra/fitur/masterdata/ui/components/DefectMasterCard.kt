@@ -35,14 +35,14 @@ fun DefectMasterCard(
             Row(verticalAlignment = Alignment.Top) {
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color(0xFFFEF2F2),
+                    color = MaterialTheme.colorScheme.errorContainer,
                     modifier = Modifier.size(56.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.BugReport,
                             contentDescription = null,
-                            tint = Color(0xFFDC2626),
+                            tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(28.dp)
                         )
                     }
@@ -56,20 +56,20 @@ fun DefectMasterCard(
                             text = defect.nama_defect,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Black,
-                            color = Color(0xFF1E293B)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(Modifier.weight(1f))
                         IconButton(onClick = onEdit) {
                             Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(20.dp))
                         }
                         IconButton(onClick = onDelete) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFDC2626), modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                         }
                     }
                     Text(
                         text = "ID: ${defect.id_defect}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF64748B)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

@@ -35,7 +35,7 @@ fun RingkasanAtas(
         shape = RoundedCornerShape(24.dp),
         color = Color.White,
         shadowElevation = 2.dp,
-        border = BorderStroke(1.dp, Color(0xFFF1F5F9))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
             modifier = Modifier
@@ -44,16 +44,16 @@ fun RingkasanAtas(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            InfoColumn("Diperiksa", "$totalDiperiksa Pcs", Color(0xFF475569))
-            VerticalDivider(modifier = Modifier.height(30.dp), thickness = 1.dp, color = Color(0xFFF1F5F9))
-            InfoColumn("OK", "$totalOk Pcs", Color(0xFF16A34A))
-            VerticalDivider(modifier = Modifier.height(30.dp), thickness = 1.dp, color = Color(0xFFF1F5F9))
-            InfoColumn("NG", "$totalNg Pcs", Color(0xFFDC2626))
-            VerticalDivider(modifier = Modifier.height(30.dp), thickness = 1.dp, color = Color(0xFFF1F5F9))
+            InfoColumn("Diperiksa", "$totalDiperiksa Pcs", MaterialTheme.colorScheme.onSurfaceVariant)
+            VerticalDivider(modifier = Modifier.height(30.dp), thickness = 1.dp, color = MaterialTheme.colorScheme.surfaceVariant)
+            InfoColumn("OK", "$totalOk Pcs", MaterialTheme.colorScheme.tertiary)
+            VerticalDivider(modifier = Modifier.height(30.dp), thickness = 1.dp, color = MaterialTheme.colorScheme.surfaceVariant)
+            InfoColumn("NG", "$totalNg Pcs", MaterialTheme.colorScheme.error)
+            VerticalDivider(modifier = Modifier.height(30.dp), thickness = 1.dp, color = MaterialTheme.colorScheme.surfaceVariant)
             InfoColumn(
                 "Rasio NG",
                 String.format("%.1f%%", rasioNg),
-                if (adaKuantitasTidakValid) Color(0xFFDC2626) else Color(0xFFD97706)
+                if (adaKuantitasTidakValid) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary
             )
         }
     }
@@ -65,7 +65,7 @@ private fun InfoColumn(label: String, value: String, color: Color) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = Color(0xFF94A3B8),
+            color = MaterialTheme.colorScheme.outline,
             fontWeight = FontWeight.Bold,
             letterSpacing = 0.5.sp
         )
@@ -102,14 +102,14 @@ fun PreviewChecksheetDialog(
                 Text(
                     text = "Periksa kembali data sebelum disimpan ke server.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF64748B)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Surface(
-                    color = Color(0xFFF8FAFC),
+                    color = MaterialTheme.colorScheme.surface,
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -119,10 +119,10 @@ fun PreviewChecksheetDialog(
                             .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        DetailSummaryItem("Diperiksa", "${payload.totalDiperiksa}", Color(0xFF475569))
-                        DetailSummaryItem("OK", "${payload.totalOk}", Color(0xFF16A34A))
-                        DetailSummaryItem("NG", "${payload.totalNg}", Color(0xFFDC2626))
-                        DetailSummaryItem("Rasio", String.format("%.1f%%", payload.rasioNgGlobal), Color(0xFFD97706))
+                        DetailSummaryItem("Diperiksa", "${payload.totalDiperiksa}", MaterialTheme.colorScheme.onSurfaceVariant)
+                        DetailSummaryItem("OK", "${payload.totalOk}", MaterialTheme.colorScheme.tertiary)
+                        DetailSummaryItem("NG", "${payload.totalNg}", MaterialTheme.colorScheme.error)
+                        DetailSummaryItem("Rasio", String.format("%.1f%%", payload.rasioNgGlobal), MaterialTheme.colorScheme.secondary)
                     }
                 }
 
@@ -130,7 +130,7 @@ fun PreviewChecksheetDialog(
                     "Rincian Temuan per Part:",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1E293B)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Box(modifier = Modifier.heightIn(max = 300.dp)) {
@@ -138,7 +138,7 @@ fun PreviewChecksheetDialog(
                         items(payload.daftarPart) { part ->
                             Card(
                                 colors = CardDefaults.cardColors(containerColor = Color.White),
-                                border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {
@@ -147,13 +147,13 @@ fun PreviewChecksheetDialog(
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         Text(part.uniqNo, fontWeight = FontWeight.Black, style = MaterialTheme.typography.bodyMedium)
-                                        Text("${part.jumlahNg} NG", color = Color(0xFFDC2626), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                                        Text("${part.jumlahNg} NG", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
                                     }
                                     if (part.daftarDefectNg.isNotEmpty()) {
                                         Text(
                                             text = part.daftarDefectNg.joinToString { "${it.namaDefect} (${it.jumlahNg})" },
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = Color(0xFF64748B),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 2,
                                             overflow = TextOverflow.Ellipsis
                                         )
@@ -166,7 +166,7 @@ fun PreviewChecksheetDialog(
 
                 if (payload.daftarPart.any { it.jumlahNg > it.jumlahDiperiksa }) {
                     Surface(
-                        color = Color(0xFFFEF2F2),
+                        color = MaterialTheme.colorScheme.errorContainer,
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -174,11 +174,11 @@ fun PreviewChecksheetDialog(
                             modifier = Modifier.padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFDC2626), modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 "Peringatan: Ada jumlah NG yang tidak valid.",
-                                color = Color(0xFFDC2626),
+                                color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Bold
                             )
@@ -193,7 +193,7 @@ fun PreviewChecksheetDialog(
                 onClick = onConfirm,
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A365D))
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
                 if (sending) {
                     CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
@@ -209,7 +209,7 @@ fun PreviewChecksheetDialog(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
             ) {
-                Text("Batal", color = Color(0xFF64748B))
+                Text("Batal", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     )
@@ -218,18 +218,18 @@ fun PreviewChecksheetDialog(
 @Composable
 private fun DetailSummaryItem(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
         Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Black, color = color)
     }
 }
 
 @Composable
-private fun DetailRow(label: String, value: String, color: Color = Color(0xFF1E293B)) {
+private fun DetailRow(label: String, value: String, color: Color = MaterialTheme.colorScheme.onSurface) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF64748B))
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = color)
     }
 }

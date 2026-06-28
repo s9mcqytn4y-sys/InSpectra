@@ -30,7 +30,7 @@ class SupabaseLaporanRepository(
         val result = runNetworkCatching {
             driver.getList(
                 table = RemoteTable.ViewChecksheetPartPicker,
-                query = "tipe_proses=eq.$tipeProses",
+                query = "komoditas=eq.$tipeProses",
                 decode = { json.decodeFromString(ListSerializer(PartAcuan.serializer()), it) }
             )
         }

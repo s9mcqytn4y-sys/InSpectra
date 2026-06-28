@@ -26,6 +26,15 @@ import com.primaraya.inspectra.fitur.masterdata.domain.*
 import com.primaraya.inspectra.fitur.masterdata.ui.components.*
 import com.primaraya.inspectra.fitur.masterdata.ui.forms.*
 
+/**
+ * Layar utama untuk modul Data Induk (Master Data).
+ * Menggunakan pendekatan UDF (Unidirectional Data Flow) dengan MVI pattern.
+ * Layar ini merender grid adaptif untuk Part, Material, Supplier, dan Defect, 
+ * serta mendukung responsivitas untuk perangkat tablet (panel samping).
+ *
+ * @param onBackClick Callback yang dipanggil ketika tombol kembali ditekan.
+ * @param viewModel ViewModel yang mengelola state dan intent modul ini.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MasterDataScreen(
@@ -101,7 +110,7 @@ fun MasterDataScreen(
                         )
                     }
 
-                    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8FAFC))) {
+                    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
                         when (state.tabAktif) {
                             MasterDataContract.TabMasterData.PART -> AsyncList(
                                 data = state.parts,
@@ -234,6 +243,12 @@ fun MasterDataScreen(
     }
 }
 
+/**
+ * Menentukan apakah form tertentu harus ditampilkan di panel samping (Side Pane) pada tablet.
+ *
+ * @param form Objek dialog form aktif.
+ * @return True jika form mendukung tampilan side pane, False jika sebaliknya (modal penuh).
+ */
 private fun isSidePaneForm(form: MasterDataContract.DialogForm): Boolean {
     return form is MasterDataContract.DialogForm.FormPart ||
            form is MasterDataContract.DialogForm.FormMaterial ||
@@ -241,6 +256,12 @@ private fun isSidePaneForm(form: MasterDataContract.DialogForm): Boolean {
            form is MasterDataContract.DialogForm.FormDefect
 }
 
+/**
+ * Merender konten form berdasarkan tipe dialog yang sedang aktif.
+ *
+ * @param state State UI saat ini yang menyimpan data form aktif.
+ * @param viewModel ViewModel untuk meneruskan intent aksi form (simpan, tutup, ubah).
+ */
 @Composable
 private fun MasterDataFormContent(
     state: MasterDataContract.State,

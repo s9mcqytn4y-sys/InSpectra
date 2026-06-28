@@ -8,6 +8,7 @@ import com.primaraya.inspectra.fitur.laporan.domain.DetailLaporanDto
 import com.primaraya.inspectra.fitur.laporan.domain.LaporanRepository
 import com.primaraya.inspectra.fitur.laporan.domain.LaporanSubmitDto
 import kotlinx.collections.immutable.toPersistentList
+import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -72,7 +73,7 @@ class LaporanViewModel(
             } else {
                 selected.add(idPart)
             }
-            state.copy(selectedPartIds = selected)
+            state.copy(selectedPartIds = selected.toPersistentSet())
         }
     }
 

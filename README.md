@@ -2,16 +2,16 @@
 
 InSpectra adalah aplikasi Android tablet untuk sistem informasi Quality Control manufacturing. Dirancang khusus untuk efisiensi input data operasional di lapangan dengan arsitektur modern dan performa tinggi.
 
-Tujuan produk: menyediakan workspace QC yang rapi, operasional, dan siap tumbuh menjadi standar SaaS internal untuk input Lembar Periksa, Data Induk, riwayat inspeksi, analytics, dan tindak lanjut perbaikan kualitas.
+Tujuan produk: menyediakan workspace QC yang rapi, operasional, dan siap tumbuh menjadi standar SaaS internal untuk input Lembar Periksa, Data Induk, riwayat inspeksi, dan tindak lanjut perbaikan kualitas.
 
 ## Fitur Unggulan Elite 2026
 
+- **Input Hardening**: Form validasi yang ketat dan persisten (memastikan *atomicity* melalui RPC PostgREST Supabase) demi keandalan data 100%.
 - **Checksheet Elite Picker**: Alur pemilihan part cerdas dengan status kesiapan "SIAP_INPUT" dan validasi data acuan real-time.
 - **Dynamic Defect Sources**: Integrasi defect material otomatis ke dalam checksheet proses (Press/Sewing) berdasarkan mapping data induk.
 - **Supabase Media Storage**: Upload dan kelola gambar part langsung dari aplikasi menggunakan Supabase Storage.
-- **Advanced Cache Invalidation**: Sistem sinkronisasi berbasis versi (`m_data_revision`) dengan TTL cerdas untuk performa offline-first yang maksimal.
-- **Modern Splash & Home**: Implementasi Android 12 Splash Screen API dan Dashboard Workspace dengan ringkasan aktivitas harian.
-- **Responsive Tablet UX**: Desain "Elite" dengan kartu 24dp radius, visual weight yang seimbang, dan layout adaptif tablet.
+- **Modern Splash & Home**: Implementasi Android 12 Splash Screen API dan UI navigasi yang berfokus pada operasional.
+- **Responsive Tablet UX**: Desain "Elite Industrial Dark SaaS" dengan batas kontras yang jelas dan layout adaptif tablet.
 
 ## Stack Teknologi
 
@@ -73,4 +73,4 @@ Seluruh RPC submit (`rpc_submit_checksheet`, `rpc_submit_cutting_batch`) telah d
 Migration file terbaru tersedia di `supabase/migrations/`.
 
 ---
-© 2024 PT. Primaraya Graha Nusantara. All Rights Reserved.
+© 2026 PT. Primaraya Graha Nusantara. All Rights Reserved.

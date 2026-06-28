@@ -1,18 +1,19 @@
 package com.primaraya.inspectra.core.ui.component
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
+/**
+ * Nada status untuk badge dan indikator visual.
+ */
 enum class NadaStatusAplikasi {
     INFO,
     SUKSES,
@@ -20,6 +21,9 @@ enum class NadaStatusAplikasi {
     BAHAYA
 }
 
+/**
+ * Badge status visual yang mengikuti tema InSpectra.
+ */
 @Composable
 fun AppStatusBadge(
     label: String,
@@ -30,12 +34,12 @@ fun AppStatusBadge(
         NadaStatusAplikasi.INFO -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
         NadaStatusAplikasi.SUKSES -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
         NadaStatusAplikasi.PERINGATAN -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
-        NadaStatusAplikasi.BAHAYA -> MaterialTheme.colorScheme.error to MaterialTheme.colorScheme.onError
+        NadaStatusAplikasi.BAHAYA -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
     }
 
     Surface(
         modifier = modifier,
-        shape = MaterialTheme.shapes.small,
+        shape = MaterialTheme.shapes.extraSmall,
         color = colors.first,
         contentColor = colors.second
     ) {
@@ -48,6 +52,9 @@ fun AppStatusBadge(
     }
 }
 
+/**
+ * Tampilan empty state yang jujur dan bersih.
+ */
 @Composable
 fun AppEmptyState(
     title: String,
@@ -65,10 +72,10 @@ fun AppEmptyState(
         Icon(
             imageVector = Icons.Default.Inbox,
             contentDescription = null,
-            modifier = Modifier.size(64.dp),
+            modifier = Modifier.size(80.dp),
             tint = MaterialTheme.colorScheme.outlineVariant
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(20.dp))
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
@@ -82,12 +89,12 @@ fun AppEmptyState(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp)
         )
-        
+
         if (onRetry != null) {
             Spacer(Modifier.height(24.dp))
             Button(
                 onClick = onRetry,
-                shape = RoundedCornerShape(12.dp)
+                shape = MaterialTheme.shapes.medium
             ) {
                 Text("Coba Lagi")
             }
@@ -95,19 +102,35 @@ fun AppEmptyState(
     }
 }
 
+/**
+ * Indikator loading global.
+ */
 @Composable
 fun AppLoading(
     modifier: Modifier = Modifier,
-    color: Color = Color(0xFF1A365D)
+    label: String? = null
 ) {
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator(color = color)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            if (label != null) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 
+/**
+ * Dialog konfirmasi/informasi ramah.
+ */
 @Composable
 fun AppFriendlyDialog(
     title: String,
@@ -117,7 +140,7 @@ fun AppFriendlyDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, fontWeight = FontWeight.Black) },
+        title = { Text(title, fontWeight = FontWeight.Bold) },
         text = { Text(message) },
         confirmButton = {
             Button(onClick = onDismiss) {
