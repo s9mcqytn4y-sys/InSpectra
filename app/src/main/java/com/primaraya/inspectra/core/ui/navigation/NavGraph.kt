@@ -9,8 +9,8 @@ import androidx.navigation.toRoute
 import com.primaraya.inspectra.fitur.checksheet.domain.TipeProses
 import com.primaraya.inspectra.fitur.checksheet.ui.ChecksheetScreen
 import com.primaraya.inspectra.fitur.cutting.ui.CuttingScreen
+import com.primaraya.inspectra.fitur.checksheet.ui.MenuChecksheetScreen
 import com.primaraya.inspectra.fitur.dashboard.ui.DashboardScreen
-import com.primaraya.inspectra.fitur.dashboard.ui.MenuChecksheetScreen
 import com.primaraya.inspectra.fitur.masterdata.ui.MasterDataScreen
 import com.primaraya.inspectra.fitur.splash.SplashScreen
 

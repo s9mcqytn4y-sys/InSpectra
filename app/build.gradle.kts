@@ -126,4 +126,6 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.ktor.client.mock)
+    testImplementation(libs.kotlin.test)
 }

@@ -42,6 +42,8 @@ androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscree
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
+ktor-client-mock = { group = "io.ktor", name = "ktor-client-mock", version.ref = "ktor" }
+kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
 
 
 [plugins]

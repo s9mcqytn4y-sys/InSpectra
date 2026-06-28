@@ -1,13 +1,31 @@
-# .aiexclude
-# Ignored files for AI context and modifications
+# AI Agent Exclusion List
+# Prevent AI from modifying sensitive or irrelevant files
 
+# IDE & Personal State
+.idea/workspace.xml
+.idea/caches/
 local.properties
-.idea/
-.gradle/
+*.iml
+
+# Build Outputs
 build/
 app/build/
-*.iml
-*.keystore
-local-deployment-targets.xml
-*.xlsx
+.gradle/
+*.apk
+*.aab
+
+# Credentials & Secrets
 .env
+supabase/key.txt
+*.keystore
+*.jks
+
+# Data & Seed Files
+*.xlsx
+*.csv
+*.db
+*.sqlite
+
+# Logs
+*.log
+logcat.txt
