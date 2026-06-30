@@ -1,5 +1,6 @@
 package com.primaraya.inspectra.fitur.masterdata.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.*
@@ -29,7 +30,7 @@ fun DataIndukSearchBar(
         MasterDataContract.TabMasterData.DEFECT -> "Cari defect atau kategori"
     }
 
-    Column(modifier = modifier.padding(vertical = 12.dp)) {
+    Column(modifier = modifier.padding(vertical = 12.dp).background(MaterialTheme.colorScheme.surface)) {
         SearchBarElite(
             query = query,
             onQueryChange = onQueryChange,
@@ -37,14 +38,14 @@ fun DataIndukSearchBar(
             modifier = Modifier.padding(horizontal = 16.dp)
         )
 
-        if (tabAktif == MasterDataContract.TabMasterData.PART) {
-            Spacer(Modifier.height(12.dp))
-            
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
+        Spacer(Modifier.height(12.dp))
+        
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            if (tabAktif == MasterDataContract.TabMasterData.PART) {
                 items(FilterDataInduk.entries.toTypedArray(), key = { it.name }) { filter ->
                     FilterChip(
                         selected = filterAktif == filter,
@@ -57,9 +58,19 @@ fun DataIndukSearchBar(
                         },
                         shape = RoundedCornerShape(12.dp),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = Color.White
                         )
+                    )
+                }
+            } else {
+                // Generic Filter Chip for other tabs to keep UI consistent
+                item {
+                    FilterChip(
+                        selected = true,
+                        onClick = {},
+                        label = { Text("Semua Data", style = MaterialTheme.typography.labelSmall) },
+                        shape = RoundedCornerShape(12.dp)
                     )
                 }
             }

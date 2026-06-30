@@ -17,14 +17,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.primaraya.inspectra.core.common.AsyncData
-import com.primaraya.inspectra.core.ui.component.AppFriendlyDialog
-import com.primaraya.inspectra.core.ui.component.AppResponsiveContent
-import com.primaraya.inspectra.core.ui.component.InspectraFeedback
-import com.primaraya.inspectra.core.ui.component.ResponsiveFormHost
+import com.primaraya.inspectra.core.ui.component.*
 import com.primaraya.inspectra.core.ui.viewmodel.pabrikViewModelAplikasi
 import com.primaraya.inspectra.fitur.masterdata.domain.*
 import com.primaraya.inspectra.fitur.masterdata.ui.components.*
 import com.primaraya.inspectra.fitur.masterdata.ui.forms.*
+import androidx.compose.ui.zIndex
 
 /**
  * Layar utama untuk modul Data Induk (Master Data).
@@ -61,7 +59,11 @@ fun MasterDataScreen(
 
     AppResponsiveContent { isTablet, _ ->
         Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) },
+            snackbarHost = { 
+                SnackbarHost(snackbarHostState) { data ->
+                    InspectraEliteSnackbar(data)
+                }
+            },
             topBar = {
                 DataIndukTopBar(
                     tabAktif = state.tabAktif,
@@ -72,7 +74,7 @@ fun MasterDataScreen(
             floatingActionButton = {
                 val currentForm = state.dialogForm
                 if (!((isTablet && currentForm != null && isSidePaneForm(currentForm)))) {
-                    FloatingActionButton(
+                    ExtendedFloatingActionButton(
                         onClick = {
                             when (state.tabAktif) {
                                 MasterDataContract.TabMasterData.PART -> viewModel.onIntent(MasterDataContract.Intent.TambahPart)
@@ -81,14 +83,11 @@ fun MasterDataScreen(
                                 MasterDataContract.TabMasterData.DEFECT -> viewModel.onIntent(MasterDataContract.Intent.TambahDefect)
                             }
                         },
-                        containerColor = Color(0xFFD97706),
-                        contentColor = Color.White
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Tambah data"
-                        )
-                    }
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White,
+                        icon = { Icon(Icons.Default.Add, "Tambah") },
+                        text = { Text("Tambah Data") }
+                    )
                 }
             }
         ) { padding ->
@@ -121,20 +120,15 @@ fun MasterDataScreen(
                                     LazyVerticalGrid(
                                         columns = GridCells.Adaptive(minSize = 350.dp),
                                         contentPadding = PaddingValues(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                                     ) {
                                         items(list, key = { it.uniq_no }) { part ->
                                             PartMasterCard(
                                                 part = part,
-                                                detailState = state.partDetails[part.uniq_no] ?: MasterDataContract.PartRelationState(),
                                                 onEdit = { viewModel.onIntent(MasterDataContract.Intent.EditPart(part)) },
                                                 onDelete = { viewModel.onIntent(MasterDataContract.Intent.HapusPart(part)) },
-                                                onToggleDetail = { viewModel.onIntent(MasterDataContract.Intent.TogglePartDetail(part.uniq_no)) },
-                                                onAddDefect = { viewModel.onIntent(MasterDataContract.Intent.BukaPilihDefect(part.uniq_no)) },
-                                                onRemoveDefect = { relId -> viewModel.onIntent(MasterDataContract.Intent.HapusDefectDariPart(part.uniq_no, relId)) },
-                                                onAddMaterial = { viewModel.onIntent(MasterDataContract.Intent.BukaPilihMaterial(part.uniq_no)) },
-                                                onRemoveMaterial = { relId -> viewModel.onIntent(MasterDataContract.Intent.HapusMaterialDariPart(part.uniq_no, relId)) }
+                                                onShowDetail = { viewModel.onIntent(MasterDataContract.Intent.TampilDetailPart(part)) }
                                             )
                                         }
                                     }
@@ -149,18 +143,15 @@ fun MasterDataScreen(
                                     LazyVerticalGrid(
                                         columns = GridCells.Adaptive(minSize = 350.dp),
                                         contentPadding = PaddingValues(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                                     ) {
                                         items(list, key = { it.id ?: it.nama_material }) { mat ->
                                             MaterialMasterCard(
                                                 material = mat,
-                                                detailState = state.materialDetails[mat.id ?: ""] ?: MasterDataContract.MaterialRelationState(),
                                                 onEdit = { viewModel.onIntent(MasterDataContract.Intent.EditMaterial(mat)) },
                                                 onDelete = { viewModel.onIntent(MasterDataContract.Intent.HapusMaterial(mat)) },
-                                                onToggleDetail = { viewModel.onIntent(MasterDataContract.Intent.ToggleMaterialDetail(mat.id ?: "")) },
-                                                onAddDefect = { viewModel.onIntent(MasterDataContract.Intent.BukaPilihDefectUntukMaterial(mat.id ?: "")) },
-                                                onRemoveDefect = { relId -> viewModel.onIntent(MasterDataContract.Intent.HapusDefectDariMaterial(mat.id ?: "", relId)) }
+                                                onShowDetail = { viewModel.onIntent(MasterDataContract.Intent.TampilDetailMaterial(mat)) }
                                             )
                                         }
                                     }
@@ -175,14 +166,15 @@ fun MasterDataScreen(
                                     LazyVerticalGrid(
                                         columns = GridCells.Adaptive(minSize = 350.dp),
                                         contentPadding = PaddingValues(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                                     ) {
                                         items(list, key = { it.id ?: it.nama_supplier }) { supplier ->
                                             SupplierMasterCard(
                                                 supplier = supplier,
                                                 onEdit = { viewModel.onIntent(MasterDataContract.Intent.EditSupplier(supplier)) },
-                                                onDelete = { viewModel.onIntent(MasterDataContract.Intent.HapusSupplier(supplier)) }
+                                                onDelete = { viewModel.onIntent(MasterDataContract.Intent.HapusSupplier(supplier)) },
+                                                onShowDetail = { viewModel.onIntent(MasterDataContract.Intent.TampilDetailSupplier(supplier)) }
                                             )
                                         }
                                     }
@@ -197,14 +189,15 @@ fun MasterDataScreen(
                                     LazyVerticalGrid(
                                         columns = GridCells.Adaptive(minSize = 350.dp),
                                         contentPadding = PaddingValues(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                                     ) {
                                         items(list, key = { it.id_defect }) { defect ->
                                             DefectMasterCard(
                                                 defect = defect,
                                                 onEdit = { viewModel.onIntent(MasterDataContract.Intent.EditDefect(defect)) },
-                                                onDelete = { viewModel.onIntent(MasterDataContract.Intent.HapusDefect(defect)) }
+                                                onDelete = { viewModel.onIntent(MasterDataContract.Intent.HapusDefect(defect)) },
+                                                onShowDetail = { viewModel.onIntent(MasterDataContract.Intent.TampilDetailDefect(defect)) }
                                             )
                                         }
                                     }
@@ -348,6 +341,30 @@ private fun MasterDataFormContent(
                 }
             )
         }
+        is MasterDataContract.DialogForm.DetailPart -> PartDetailModal(
+            part = form.data,
+            relationState = state.partDetails[form.data.uniq_no] ?: MasterDataContract.PartRelationState(),
+            onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
+            onAddDefect = { viewModel.onIntent(MasterDataContract.Intent.BukaPilihDefect(form.data.uniq_no)) },
+            onRemoveDefect = { viewModel.onIntent(MasterDataContract.Intent.HapusDefectDariPart(form.data.uniq_no, it)) },
+            onAddMaterial = { viewModel.onIntent(MasterDataContract.Intent.BukaPilihMaterial(form.data.uniq_no)) },
+            onRemoveMaterial = { viewModel.onIntent(MasterDataContract.Intent.HapusMaterialDariPart(form.data.uniq_no, it)) }
+        )
+        is MasterDataContract.DialogForm.DetailMaterial -> MaterialDetailModal(
+            material = form.data,
+            relationState = state.materialDetails[form.data.id ?: ""] ?: MasterDataContract.MaterialRelationState(),
+            onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
+            onAddDefect = { viewModel.onIntent(MasterDataContract.Intent.BukaPilihDefectUntukMaterial(form.data.id ?: "")) },
+            onRemoveDefect = { viewModel.onIntent(MasterDataContract.Intent.HapusDefectDariMaterial(form.data.id ?: "", it)) }
+        )
+        is MasterDataContract.DialogForm.DetailSupplier -> SupplierDetailModal(
+            supplier = form.data,
+            onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) }
+        )
+        is MasterDataContract.DialogForm.DetailDefect -> DefectDetailModal(
+            defect = form.data,
+            onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) }
+        )
         else -> Unit
     }
 }

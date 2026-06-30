@@ -1,17 +1,17 @@
 <resources>
-    <string name="app_name">InSpectra</string>
-    <string name="checksheet_review_submit">Tinjau &amp; Kirim</string>
+    <string name="app_name">InSpectra Elite</string>
+    <string name="checksheet_review_submit">Review &amp; Submit</string>
     <string name="checksheet_add_other_defect">Tambah Jenis Defect Lain</string>
     <string name="checksheet_input_checked_qty">Input Jumlah Diperiksa</string>
     <string name="checksheet_ng_findings_list">Daftar Temuan NG</string>
-    <string name="dashboard_workspace_title">Workspace InSpectra</string>
+    <string name="dashboard_workspace_title">InSpectra Command Center</string>
     <string name="master_data_part_title">Master Data Part</string>
     <string name="btn_save">Simpan Data</string>
     <string name="btn_cancel">Batal</string>
     <string name="msg_save_success">Data berhasil disimpan.</string>
     <string name="msg_delete_confirm">Apakah Anda yakin ingin menghapus data ini?</string>
     <string name="dashboard_quick_summary">Ringkasan Hari Ini</string>
-    <string name="dashboard_workspace_subtitle">Quality Control Digital Mandate</string>
+    <string name="dashboard_workspace_subtitle">Industrial Quality Intelligence</string>
     <string name="card_action_edit">Ubah</string>
     <string name="card_action_delete">Hapus</string>
     

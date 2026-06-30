@@ -156,6 +156,22 @@ class MasterDataViewModel(
             is MasterDataContract.Intent.SimpanDefect -> simpanDefect(intent.data)
             is MasterDataContract.Intent.HapusDefect -> confirmHapus("Hapus Defect", "Defect akan dinonaktifkan.") { hapusDefect(intent.data) }
 
+            // Elite Modal Details
+            is MasterDataContract.Intent.TampilDetailPart -> {
+                _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.DetailPart(intent.data)) }
+                muatDetailPart(intent.data.uniq_no)
+            }
+            is MasterDataContract.Intent.TampilDetailMaterial -> {
+                _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.DetailMaterial(intent.data)) }
+                muatDetailMaterial(intent.data.id ?: "")
+            }
+            is MasterDataContract.Intent.TampilDetailSupplier -> {
+                _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.DetailSupplier(intent.data)) }
+            }
+            is MasterDataContract.Intent.TampilDetailDefect -> {
+                _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.DetailDefect(intent.data)) }
+            }
+
             // Relations
             is MasterDataContract.Intent.BukaPilihDefect -> bukaPilihDefectUntukPart(intent.uniqNo)
             is MasterDataContract.Intent.TambahDefectKePart -> tambahDefectKePart(intent.uniqNo, intent.idDefect)

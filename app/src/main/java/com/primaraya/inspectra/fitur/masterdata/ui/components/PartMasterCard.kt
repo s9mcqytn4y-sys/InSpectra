@@ -29,20 +29,19 @@ import com.primaraya.inspectra.fitur.masterdata.ui.components.AsyncRelationList
 @Composable
 fun PartMasterCard(
     part: MasterPartDto,
-    detailState: MasterDataContract.PartRelationState,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onToggleDetail: () -> Unit,
-    onAddDefect: () -> Unit,
-    onRemoveDefect: (String) -> Unit,
-    onAddMaterial: () -> Unit,
-    onRemoveMaterial: (String) -> Unit,
+    onShowDetail: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    ElevatedCard(
+    Card(
         shape = RoundedCornerShape(24.dp),
         modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
             Row(
@@ -53,7 +52,7 @@ fun PartMasterCard(
                 Box(
                     modifier = Modifier
                         .size(72.dp)
-                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp)),
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), RoundedCornerShape(16.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (part.lokasi_gambar != null) {
@@ -83,20 +82,23 @@ fun PartMasterCard(
                         Text(
                             text = part.uniq_no,
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Black
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(Modifier.weight(1f))
-                        IconButton(onClick = onEdit) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit")
-                        }
-                        IconButton(onClick = onDelete) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                        IconButton(onClick = onShowDetail) {
+                            Icon(
+                                imageVector = Icons.Default.Info, 
+                                contentDescription = "Detail",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
                     Text(
                         text = part.nama_part,
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "${part.part_no ?: "-"} · Model ${part.model ?: "-"}",
@@ -106,150 +108,36 @@ fun PartMasterCard(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AppStatusBadge(
-                    label = part.komoditas,
-                    nada = NadaStatusAplikasi.PERINGATAN
-                )
-                PartKesiapanBadge(part)
-            }
-
             Spacer(Modifier.height(16.dp))
-            
-            // Summary info
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), MaterialTheme.shapes.small)
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = "Material: ${part.jumlah_material ?: 0} jenis",
-                    style = MaterialTheme.typography.labelMedium
-                )
-                Text(
-                    text = "Defect Proses: ${part.jumlah_defect_proses ?: 0} jenis",
-                    style = MaterialTheme.typography.labelMedium
-                )
-                Text(
-                    text = "Defect Material: ${part.jumlah_defect_material ?: 0} jenis",
-                    style = MaterialTheme.typography.labelMedium
-                )
-            }
 
-            Spacer(Modifier.height(12.dp))
-
-            OutlinedButton(
-                onClick = onToggleDetail,
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.small
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(if (detailState.expanded) "Tutup Detail" else "Lihat Detail & Relasi")
-                Spacer(Modifier.width(8.dp))
-                Icon(
-                    imageVector = if (detailState.expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = null
-                )
-            }
-
-            AnimatedVisibility(visible = detailState.expanded) {
-                Column(modifier = Modifier.padding(top = 16.dp)) {
-                    HorizontalDivider()
-                    Spacer(Modifier.height(16.dp))
-
-                    Text(
-                        text = "Material Digunakan",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AppStatusBadge(
+                        label = part.komoditas,
+                        nada = NadaStatusAplikasi.INFO
                     )
-                    AsyncRelationList(detailState.materials) { materials ->
-                        if (materials.isEmpty()) {
-                            Text("Belum ada material tertaut", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
-                        }
-                        materials.forEach { rel ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(rel.label_material, style = MaterialTheme.typography.bodyMedium)
-                                }
-                                IconButton(onClick = { onRemoveMaterial(rel.id ?: "") }) {
-                                    Icon(Icons.Default.LinkOff, contentDescription = "Hapus", modifier = Modifier.size(20.dp))
-                                }
-                            }
-                        }
-                        TextButton(onClick = onAddMaterial) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Tambah Material")
-                        }
+                    PartKesiapanBadge(part)
+                }
+
+                Row {
+                    IconButton(onClick = onEdit) {
+                        Icon(
+                            imageVector = Icons.Default.Edit, 
+                            contentDescription = "Edit",
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
-
-                    Spacer(Modifier.height(16.dp))
-
-                    Text(
-                        text = "Defect Proses Part",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    AsyncRelationList(detailState.defects) { defects ->
-                        if (defects.isEmpty()) {
-                            Text("Belum ada defect proses tertaut", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
-                        }
-                        defects.forEach { rel ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            ) {
-                                Text(rel.id_defect, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                                IconButton(onClick = { onRemoveDefect(rel.id ?: "") }) {
-                                    Icon(Icons.Default.LinkOff, contentDescription = "Hapus", modifier = Modifier.size(20.dp))
-                                }
-                            }
-                        }
-                        TextButton(onClick = onAddDefect) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Tambah Defect Proses")
-                        }
-                    }
-
-                    Spacer(Modifier.height(16.dp))
-
-                    Text(
-                        text = "Defect dari Material",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    AsyncRelationList(detailState.effectiveDefects) { effectiveDefects ->
-                        val materialDefects = effectiveDefects.filter { it.sumber_defect == "MATERIAL" }
-                        if (materialDefects.isEmpty()) {
-                            if (part.jumlah_material == 0) {
-                                Text(
-                                    text = "Material belum terhubung. Defect material belum dapat digunakan.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.padding(vertical = 8.dp)
-                                )
-                            } else {
-                                Text("Belum ada defect dari material", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
-                            }
-                        }
-                        materialDefects.forEach { rel ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(rel.nama_defect ?: rel.id_defect, style = MaterialTheme.typography.bodyMedium)
-                                    Text("Sumber: ${rel.nama_material ?: "-"}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                                }
-                            }
-                        }
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteOutline, 
+                            contentDescription = "Hapus", 
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }
@@ -261,8 +149,9 @@ fun PartMasterCard(
 fun PartKesiapanBadge(part: MasterPartDto) {
     val (label, nada) = when {
         part.status_kelengkapan == "LENGKAP" -> "Siap Input" to NadaStatusAplikasi.SUKSES
-        part.butuh_review -> "Butuh Review" to NadaStatusAplikasi.BAHAYA
-        else -> "Belum Lengkap" to NadaStatusAplikasi.PERINGATAN
+        part.status_kelengkapan == "BELUM_LENGKAP" -> "Incomplete Data" to NadaStatusAplikasi.PERINGATAN
+        part.butuh_review -> "Audit Supplier" to NadaStatusAplikasi.BAHAYA
+        else -> "Data Parsial" to NadaStatusAplikasi.INFO
     }
     AppStatusBadge(label = label, nada = nada)
 }

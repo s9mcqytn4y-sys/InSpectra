@@ -129,18 +129,33 @@ data class RingkasanHarianCutting(
 )
 
 object ValidatorBatchCutting {
-    fun validasi(input: InputBatchCutting): ImmutableList<String> = buildList {
-        if (input.materialId.isBlank()) add("Material wajib dipilih.")
-        if ((input.ukuranCuttingAngka ?: 0.0) <= 0) add("Ukuran cutting harus lebih besar dari nol.")
-        if (input.qtyLayerOk.toIntOrNull() == null || input.qtyLayerOkAngka < 0) add("Jumlah layer OK tidak boleh negatif.")
-        if (input.qtyLayerNg.toIntOrNull() == null || input.qtyLayerNgAngka < 0) add("Jumlah layer NG tidak boleh negatif.")
-        if (input.totalLayer <= 0) add("Isi minimal satu layer OK atau NG.")
-        if (input.wastePanjangCm.toDoubleOrNull() == null || input.wastePanjangAngka < 0) add("Waste panjang tidak boleh negatif.")
-        if (input.qtyLayerNgAngka > 0 && input.daftarDefect.isEmpty()) add("Tambahkan minimal satu defect untuk layer NG.")
-        if (input.totalLayerDefect > input.qtyLayerNgAngka) add("Total layer defect tidak boleh melebihi layer NG.")
+    fun validasi(input: InputBatchCutting): ImmutableList<String> {
+        val errors = mutableListOf<String>()
+        if (input.materialId.isBlank()) errors.add("Material wajib dipilih.")
+        if ((input.ukuranCuttingAngka ?: 0.0) <= 0) errors.add("Ukuran cutting harus lebih besar dari nol.")
+        if (input.qtyLayerOk.toIntOrNull() == null || input.qtyLayerOkAngka < 0) errors.add("Jumlah layer OK tidak boleh negatif.")
+        if (input.qtyLayerNg.toIntOrNull() == null || input.qtyLayerNgAngka < 0) errors.add("Jumlah layer NG tidak boleh negatif.")
+        if (input.totalLayer <= 0) errors.add("Isi minimal satu layer OK atau NG.")
+        if (input.wastePanjangCm.toDoubleOrNull() == null || input.wastePanjangAngka < 0) errors.add("Waste panjang tidak boleh negatif.")
+        if (input.qtyLayerNgAngka > 0 && input.daftarDefect.isEmpty()) errors.add("Tambahkan minimal satu defect untuk layer NG.")
+        if (input.totalLayerDefect > input.qtyLayerNgAngka) errors.add("Total layer defect tidak boleh melebihi layer NG.")
         input.daftarDefect.forEach { defect ->
-            if (defect.jumlahLayerTerdampak <= 0) add("Jumlah layer defect harus lebih besar dari nol.")
-            if (defect.panjangDefectCm != null && defect.panjangDefectCm <= 0) add("Panjang defect harus lebih besar dari nol.")
+            if (defect.jumlahLayerTerdampak <= 0) errors.add("Jumlah layer ${defect.namaDefect} harus > 0.")
         }
-    }.toImmutableList()
+        return errors.toImmutableList()
+    }
+
+    /**
+     * Mengembalikan pesan error spesifik untuk field tertentu.
+     */
+    fun getErrorForField(field: String, input: InputBatchCutting): String? {
+        return when (field) {
+            "material" -> if (input.materialId.isBlank()) "Material wajib dipilih" else null
+            "ukuran" -> if ((input.ukuranCuttingAngka ?: 0.0) <= 0) "Ukuran harus > 0" else null
+            "qty_ok" -> if (input.qtyLayerOk.toIntOrNull() == null || input.qtyLayerOkAngka < 0) "Format tidak valid" else null
+            "qty_ng" -> if (input.qtyLayerNg.toIntOrNull() == null || input.qtyLayerNgAngka < 0) "Format tidak valid" else null
+            "waste" -> if (input.wastePanjangCm.toDoubleOrNull() == null || input.wastePanjangAngka < 0) "Format tidak valid" else null
+            else -> null
+        }
+    }
 }

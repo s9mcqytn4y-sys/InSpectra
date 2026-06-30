@@ -1,65 +1,72 @@
-# Implementation Plan - Project Hardening & UI/Schema Normalization
+# Implementation Plan - InSpectra Elite UI/UX Overhaul
 
-This plan addresses a comprehensive set of hardening tasks across the database, serialization, and UI layers.
+This plan outlines the massive transformation of InSpectra from a text-centric application to an elite, selection-centric, and highly responsive digital mandate.
 
 ## User Review Required
 
-- **Schema Normalization**: I will normalize all table and view names to use consistent prefixes (e.g., `m_` for master, `e_` for entry/transaction, `v_` for view).
-- **Serialization Hardening**: Every DTO will be audited to use `@SerialName` for every property to ensure resilience against naming changes and clear mapping to Supabase snake_case.
-- **UI detaling**: "Laporan Produksi" header (Tenaga Kerja, OT) will be moved to the bottom.
+- **Modal vs Dropdown**: We are switching from expandable cards to Modal Detail boxes for all Master Data.
+- **Cutting Logic**: Material specs will now automate the input field, and sizes will be selected via dropdown.
+- **Color Scheme**: Tunning white text readability and making Dark Mode more professional (Slate-based).
 
 ## Proposed Changes
 
-### 1. Supabase Schema Normalization & Audit
-- Normalize table names to consistent `m_` (master), `e_` (entry), and `v_` (view) prefixes.
-- Audit all `.sql` files to ensure snake_case naming throughout.
-- Ensure all views use `CASCADE` for safe recreation.
+### 1. Product Identity & Theme [Hardening]
 
-#### [NEW] [20260702000000_schema_normalization.sql](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/supabase/migrations/20260702000000_schema_normalization.sql)
-- Rename any inconsistent tables (if found during full audit).
-- Update all views to follow strict `v_` prefix.
+#### [Theme.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/core/ui/theme/Theme.kt)
+- Update color scheme to higher contrast Slate (900/950) for Dark Mode.
+- Improve white text visibility in Light Mode.
 
----
+#### [NEW] [InspectraEliteModal.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/core/ui/component/InspectraEliteModal.kt)
+- Reusable modal component with blur background (API 31+) and smooth entrance/exit motions.
 
-### 2. Serialization Hardening
-- Audit all DTOs and domain models used for Supabase interactions.
-- Add `@SerialName` to all properties.
-- Ensure `ignoreUnknownKeys = true` is set in the global Json configuration.
-
-#### [ChecksheetSubmitDto.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/checksheet/domain/ChecksheetSubmitDto.kt)
-- Add `@SerialName` to all fields.
-
-#### [LaporanDto.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/laporan/domain/LaporanDto.kt)
-- Add `@SerialName` to all remaining fields.
+#### [NEW] [InspectraEliteSnackbar.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/core/ui/component/InspectraEliteSnackbar.kt)
+- Custom Snackbar host that overrides native UI for better brand alignment.
 
 ---
 
-### 3. UI Detailing & Refactoring
-- Move `HeaderSection` (Tenaga Kerja, Overtime) to the bottom of the form in `LaporanProduksiScreen`.
-- Enhance the Snackbar/Toast positioning to be at the top of the z-index.
-- Detailing `InspectraMultiPickerSheet` with better theme harmonization.
+### 2. Master Data [Overhaul]
 
-#### [LaporanProduksiScreen.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/laporan/ui/LaporanProduksiScreen.kt)
-- Move `HeaderSection` after the list of parts.
+#### [MasterDataScreen.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/masterdata/ui/MasterDataScreen.kt)
+- Implement `DetailModal` for Part, Material, Supplier, and Defect.
+- Add Sort/Filter for "Komoditas".
+- Correct the logic for "Belum Lengkap" (incomplete relations) and "Unknown" badges.
 
-#### [AppComponents2.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/core/ui/component/AppComponents2.kt) (or where Snackbar is defined)
-- Ensure Snackbar is properly positioned.
+#### [MaterialMasterCard.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/masterdata/ui/components/MaterialMasterCard.kt)
+- Remove `AnimatedVisibility` expansion.
+- Add "Info/Detail" icon button to trigger Modal.
 
 ---
 
-### 4. Performance & Logging Fixes
-- Address "Skipped frames" by moving any heavy parsing or data manipulation to `Dispatchers.Default/IO`.
-- Investigate the `vold` error (likely related to Android 15 target SDK or emulator specific storage issues).
+### 3. Cutting Process [Hardening]
+
+#### [CuttingScreen.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/cutting/ui/CuttingScreen.kt)
+- Automate "Spesifikasi Material" text field based on selected material.
+- Change "Ukuran Cutting" from manual input to priority dropdown (with manual override option).
+- Implement inline field errors instead of summary list.
+
+#### [CuttingViewModel.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/cutting/ui/CuttingViewModel.kt)
+- Improve validation logic to trigger per-field error states.
+- Debug and fix Supabase submission failures (Audit RPC permissions).
+
+---
+
+### 4. Data Consistency (Checksheet)
+
+#### [DataAcuanChecksheet.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/checksheet/domain/DataAcuanChecksheet.kt)
+- Populate missing material defects for Press parts.
+- Update all composite part/material relations based on provided reference images.
 
 ---
 
 ## Verification Plan
 
 ### Automated Tests
-- Run all unit tests: `.\gradlew testDebugUnitTest`
-- Run build to check for compilation errors: `.\gradlew assembleDebug`
+- Update `LaporanViewModelTest` and `ChecksheetViewModelTest` to match new validation flows.
+- Run: `.\gradlew :app:testDebugUnitTest`
 
 ### Manual Verification
-- Deploy to emulator and test the full flow of "Laporan Produksi".
-- Verify UI Detailing and snackbar visibility.
-- Verify Supabase data persistence through the updated serialization.
+- Deploy to tablet and verify:
+    - Detail Modals look & feel (Blur, Smoothness).
+    - Cutting form automation.
+    - Master Data filtering.
+    - Data sync consistency between Checksheet and Laporan.

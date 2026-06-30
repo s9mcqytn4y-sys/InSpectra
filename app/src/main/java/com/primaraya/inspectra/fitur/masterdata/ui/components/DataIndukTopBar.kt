@@ -21,8 +21,8 @@ fun DataIndukTopBar(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.primary,
-        contentColor = Color.White,
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
         modifier = modifier.fillMaxWidth()
     ) {
         Column {
@@ -32,38 +32,41 @@ fun DataIndukTopBar(
                         Text(
                             text = "Data Induk",
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Black
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Kelola referensi QC aktif",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack, 
+                            contentDescription = "Kembali",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
+                    containerColor = Color.Transparent
                 )
             )
 
-            ScrollableTabRow(
+            TabRow(
                 selectedTabIndex = tabAktif.ordinal,
                 containerColor = Color.Transparent,
-                contentColor = Color.White,
-                edgePadding = 16.dp,
-                divider = {},
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                divider = { HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant) },
                 indicator = { tabPositions ->
                     if (tabAktif.ordinal < tabPositions.size) {
                         TabRowDefaults.SecondaryIndicator(
                             Modifier.tabIndicatorOffset(tabPositions[tabAktif.ordinal]),
-                            color = Color(0xFFD97706)
+                            color = MaterialTheme.colorScheme.primary,
+                            height = 3.dp
                         )
                     }
                 }
@@ -75,7 +78,8 @@ fun DataIndukTopBar(
                         text = {
                             Text(
                                 text = tab.name.lowercase().capitalize(),
-                                style = MaterialTheme.typography.titleSmall
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = if (tabAktif == tab) FontWeight.Bold else FontWeight.Normal
                             )
                         }
                     )

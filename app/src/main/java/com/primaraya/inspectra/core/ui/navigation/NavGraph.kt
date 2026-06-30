@@ -54,7 +54,11 @@ fun AppNavGraph(
         }
 
         composable<Screen.Dashboard> {
-            DashboardScreen()
+            DashboardScreen(
+                onChecksheetClick = { navController.navigate(Screen.MenuChecksheet) },
+                onLaporanClick = { navController.navigate(Screen.MenuLaporan) },
+                onMasterDataClick = { navController.navigate(Screen.MasterData) }
+            )
         }
 
         composable<Screen.MenuChecksheet> {

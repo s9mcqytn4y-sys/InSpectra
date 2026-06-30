@@ -90,6 +90,12 @@ object MasterDataContract {
         data class SimpanDefect(val data: DefectFormState) : Intent
         data class HapusDefect(val data: MasterDefectDto) : Intent
 
+        // Detail View (Elite Modal)
+        data class TampilDetailPart(val data: MasterPartDto) : Intent
+        data class TampilDetailMaterial(val data: MasterMaterialDto) : Intent
+        data class TampilDetailSupplier(val data: MasterSupplierDto) : Intent
+        data class TampilDetailDefect(val data: MasterDefectDto) : Intent
+
         // Relations - Defect
         data class BukaPilihDefect(val uniqNo: String) : Intent
         data class TambahDefectKePart(val uniqNo: String, val idDefect: String) : Intent
@@ -131,5 +137,11 @@ object MasterDataContract {
         data class PilihDefectUntukMaterial(val materialId: String) : DialogForm
         data class PilihSupplier(val context: String) : DialogForm
         data class KonfirmasiHapus(val judul: String, val pesan: String, val onConfirm: () -> Unit) : DialogForm
+        
+        // Elite Modal Details
+        data class DetailPart(val data: MasterPartDto) : DialogForm
+        data class DetailMaterial(val data: MasterMaterialDto) : DialogForm
+        data class DetailSupplier(val data: MasterSupplierDto) : DialogForm
+        data class DetailDefect(val data: MasterDefectDto) : DialogForm
     }
 }
