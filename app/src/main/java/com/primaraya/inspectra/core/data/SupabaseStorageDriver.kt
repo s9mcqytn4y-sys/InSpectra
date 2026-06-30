@@ -1,14 +1,14 @@
 package com.primaraya.inspectra.core.data
 
-import com.primaraya.inspectra.BuildConfig
 import com.primaraya.inspectra.core.network.InspectraHttpClient
+import com.primaraya.inspectra.BuildConfig
 import io.ktor.client.request.*
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.*
 import java.io.File
 
 /**
- * Driver untuk interaksi dengan Supabase Storage.
+ * Driver untuk berinteraksi dengan Supabase Storage API.
  */
 class SupabaseStorageDriver {
 
@@ -17,50 +17,50 @@ class SupabaseStorageDriver {
         .removeSurrounding("\"")
         .trimEnd('/')
 
-    private val client = InspectraHttpClient.client
-
-    private fun checkQuotaLimits(status: HttpStatusCode) {
-        if (status == HttpStatusCode.TooManyRequests || status == HttpStatusCode.ServiceUnavailable) {
-            throw DatabaseDriverException(
-                "Sistem sedang sibuk karena batas penggunaan gratis. Mohon coba beberapa saat lagi.",
-                status.value.toString()
-            )
-        }
-    }
+    private val storageUrl = "$baseUrl/storage/v1"
 
     /**
-     * Upload file ke bucket tertentu.
-     * Mengembalikan URL publik jika berhasil.
+     * Upload file ke bucket Supabase.
+     * Mengembalikan URL publik file jika berhasil.
      */
     suspend fun uploadFile(
         bucket: String,
         path: String,
-        file: File,
-        contentType: String = "image/jpeg"
+        file: File
     ): String {
-        val response = client.post("$baseUrl/storage/v1/object/$bucket/$path") {
+        val url = "$storageUrl/object/$bucket/$path"
+        
+        val response = InspectraHttpClient.client.post(url) {
             header("x-upsert", "true")
             setBody(file.readBytes())
-            contentType(ContentType.parse(contentType))
+            contentType(ContentType.Image.JPEG)
         }
 
         if (!response.status.isSuccess()) {
-            checkQuotaLimits(response.status)
-            val error = response.bodyAsText()
-            throw Exception("Gagal upload file: $error")
+            val errorBody = response.bodyAsText()
+            handleStorageError(response.status, errorBody)
         }
 
-        // Supabase Public URL Pattern
         return "$baseUrl/storage/v1/object/public/$bucket/$path"
     }
 
     suspend fun deleteFile(bucket: String, path: String) {
-        val response = client.delete("$baseUrl/storage/v1/object/$bucket/$path")
+        val url = "$storageUrl/object/$bucket/$path"
+        val response = InspectraHttpClient.client.delete(url)
         
-        if (!response.status.isSuccess() && response.status != HttpStatusCode.NotFound) {
-            checkQuotaLimits(response.status)
-            val error = response.bodyAsText()
-            throw Exception("Gagal hapus file: $error")
+        if (!response.status.isSuccess()) {
+            val errorBody = response.bodyAsText()
+            handleStorageError(response.status, errorBody)
         }
+    }
+
+    private fun handleStorageError(status: HttpStatusCode, body: String) {
+        if (status == HttpStatusCode.TooManyRequests || status == HttpStatusCode.ServiceUnavailable) {
+            throw DatabaseDriverException(
+                message = "Gagal memproses media karena batas penggunaan gratis Supabase terlampaui (429/503).",
+                code = status.value.toString()
+            )
+        }
+        throw Exception("Gagal berinteraksi dengan Storage: $body")
     }
 }

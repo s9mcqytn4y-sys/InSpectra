@@ -20,7 +20,7 @@ fun InspectraEliteSnackbar(
     Snackbar(
         modifier = modifier.padding(12.dp),
         action = snackbarData.visuals.actionLabel?.let { actionLabel ->
-            @Composable {
+            {
                 TextButton(
                     onClick = { snackbarData.performAction() }
                 ) {

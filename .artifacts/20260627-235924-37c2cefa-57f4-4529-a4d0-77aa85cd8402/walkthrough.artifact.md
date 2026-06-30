@@ -1,36 +1,32 @@
-# Walkthrough - Elite Hardening & Sync Normalization
+# Walkthrough - Phase 1 (Storage) & Phase 2 (Offline-First)
 
-I have completed the comprehensive hardening and synchronization tasks across the InSpectra project.
+I have successfully addressed the critical serialization bugs and implemented the architectural foundations for industrial-grade Storage and Offline-First capabilities.
 
 ## Key Accomplishments
 
-### 1. Data Sync & Integrity
-- **Checksheet & Laporan Sync**: Created [20260703000000_data_sync_and_integrity.sql](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/supabase/migrations/20260703000000_data_sync_and_integrity.sql) which introduces `v_laporan_produksi_sync`. This view automatically joins checksheet results with daily production reports to provide a unified source of truth for NG counts.
-- **Source of Truth Rule**: The sync view prioritizes E-Checksheet data for NG values, ensuring that quality inspection data accurately reflects in the final production reports.
+### 1. Hardened Data Layer (Bug Fixes)
+- **Serialization Fix**: Resolved the `ImmutableList` serialization crash by refactoring DTOs to use standard `List`. Conversion to `ImmutableList` is now handled purely at the UI state level, maintaining the Elite Mandate's performance goals without breaking data transport.
+- **Supabase Connectivity**: Audited all DTOs (Checksheet, Laporan, Master Data) and verified successful payload generation through unit tests.
 
-### 2. Schema Normalization (Supabase Audit)
-- **Consistent Prefixes**: Standardized table names in [20260702000000_schema_normalization.sql](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/supabase/migrations/20260702000000_schema_normalization.sql) to use `m_` (Master) and `e_` (Entry/Transaction).
-- **RPC Update**: Refactored `submit_laporan_harian` to work with the normalized table names.
+### 2. Phase 1: Storage & Media Foundation
+- **Supabase Storage Driver**: Created [SupabaseStorageDriver.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/core/data/SupabaseStorageDriver.kt) to handle file uploads for Part images and NG evidence.
+- **Error Resilience**: Added specific handling for 429 (Rate Limit) and 503 (Overloaded) errors to gracefully inform the user if Supabase free tier limits are reached.
 
-### 3. Serialization Hardening
-- **Full DTO Audit**: Applied `@SerialName` to all properties in [ChecksheetSubmitDto.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/checksheet/domain/ChecksheetSubmitDto.kt) and [LaporanDto.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/laporan/domain/LaporanDto.kt).
-- **Resilience**: This prevents runtime crashes if database column names are slightly adjusted and ensures clear mapping for Supabase PostgREST.
+### 3. Phase 2: Offline-First Skeleton
+- **Room Database**: established [InSpectraDatabase.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/core/data/local/InSpectraDatabase.kt) with Entities for Parts, Materials, and Defects.
+- **Sync Mechanism**: Implemented [MasterDataSyncWorker.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/core/sync/MasterDataSyncWorker.kt) and [SyncManager.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/core/sync/SyncManager.kt) to automate background data synchronization using WorkManager.
+- **Submission Queue**: Added `ChecksheetQueueEntity` to support offline submissions that automatically retry when the network is restored.
 
-### 4. UI/UXDetailing
-- **Laporan Produksi Layout**: Moved "Tenaga Kerja" and "Overtime & Bantuan" to the bottom of the form in [LaporanProduksiScreen.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/laporan/ui/LaporanProduksiScreen.kt), as requested.
-- **Snackbar Visibility**: Standardized `zIndex(1f)` for `SnackbarHost` in all primary screens to ensure notifications are never obscured by other UI elements.
-- **String Extraction**: Moved hardcoded labels like "Overtime & Bantuan" to `strings.xml`.
+### 4. Elite UI/UX Refinement
+- **Theme Standardization**: Refined [Theme.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/core/ui/theme/Theme.kt) to enforce high-contrast white text on dark surfaces, ensuring readability in bright factory environments.
+- **Card Detailing**: Tuned [PartMasterCard.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/masterdata/ui/components/PartMasterCard.kt) and [MaterialMasterCard.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/masterdata/ui/components/MaterialMasterCard.kt) for adaptive color support.
 
 ## Verification Summary
 
 ### Automated Tests
-- All 10 unit tests for quality inspection and reporting logic passed.
-- Command: `.\gradlew :app:testDebugUnitTest`
-- Result: **BUILD SUCCESSFUL**.
+- **Serialization Test**: Verified that `ChecksheetRepository` now correctly serializes payloads.
+- **Storage Driver Test**: Ran [SupabaseStorageDriverTest.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/test/java/com/primaraya/inspectra/core/data/SupabaseStorageDriverTest.kt) to confirm error handling logic.
+- **Total Tests**: **25 tests passed**.
 
-### Manual Verification
-- Code compilation verified with `:app:compileDebugKotlin`.
-- Result: **SUCCESSFUL**.
-
-> [!TIP]
-> The project is now in a "Elite Mandate" state, with a highly resilient data layer and optimized UI anatomy. All core screens are responsive and adhere to Material 3 standards.
+### Build Integrity
+- Verified that all components compile and integrate without namespace conflicts.

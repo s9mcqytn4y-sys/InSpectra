@@ -106,7 +106,8 @@ fun MaterialMasterCard(
                         Icon(
                             imageVector = Icons.Default.Edit, 
                             contentDescription = "Edit",
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     IconButton(onClick = onDelete) {

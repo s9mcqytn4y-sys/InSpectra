@@ -43,11 +43,11 @@ data class SlotNg(
 
 @Serializable
 data class InputDefect(
-    val idDefect: String,
-    val namaDefect: String,
-    val kategori: KategoriDefect,
-    val jumlahNg: Int = 0,
-    val detailSlot: ImmutableList<SlotNg> = persistentListOf()
+    @SerialName("id_defect") val idDefect: String,
+    @SerialName("nama_defect") val namaDefect: String,
+    @SerialName("kategori") val kategori: KategoriDefect,
+    @SerialName("jumlah_ng") val jumlahNg: Int = 0,
+    @SerialName("detail_slot") val detailSlot: List<SlotNg> = emptyList()
 ) {
     val totalNgDariSlot: Int get() = detailSlot.sumOf { it.jumlah }
     val slotMatch: Boolean get() = detailSlot.isEmpty() || totalNgDariSlot == jumlahNg
@@ -136,26 +136,26 @@ data class PartPickerItem(
 
 @Serializable
 data class PayloadChecksheet(
-    val versiPayload: String = "fase-mvi-supabase",
-    val tipeProses: String,
-    val dibuatPadaMillis: Long,
-    val totalDiperiksa: Int,
-    val totalOk: Int,
-    val totalNg: Int,
-    val rasioNgGlobal: Float,
-    val daftarPart: List<PayloadPartDiperiksa>
+    @SerialName("versi_payload") val versiPayload: String = "fase-mvi-supabase",
+    @SerialName("tipe_proses") val tipeProses: String,
+    @SerialName("dibuat_pada_millis") val dibuatPadaMillis: Long,
+    @SerialName("total_diperiksa") val totalDiperiksa: Int,
+    @SerialName("total_ok") val totalOk: Int,
+    @SerialName("total_ng") val totalNg: Int,
+    @SerialName("rasio_ng_global") val rasioNgGlobal: Float,
+    @SerialName("daftar_part") val daftarPart: List<PayloadPartDiperiksa>
 )
 
 @Serializable
 data class PayloadPartDiperiksa(
-    val uniqNo: String,
-    val nomorPart: String?,
-    val namaPart: String,
-    val komoditas: String,
-    val jumlahDiperiksa: Int,
-    val jumlahOk: Int,
-    val jumlahNg: Int,
-    val rasioNg: Float,
-    val daftarMaterial: List<String> = emptyList(),
-    val daftarDefectNg: List<InputDefect>
+    @SerialName("uniq_no") val uniqNo: String,
+    @SerialName("nomor_part") val nomorPart: String?,
+    @SerialName("nama_part") val namaPart: String,
+    @SerialName("komoditas") val komoditas: String,
+    @SerialName("jumlah_diperiksa") val jumlahDiperiksa: Int,
+    @SerialName("jumlah_ok") val jumlahOk: Int,
+    @SerialName("jumlah_ng") val jumlahNg: Int,
+    @SerialName("rasio_ng") val rasioNg: Float,
+    @SerialName("daftar_material") val daftarMaterial: List<String> = emptyList(),
+    @SerialName("daftar_defect_ng") val daftarDefectNg: List<InputDefect>
 )

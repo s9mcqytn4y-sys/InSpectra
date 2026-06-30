@@ -1,72 +1,65 @@
-# Implementation Plan - InSpectra Elite UI/UX Overhaul
+# Implementation Plan - Phase 1 & 2 + Massive Elite UI/UX Hardening
 
-This plan outlines the massive transformation of InSpectra from a text-centric application to an elite, selection-centric, and highly responsive digital mandate.
+This plan covers the implementation of Storage (Phase 1), Offline-First (Phase 2), and a comprehensive cleanup of serialization and UI/UX issues across InSpectra.
 
 ## User Review Required
 
-- **Modal vs Dropdown**: We are switching from expandable cards to Modal Detail boxes for all Master Data.
-- **Cutting Logic**: Material specs will now automate the input field, and sizes will be selected via dropdown.
-- **Color Scheme**: Tunning white text readability and making Dark Mode more professional (Slate-based).
+- **Data Migration**: Applying the new material specs to `DataAcuanChecksheet.kt` and Supabase seed.
+- **Permission Requests**: Adding Camera and Storage permissions to `AndroidManifest.xml`.
+- **Theme Standardization**: Using Material 3 `surfaceContainer` variants for card backgrounds.
 
 ## Proposed Changes
 
-### 1. Product Identity & Theme [Hardening]
+### 1. Data Integrity & Serialization [Hardening]
 
-#### [Theme.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/core/ui/theme/Theme.kt)
-- Update color scheme to higher contrast Slate (900/950) for Dark Mode.
-- Improve white text visibility in Light Mode.
+#### [ChecksheetModels.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/checksheet/domain/ChecksheetModels.kt)
+- Convert `ImmutableList` to `List` in all `@Serializable` DTOs (e.g., `InputDefect`, `PayloadChecksheet`) to fix submission crashes.
+- Convert back to `ImmutableList` only at the UI state level.
 
-#### [NEW] [InspectraEliteModal.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/core/ui/component/InspectraEliteModal.kt)
-- Reusable modal component with blur background (API 31+) and smooth entrance/exit motions.
-
-#### [NEW] [InspectraEliteSnackbar.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/core/ui/component/InspectraEliteSnackbar.kt)
-- Custom Snackbar host that overrides native UI for better brand alignment.
+#### [MasterDataModels.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/masterdata/domain/MasterDataModels.kt)
+- Add `@SerialName` to every field in every DTO for resilient Supabase mapping.
+- Update `MasterPartDto` to include the logic for "Siap Input" vs "Incomplete Data".
 
 ---
 
-### 2. Master Data [Overhaul]
+### 2. Elite UI/UX Overhaul [Master Data]
 
 #### [MasterDataScreen.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/masterdata/ui/MasterDataScreen.kt)
-- Implement `DetailModal` for Part, Material, Supplier, and Defect.
-- Add Sort/Filter for "Komoditas".
-- Correct the logic for "Belum Lengkap" (incomplete relations) and "Unknown" badges.
+- Implement high-fidelity **Modal Details** with background blur (API 31+).
+- Replace card expansion with modal trigger icon.
+- Standardize colors to adapt to Light/Dark mode with high legibility.
 
-#### [MaterialMasterCard.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/masterdata/ui/components/MaterialMasterCard.kt)
-- Remove `AnimatedVisibility` expansion.
-- Add "Info/Detail" icon button to trigger Modal.
+#### [DataIndukTopBar.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/masterdata/ui/components/DataIndukTopBar.kt)
+- Refine TopBar and Tab anatomy for better contrast.
 
 ---
 
-### 3. Cutting Process [Hardening]
+### 3. Cutting Process [Elite Automation]
 
 #### [CuttingScreen.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/cutting/ui/CuttingScreen.kt)
-- Automate "Spesifikasi Material" text field based on selected material.
-- Change "Ukuran Cutting" from manual input to priority dropdown (with manual override option).
-- Implement inline field errors instead of summary list.
-
-#### [CuttingViewModel.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/cutting/ui/CuttingViewModel.kt)
-- Improve validation logic to trigger per-field error states.
-- Debug and fix Supabase submission failures (Audit RPC permissions).
+- Automate "Spesifikasi Material" based on selection.
+- Implement inline field errors for immediate validation feedback.
+- Change "Ukuran Cutting" to a dropdown-first selection.
 
 ---
 
-### 4. Data Consistency (Checksheet)
+### 4. Phase 1 & 2 [Industrial Foundation]
 
-#### [DataAcuanChecksheet.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/fitur/checksheet/domain/DataAcuanChecksheet.kt)
-- Populate missing material defects for Press parts.
-- Update all composite part/material relations based on provided reference images.
+#### [SupabaseStorageDriver.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/core/data/SupabaseStorageDriver.kt)
+- Full implementation of `uploadFile` with status 429/503 handling.
+
+#### [InSpectraDatabase.kt](file:///C:/Users/Acer/AndroidStudioProjects/InSpectra/app/src/main/java/com/primaraya/inspectra/core/data/local/InSpectraDatabase.kt)
+- Setup full Room entities for offline caching and submission queuing.
 
 ---
 
 ## Verification Plan
 
 ### Automated Tests
-- Update `LaporanViewModelTest` and `ChecksheetViewModelTest` to match new validation flows.
-- Run: `.\gradlew :app:testDebugUnitTest`
+- Run updated `LaporanViewModelTest` and `ChecksheetViewModelTest`.
+- Run build to verify R8/ProGuard won't break serialization.
 
 ### Manual Verification
-- Deploy to tablet and verify:
-    - Detail Modals look & feel (Blur, Smoothness).
-    - Cutting form automation.
-    - Master Data filtering.
-    - Data sync consistency between Checksheet and Laporan.
+- Verify submission of Checksheet and Laporan on Tablet.
+- Verify Modal detailing on all Master Data tabs.
+- Verify theme adaptation (Dark/Light) across all primary screens.

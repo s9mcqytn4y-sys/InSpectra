@@ -14,6 +14,7 @@ import kotlinx.serialization.json.Json
 
 class SupabaseChecksheetRepository(
     private val driver: DatabaseDriver = SupabasePgRestDriver(),
+    private val storageDriver: com.primaraya.inspectra.core.data.SupabaseStorageDriver = com.primaraya.inspectra.core.data.SupabaseStorageDriver(),
     private val dispatchers: CoroutineDispatchersProvider = DefaultDispatchersProvider
 ) : ChecksheetRepository {
 
@@ -32,9 +33,20 @@ class SupabaseChecksheetRepository(
                 "Cutting harus dikirim melalui form Cutting."
             }
 
+            // Convert UI list back to standard list for serialization fix
+            val serializablePayload = payload.copy(
+                daftarPart = payload.daftarPart.map { p ->
+                    p.copy(
+                        daftarDefectNg = p.daftarDefectNg.map { d ->
+                            d.copy(detailSlot = d.detailSlot.toList())
+                        }
+                    )
+                }
+            )
+
             val resultId = driver.rpc(
                 functionName = "rpc_submit_checksheet",
-                body = payload,
+                body = serializablePayload,
                 encode = { json.encodeToString(PayloadChecksheet.serializer(), it) },
                 decode = { it.trim().removeSurrounding("\"") }
             )

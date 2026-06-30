@@ -4,43 +4,39 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.primaraya.inspectra.core.data.local.dao.ChecksheetQueueDao
-import com.primaraya.inspectra.core.data.local.dao.MaterialDao
-import com.primaraya.inspectra.core.data.local.dao.PartDao
-import com.primaraya.inspectra.core.data.local.entity.ChecksheetQueueEntity
-import com.primaraya.inspectra.core.data.local.entity.MaterialEntity
-import com.primaraya.inspectra.core.data.local.entity.PartEntity
+import com.primaraya.inspectra.core.data.local.entity.*
+import com.primaraya.inspectra.core.data.local.dao.*
 
 @Database(
     entities = [
-        PartEntity::class,
-        MaterialEntity::class,
+        PartEntity::class, 
+        MaterialEntity::class, 
+        DefectEntity::class,
         ChecksheetQueueEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
-abstract class InspectraDatabase : RoomDatabase() {
-    abstract fun partDao(): PartDao
-    abstract fun materialDao(): MaterialDao
+abstract class InSpectraDatabase : RoomDatabase() {
+    abstract fun masterDao(): MasterDao
     abstract fun checksheetQueueDao(): ChecksheetQueueDao
 
     companion object {
         @Volatile
-        private var INSTANCE: InspectraDatabase? = null
+        private var INSTANCE: InSpectraDatabase? = null
 
-        fun getDatabase(context: Context): InspectraDatabase {
+        fun getDatabase(context: Context): InSpectraDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
-                    InspectraDatabase::class.java,
-                    "inspectra_database"
-                )
-                .fallbackToDestructiveMigration()
-                .build()
+                    InSpectraDatabase::class.java,
+                    "inspectra_db"
+                ).fallbackToDestructiveMigration().build()
                 INSTANCE = instance
                 instance
             }
         }
     }
 }
+
+typealias InspectraDatabase = InSpectraDatabase
