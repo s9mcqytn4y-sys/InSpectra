@@ -18,6 +18,16 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.serialization.json.Json
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.Constraints
+import androidx.work.NetworkType
+import com.primaraya.inspectra.core.data.local.InspectraDatabase
+import com.primaraya.inspectra.core.data.local.entity.ChecksheetQueueEntity
+import com.primaraya.inspectra.core.data.worker.SubmitChecksheetWorker
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
@@ -37,17 +47,21 @@ class ChecksheetMviViewModel(
     val effect: SharedFlow<ChecksheetContract.Effect> = _effect.asSharedFlow()
 
     private var loadJob: Job? = null
-    
+
     // Takt Time tracking
     private var startTimeMillis: Long = 0L
-    
+
+    private val db = InspectraDatabase.getDatabase(application)
+    private val queueDao = db.checksheetQueueDao()
+    private val json = Json { ignoreUnknownKeys = true }
+
     init {
         // Search Debouncing: Hanya filter picker saat pencarian stabil (300ms)
         _state.map { it.pencarian }
             .distinctUntilChanged()
             .debounce(300)
             .onEach { query ->
-                // Jika butuh trigger reload server bisa di sini, 
+                // Jika butuh trigger reload server bisa di sini,
                 // tapi saat ini filter dilakukan di UI State (pickerFiltered).
             }
             .launchIn(viewModelScope)
@@ -60,14 +74,14 @@ class ChecksheetMviViewModel(
             is ChecksheetContract.Intent.PilihPart -> pilihPart(intent.uniqNo, intent.pilih)
             ChecksheetContract.Intent.LanjutKeForm -> muatForm()
             ChecksheetContract.Intent.KembaliKePicker -> _state.update { it.copy(step = ChecksheetContract.State.Step.PILIH_PART) }
-            
+
             is ChecksheetContract.Intent.TogglePart -> togglePart(intent.uniqNo)
             is ChecksheetContract.Intent.UbahJumlahDiperiksa -> ubahJumlahDiperiksa(intent.uniqNo, intent.jumlah)
             is ChecksheetContract.Intent.UbahJumlahDefect -> ubahJumlahDefect(intent.uniqNo, intent.idDefect, intent.jumlah)
             is ChecksheetContract.Intent.UbahJumlahSlotDefect -> ubahJumlahSlotDefect(intent)
             is ChecksheetContract.Intent.TambahDefect -> tambahKurangi(intent.uniqNo, intent.idDefect, 1)
             is ChecksheetContract.Intent.KurangiDefect -> tambahKurangi(intent.uniqNo, intent.idDefect, -1)
-            
+
             is ChecksheetContract.Intent.SembunyikanDefect -> sembunyikanDefect(intent.uniqNo, intent.idDefect)
             is ChecksheetContract.Intent.TampilkanDefect -> tampilkanDefect(intent.uniqNo, intent.idDefect)
             is ChecksheetContract.Intent.BukaTambahDefectLain -> bukaTambahDefectLain(intent.uniqNo)
@@ -184,14 +198,14 @@ class ChecksheetMviViewModel(
     private fun ubahJumlahDefect(uniqNo: String, idDefect: String, jumlah: Int) {
         _state.update { it.copy(preview = null) }
         val jamSekarang = LocalTime.now()
-        
+
         updateDaftarPart(uniqNo) { part ->
             part.copy(
                 daftarDefect = part.daftarDefect.map { defect ->
                     if (defect.idDefect == idDefect) {
                         val inputBaru = defect.copy(jumlahNg = jumlah.coerceAtLeast(0))
-                        
-                        // Smart Slot Selection: Jika NG > 0 dan detail slot masih kosong (semua 0), 
+
+                        // Smart Slot Selection: Jika NG > 0 dan detail slot masih kosong (semua 0),
                         // otomatis isi slot yang sesuai dengan jam sekarang.
                         if (jumlah > 0 && inputBaru.detailSlot.all { it.jumlah == 0 }) {
                             val slotIdTarget = cariSlotIdSesuaiJam(jamSekarang, inputBaru.detailSlot)
@@ -293,11 +307,11 @@ class ChecksheetMviViewModel(
     private fun updateDaftarPart(targetUniqNo: String? = null, transform: (RingkasanPartChecksheet) -> RingkasanPartChecksheet) {
         val current = _state.value.dataChecksheet
         if (current is AsyncData.Success) {
-            val updated = current.data.map { 
+            val updated = current.data.map {
                 if (targetUniqNo == null || it.uniqNo == targetUniqNo) transform(it) else it
             }.toImmutableList()
             _state.update { it.copy(dataChecksheet = AsyncData.Success(updated)) }
-            
+
         }
     }
 
@@ -352,11 +366,28 @@ class ChecksheetMviViewModel(
         val durationSeconds = (System.currentTimeMillis() - startTimeMillis) / 1000
         android.util.Log.i("TAKT_TIME", "Evaluasi Waktu Input (Takt Time) - Proses: ${payload.tipeProses}, Total Diperiksa: ${payload.totalDiperiksa}, Waktu: $durationSeconds detik")
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _state.update { it.copy(mengirim = true) }
 
-            when (val result = checksheetRepository.submitChecksheet(payload)) {
-                is NetworkResult.Success -> {
+            try {
+                val payloadJson = json.encodeToString(PayloadChecksheet.serializer(), payload)
+                val entity = ChecksheetQueueEntity(
+                    payloadJson = payloadJson,
+                    status = "PENDING",
+                    createdAt = System.currentTimeMillis()
+                )
+                queueDao.insert(entity)
+
+                // Enqueue Worker
+                val constraints = Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+                val request = OneTimeWorkRequestBuilder<SubmitChecksheetWorker>()
+                    .setConstraints(constraints)
+                    .build()
+                WorkManager.getInstance(getApplication()).enqueue(request)
+
+                withContext(Dispatchers.Main) {
                     val clearedList = _state.value.daftarPart.map { part ->
                         part.copy(
                             jumlahDiperiksa = 0,
@@ -366,7 +397,7 @@ class ChecksheetMviViewModel(
                             }.toImmutableList()
                         )
                     }.toImmutableList()
-                    
+
                     _state.update {
                         it.copy(
                             mengirim = false,
@@ -376,16 +407,13 @@ class ChecksheetMviViewModel(
                         )
                     }
 
-                    _effect.emit(ChecksheetContract.Effect.KirimBerhasil(result.data))
-                    _effect.emit(ChecksheetContract.Effect.PesanSukses("Checksheet berhasil dikirim."))
+                    _effect.emit(ChecksheetContract.Effect.PesanSukses("Checksheet disimpan lokal dan akan disinkronkan di latar belakang."))
                 }
-
-                is NetworkResult.Error -> {
-                    val message = UserMessageMapper.fromThrowableMessage(result.message, KonteksOperasi.CHECKSHEET)
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
                     _state.update { it.copy(mengirim = false) }
-                    _effect.emit(ChecksheetContract.Effect.PesanError(message.title, message.body))
+                    _effect.emit(ChecksheetContract.Effect.PesanError("Gagal menyimpan data", "Kesalahan saat menyimpan ke database lokal: ${e.message}"))
                 }
-                else -> Unit
             }
         }
     }

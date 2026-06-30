@@ -91,6 +91,5 @@ object ChecksheetContract {
     sealed interface Effect {
         data class PesanSukses(val pesan: String) : Effect
         data class PesanError(val judul: String, val pesan: String) : Effect
-        data class KirimBerhasil(val idSesi: String) : Effect
     }
 }

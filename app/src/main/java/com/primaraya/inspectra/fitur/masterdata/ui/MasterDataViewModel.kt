@@ -488,7 +488,13 @@ class MasterDataViewModel(
             // Upload gambar jika ada file lokal baru
             if (f.lokasiGambarLokal != null) {
                 val file = java.io.File(f.lokasiGambarLokal)
-                val compressedFile = com.primaraya.inspectra.core.util.ImageCompressor.compressImage(getApplication(), file)
+                val uri = android.net.Uri.fromFile(file)
+                val compressedFile = com.primaraya.inspectra.core.util.ImageCompressor.compressImage(getApplication(), uri)
+                if (compressedFile == null) {
+                    tampilkanError("Gagal mengompres gambar")
+                    _state.update { it.copy(menyimpan = false) }
+                    return@launch
+                }
                 when (val uploadRes = repository.uploadPartImage(f.uniqNo, compressedFile)) {
                     is NetworkResult.Success -> remoteUrl = uploadRes.data
                     is NetworkResult.Error -> {

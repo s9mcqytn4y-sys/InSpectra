@@ -87,10 +87,6 @@ fun ChecksheetScreen(
                     }
                     snackbarHostState.showSnackbar("${effect.judul}: ${effect.pesan}")
                 }
-                is ChecksheetContract.Effect.KirimBerhasil -> {
-                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    snackbarHostState.showSnackbar("$successDesc ID: ${effect.idSesi.take(8)}")
-                }
             }
         }
     }
