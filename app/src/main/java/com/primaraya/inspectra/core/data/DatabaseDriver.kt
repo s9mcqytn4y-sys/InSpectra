@@ -70,5 +70,7 @@ enum class RemoteTable(val value: String) {
     DefectChecksheet("e_defect_checksheet"),
     DefectSlotChecksheet("e_defect_slot_checksheet"),
     CuttingBatch("e_cutting_batch"),
-    CuttingDefectDetail("e_cutting_defect_detail")
+    CuttingDefectDetail("e_cutting_defect_detail"),
+    Employee("m_karyawan"),
+    Attendance("t_rasio_kehadiran")
 }

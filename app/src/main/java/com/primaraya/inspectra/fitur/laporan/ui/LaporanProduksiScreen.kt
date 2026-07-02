@@ -276,16 +276,16 @@ fun HeaderSection(
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     InputTeksUtama(
-                        value = state.otProd,
-                        onValueChange = { onIntent(LaporanContract.Intent.UpdateOtProd(it)) },
-                        label = stringResource(R.string.laporan_ot_prod),
+                        value = state.lemburProd,
+                        onValueChange = { onIntent(LaporanContract.Intent.UpdateLemburProd(it)) },
+                        label = stringResource(R.string.laporan_lembur_prod),
                         modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
                     InputTeksUtama(
-                        value = state.otNon,
-                        onValueChange = { onIntent(LaporanContract.Intent.UpdateOtNon(it)) },
-                        label = stringResource(R.string.laporan_ot_non),
+                        value = state.lemburNon,
+                        onValueChange = { onIntent(LaporanContract.Intent.UpdateLemburNon(it)) },
+                        label = stringResource(R.string.laporan_lembur_non),
                         modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )

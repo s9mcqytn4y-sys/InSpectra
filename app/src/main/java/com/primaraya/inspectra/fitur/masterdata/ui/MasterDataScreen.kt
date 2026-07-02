@@ -23,16 +23,8 @@ import com.primaraya.inspectra.fitur.masterdata.domain.*
 import com.primaraya.inspectra.fitur.masterdata.ui.components.*
 import com.primaraya.inspectra.fitur.masterdata.ui.forms.*
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.Alignment
 
-/**
- * Layar utama untuk modul Data Induk (Master Data).
- * Menggunakan pendekatan UDF (Unidirectional Data Flow) dengan MVI pattern.
- * Layar ini merender grid adaptif untuk Part, Material, Supplier, dan Defect, 
- * serta mendukung responsivitas untuk perangkat tablet (panel samping).
- *
- * @param onBackClick Callback yang dipanggil ketika tombol kembali ditekan.
- * @param viewModel ViewModel yang mengelola state dan intent modul ini.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MasterDataScreen(
@@ -81,6 +73,7 @@ fun MasterDataScreen(
                                 MasterDataContract.TabMasterData.MATERIAL -> viewModel.onIntent(MasterDataContract.Intent.TambahMaterial)
                                 MasterDataContract.TabMasterData.SUPPLIER -> viewModel.onIntent(MasterDataContract.Intent.TambahSupplier)
                                 MasterDataContract.TabMasterData.DEFECT -> viewModel.onIntent(MasterDataContract.Intent.TambahDefect)
+                                MasterDataContract.TabMasterData.KARYAWAN -> viewModel.onIntent(MasterDataContract.Intent.TambahKaryawan)
                             }
                         },
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -203,6 +196,29 @@ fun MasterDataScreen(
                                     }
                                 }
                             )
+                            MasterDataContract.TabMasterData.KARYAWAN -> AsyncList(
+                                data = state.karyawan,
+                                canLoadMore = state.canLoadMore,
+                                loadingMore = state.loadingMore,
+                                onLoadMore = { viewModel.onIntent(MasterDataContract.Intent.MuatLebihBanyak) },
+                                content = { list ->
+                                    LazyVerticalGrid(
+                                        columns = GridCells.Adaptive(minSize = 350.dp),
+                                        contentPadding = PaddingValues(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        items(list, key = { it.id ?: it.namaLengkap }) { emp ->
+                                            KaryawanMasterCard(
+                                                karyawan = emp,
+                                                onEdit = { viewModel.onIntent(MasterDataContract.Intent.EditKaryawan(emp)) },
+                                                onDelete = { viewModel.onIntent(MasterDataContract.Intent.HapusKaryawan(emp)) },
+                                                onShowDetail = { viewModel.onIntent(MasterDataContract.Intent.TampilDetailKaryawan(emp)) }
+                                            )
+                                        }
+                                    }
+                                }
+                            )
                         }
                     }
                 }
@@ -236,31 +252,27 @@ fun MasterDataScreen(
     }
 }
 
-/**
- * Menentukan apakah form tertentu harus ditampilkan di panel samping (Side Pane) pada tablet.
- *
- * @param form Objek dialog form aktif.
- * @return True jika form mendukung tampilan side pane, False jika sebaliknya (modal penuh).
- */
 private fun isSidePaneForm(form: MasterDataContract.DialogForm): Boolean {
     return form is MasterDataContract.DialogForm.FormPart ||
            form is MasterDataContract.DialogForm.FormMaterial ||
            form is MasterDataContract.DialogForm.FormSupplier ||
-           form is MasterDataContract.DialogForm.FormDefect
+           form is MasterDataContract.DialogForm.FormDefect ||
+           form is MasterDataContract.DialogForm.FormKaryawan
 }
 
-/**
- * Merender konten form berdasarkan tipe dialog yang sedang aktif.
- *
- * @param state State UI saat ini yang menyimpan data form aktif.
- * @param viewModel ViewModel untuk meneruskan intent aksi form (simpan, tutup, ubah).
- */
 @Composable
 private fun MasterDataFormContent(
     state: MasterDataContract.State,
     viewModel: MasterDataViewModel
 ) {
     when (val form = state.dialogForm) {
+        is MasterDataContract.DialogForm.FormKaryawan -> KaryawanFormSheet(
+            state = state.karyawanFormDraft,
+            onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
+            onUpdate = { viewModel.onIntent(MasterDataContract.Intent.UbahFormKaryawan(it)) },
+            onSave = { viewModel.onIntent(MasterDataContract.Intent.SimpanKaryawan(it)) },
+            isSaving = state.menyimpan
+        )
         is MasterDataContract.DialogForm.FormPart -> PartFormSheet(
             state = state.partFormDraft,
             onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) },
@@ -363,6 +375,10 @@ private fun MasterDataFormContent(
         )
         is MasterDataContract.DialogForm.DetailDefect -> DefectDetailModal(
             defect = form.data,
+            onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) }
+        )
+        is MasterDataContract.DialogForm.DetailKaryawan -> KaryawanDetailModal(
+            karyawan = form.data,
             onDismiss = { viewModel.onIntent(MasterDataContract.Intent.TutupDialog) }
         )
         else -> Unit

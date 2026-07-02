@@ -47,8 +47,8 @@ class LaporanViewModel(
             is LaporanContract.Intent.UpdateMpIndirect -> _state.update { it.copy(mpIndirect = intent.value) }
             is LaporanContract.Intent.UpdateJknHour -> _state.update { it.copy(jknHour = intent.value) }
             is LaporanContract.Intent.UpdateJknMenit -> _state.update { it.copy(jknMenit = intent.value) }
-            is LaporanContract.Intent.UpdateOtProd -> _state.update { it.copy(otProd = intent.value) }
-            is LaporanContract.Intent.UpdateOtNon -> _state.update { it.copy(otNon = intent.value) }
+            is LaporanContract.Intent.UpdateLemburProd -> _state.update { it.copy(lemburProd = intent.value) }
+            is LaporanContract.Intent.UpdateLemburNon -> _state.update { it.copy(lemburNon = intent.value) }
             is LaporanContract.Intent.UpdateBantuanKeluar -> _state.update { it.copy(bantuanKeluar = intent.value) }
             is LaporanContract.Intent.UpdateBantuanMasuk -> _state.update { it.copy(bantuanMasuk = intent.value) }
             
@@ -149,8 +149,8 @@ class LaporanViewModel(
                     mpIndirect = currentState.mpIndirect.toIntOrNull() ?: 0,
                     jknHour = currentState.jknHour.toIntOrNull() ?: 0,
                     jknMenit = currentState.jknMenit.toIntOrNull() ?: 0,
-                    otProd = currentState.otProd.toDoubleOrNull() ?: 0.0,
-                    otNon = currentState.otNon.toDoubleOrNull() ?: 0.0,
+                    lemburProd = currentState.lemburProd.toDoubleOrNull() ?: 0.0,
+                    lemburNon = currentState.lemburNon.toDoubleOrNull() ?: 0.0,
                     bantuanKeluar = currentState.bantuanKeluar.toIntOrNull() ?: 0,
                     bantuanMasuk = currentState.bantuanMasuk.toIntOrNull() ?: 0,
                     details = details

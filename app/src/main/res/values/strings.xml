@@ -19,13 +19,13 @@
     <string name="laporan_kirim">Kirim Laporan</string>
     <string name="laporan_pilih_part">Pilih Part Produksi</string>
     <string name="laporan_tenaga_kerja">Tenaga Kerja &amp; Jam</string>
-    <string name="laporan_overtime_bantuan">Overtime &amp; Bantuan</string>
+    <string name="laporan_overtime_bantuan">Lembur &amp; Bantuan</string>
     <string name="laporan_mp_direct">MP Direct</string>
     <string name="laporan_mp_indirect">MP Indirect</string>
     <string name="laporan_jkn_jam">JKN (Jam)</string>
     <string name="laporan_jkn_menit">JKN (Menit)</string>
-    <string name="laporan_ot_prod">OT Prod</string>
-    <string name="laporan_ot_non">OT Non</string>
+    <string name="laporan_lembur_prod">Lembur Prod</string>
+    <string name="laporan_lembur_non">Lembur Non</string>
     <string name="laporan_bantuan_keluar">Bantuan Keluar</string>
     <string name="laporan_bantuan_masuk">Bantuan Masuk</string>
     <string name="laporan_total_planning">Total Planning</string>

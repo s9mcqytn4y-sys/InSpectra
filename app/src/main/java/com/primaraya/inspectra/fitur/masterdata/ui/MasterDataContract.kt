@@ -14,7 +14,8 @@ object MasterDataContract {
         PART,
         MATERIAL,
         SUPPLIER,
-        DEFECT
+        DEFECT,
+        KARYAWAN
     }
 
     data class State(
@@ -35,6 +36,8 @@ object MasterDataContract {
         val materialFormDraft: MaterialFormState = MaterialFormState(),
         val supplierFormDraft: SupplierFormState = SupplierFormState(),
         val defectFormDraft: DefectFormState = DefectFormState(),
+        val karyawanFormDraft: KaryawanFormState = KaryawanFormState(),
+        val karyawan: AsyncData<ImmutableList<com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto>> = AsyncData.Idle,
         val canLoadMore: Boolean = true,
         val loadingMore: Boolean = false
     )
@@ -62,6 +65,12 @@ object MasterDataContract {
         data class PilihTab(val tab: TabMasterData) : Intent
         data class PilihFilter(val filter: FilterDataInduk) : Intent
         data class Cari(val keyword: String) : Intent
+
+        data object TambahKaryawan : Intent
+        data class EditKaryawan(val data: com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto) : Intent
+        data class UbahFormKaryawan(val data: KaryawanFormState) : Intent
+        data class SimpanKaryawan(val data: KaryawanFormState) : Intent
+        data class HapusKaryawan(val data: com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto) : Intent
 
         data object TambahPart : Intent
         data class EditPart(val data: MasterPartDto) : Intent
@@ -95,6 +104,7 @@ object MasterDataContract {
         data class TampilDetailMaterial(val data: MasterMaterialDto) : Intent
         data class TampilDetailSupplier(val data: MasterSupplierDto) : Intent
         data class TampilDetailDefect(val data: MasterDefectDto) : Intent
+        data class TampilDetailKaryawan(val data: com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto) : Intent
 
         // Relations - Defect
         data class BukaPilihDefect(val uniqNo: String) : Intent
@@ -128,6 +138,7 @@ object MasterDataContract {
     }
 
     sealed interface DialogForm {
+        data class FormKaryawan(val data: com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto? = null) : DialogForm
         data class FormPart(val data: MasterPartDto? = null) : DialogForm
         data class FormMaterial(val data: MasterMaterialDto? = null) : DialogForm
         data class FormSupplier(val data: MasterSupplierDto? = null) : DialogForm
@@ -143,5 +154,6 @@ object MasterDataContract {
         data class DetailMaterial(val data: MasterMaterialDto) : DialogForm
         data class DetailSupplier(val data: MasterSupplierDto) : DialogForm
         data class DetailDefect(val data: MasterDefectDto) : DialogForm
+        data class DetailKaryawan(val data: com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto) : DialogForm
     }
 }

@@ -38,3 +38,26 @@ data class DefectEntity(
     val aktif: Boolean,
     val last_sync: Long = System.currentTimeMillis()
 )
+
+@Entity(tableName = "m_karyawan_local")
+data class KaryawanLocalEntity(
+    @PrimaryKey val id: String,
+    val nama_lengkap: String,
+    val tipe_pekerja: String,
+    val no_reg: String?,
+    val line_process: String,
+    val aktif: Boolean,
+    val last_sync: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "t_kehadiran_local")
+data class KehadiranLocalEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val tanggal: String,
+    val line_process: String,
+    val karyawan_id: String,
+    val keterangan: String,
+    val jam_lembur_aktual: Float,
+    val lembur_non_main_job: String,
+    val is_synced: Boolean = false
+)

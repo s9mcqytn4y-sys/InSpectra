@@ -47,4 +47,9 @@ interface MasterDataRepository {
     suspend fun getMaterialDefects(materialId: String): NetworkResult<List<MasterMaterialDefectDto>>
     suspend fun upsertMaterialDefect(data: MasterMaterialDefectDto): NetworkResult<Unit>
     suspend fun deleteMaterialDefect(id: String): NetworkResult<Unit>
+
+    // Karyawan
+    suspend fun getEmployeesPage(page: PageRequest): NetworkResult<List<com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto>>
+    suspend fun upsertEmployee(employee: com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto): NetworkResult<Unit>
+    suspend fun deleteEmployeeSoft(id: String): NetworkResult<Unit>
 }

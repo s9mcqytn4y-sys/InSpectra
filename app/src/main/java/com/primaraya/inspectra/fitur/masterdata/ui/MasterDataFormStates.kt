@@ -106,3 +106,25 @@ data class DefectFormState(
 
     val valid: Boolean get() = idDefect.isNotBlank() && namaDefect.isNotBlank()
 }
+
+@Serializable
+data class KaryawanFormState(
+    val id: String? = null,
+    val namaLengkap: String = "",
+    val tipePekerja: com.primaraya.inspectra.core.common.TipePekerja = com.primaraya.inspectra.core.common.TipePekerja.KARYAWAN,
+    val noReg: String = "",
+    val lineProcess: com.primaraya.inspectra.core.common.LineProcess = com.primaraya.inspectra.core.common.LineProcess.PRESS_PRESS,
+    val aktif: Boolean = true,
+    val submitted: Boolean = false
+) {
+    val namaLengkapError: String?
+        get() = if (submitted && namaLengkap.isBlank()) "Nama lengkap wajib diisi." else null
+
+    val noRegError: String?
+        get() = if (submitted && tipePekerja == com.primaraya.inspectra.core.common.TipePekerja.KARYAWAN && noReg.isBlank()) {
+            "No Reg wajib diisi untuk karyawan."
+        } else null
+
+    val valid: Boolean 
+        get() = namaLengkap.isNotBlank() && (tipePekerja == com.primaraya.inspectra.core.common.TipePekerja.PKL || noReg.isNotBlank())
+}

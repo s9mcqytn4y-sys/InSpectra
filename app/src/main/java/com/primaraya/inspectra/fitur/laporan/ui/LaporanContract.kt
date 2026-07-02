@@ -24,8 +24,8 @@ object LaporanContract {
         val mpIndirect: String = "",
         val jknHour: String = "",
         val jknMenit: String = "",
-        val otProd: String = "",
-        val otNon: String = "",
+        val lemburProd: String = "",
+        val lemburNon: String = "",
         val bantuanKeluar: String = "",
         val bantuanMasuk: String = "",
         val details: PersistentList<DetailLaporanState> = persistentListOf(),
@@ -53,8 +53,8 @@ object LaporanContract {
         data class UpdateMpIndirect(val value: String) : Intent
         data class UpdateJknHour(val value: String) : Intent
         data class UpdateJknMenit(val value: String) : Intent
-        data class UpdateOtProd(val value: String) : Intent
-        data class UpdateOtNon(val value: String) : Intent
+        data class UpdateLemburProd(val value: String) : Intent
+        data class UpdateLemburNon(val value: String) : Intent
         data class UpdateBantuanKeluar(val value: String) : Intent
         data class UpdateBantuanMasuk(val value: String) : Intent
         

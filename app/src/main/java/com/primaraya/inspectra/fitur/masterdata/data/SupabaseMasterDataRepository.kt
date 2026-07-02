@@ -416,4 +416,37 @@ class SupabaseMasterDataRepository(
             driver.softDelete(table = RemoteTable.MaterialDefect, idColumn = "id", id = id)
         }
     }
+
+    override suspend fun getEmployeesPage(
+        page: PageRequest
+    ): NetworkResult<List<com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto>> = withContext(dispatchers.io) {
+        runNetworkCatching {
+            driver.getList(
+                table = RemoteTable.Employee,
+                query = page.toPostgrestQuery() + "&aktif=eq.true",
+                decode = { json.decodeFromString(ListSerializer(com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto.serializer()), it) }
+            )
+        }
+    }
+
+    override suspend fun upsertEmployee(employee: com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto): NetworkResult<Unit> = withContext(dispatchers.io) {
+        runNetworkCatching {
+            driver.upsert(
+                table = RemoteTable.Employee,
+                body = employee,
+                encode = { json.encodeToString(com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto.serializer(), it) },
+                onConflict = "id"
+            )
+        }
+    }
+
+    override suspend fun deleteEmployeeSoft(id: String): NetworkResult<Unit> = withContext(dispatchers.io) {
+        runNetworkCatching {
+            driver.softDelete(
+                table = RemoteTable.Employee,
+                idColumn = "id",
+                id = id
+            )
+        }
+    }
 }

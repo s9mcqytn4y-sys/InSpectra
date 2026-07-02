@@ -195,6 +195,30 @@ fun DefectDetailModal(
 }
 
 @Composable
+fun KaryawanDetailModal(
+    karyawan: com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto,
+    onDismiss: () -> Unit
+) {
+    InspectraEliteModal(
+        title = "Detail Pekerja",
+        onDismiss = onDismiss
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            DetailSectionElite(title = "Profil Pekerja", icon = Icons.Default.Person) {
+                DetailRowElite("Nama Lengkap", karyawan.namaLengkap)
+                DetailRowElite("Tipe", karyawan.tipePekerja.name)
+                DetailRowElite("No Reg", karyawan.noReg ?: "-")
+                DetailRowElite("Line / Proses", karyawan.lineProcess)
+                DetailRowElite("Status", if (karyawan.aktif) "AKTIF" else "NONAKTIF")
+            }
+        }
+    }
+}
+
+@Composable
 private fun DetailSectionElite(
     title: String,
     icon: ImageVector,

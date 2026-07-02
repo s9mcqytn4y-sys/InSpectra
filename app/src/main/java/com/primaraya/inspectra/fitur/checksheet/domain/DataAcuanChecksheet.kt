@@ -356,6 +356,29 @@ baris_excel	UNIQ	PART NO.	PART NAME	KOMODITAS	MATERIAL USED	SUPPLIER	MATERIAL DE
                 )
             }
 
+        // Logic for Composite Parts (Protector, Insulation, etc)
+        val additionalMaterialDefects = when {
+            uniqNo in listOf("B35", "B63", "B55", "B72", "B70", "B51", "BJ1") -> {
+                // These use "Protector" which has: Recycle Felt, PS Polyester Non Woven, Laminasi LDPE
+                listOf(
+                    "SOBEK", "BRUDUL", "TIPIS", 
+                    "SPUNBOUND TIDAK MEREKAT", "SPUNBOUND KOTOR", "SPUNDBOUND TERLIPAT", "SPUNDBOND HARDEN",
+                    "LAMINATING BOLONG", "LAMINATING TIDAK MATANG"
+                )
+            }
+            uniqNo.startsWith("MM1") || uniqNo.startsWith("ML0") || uniqNo.startsWith("ML1") -> {
+                // Insulation Sheets: EPDM 45mm / 47mm
+                listOf("BERLUBANG", "TIPIS")
+            }
+            else -> emptyList()
+        }.map {
+            InputDefect(
+                idDefect = "MAT_" + it.toKodeDefect(),
+                namaDefect = it,
+                kategori = KategoriDefect.MATERIAL
+            )
+        }
+
         val proses = daftarRelasiPartMaterial()
             .firstOrNull { it.uniqNo == uniqNo }
             ?.komoditas
@@ -394,7 +417,7 @@ baris_excel	UNIQ	PART NO.	PART NAME	KOMODITAS	MATERIAL USED	SUPPLIER	MATERIAL DE
             )
         }
 
-        return (materialDefect + defectProses)
+        return (materialDefect + additionalMaterialDefects + defectProses)
             .distinctBy { it.namaDefect.uppercase() }
             .sortedWith(compareBy<InputDefect> { it.kategori.name }.thenBy { it.namaDefect })
             .toImmutableList()

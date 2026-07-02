@@ -28,6 +28,7 @@ fun DataIndukSearchBar(
         MasterDataContract.TabMasterData.MATERIAL -> "Cari material, supplier, atau spesifikasi"
         MasterDataContract.TabMasterData.SUPPLIER -> "Cari supplier atau kategori"
         MasterDataContract.TabMasterData.DEFECT -> "Cari defect atau kategori"
+        MasterDataContract.TabMasterData.KARYAWAN -> "Cari nama atau no reg"
     }
 
     Column(modifier = modifier.padding(vertical = 12.dp).background(MaterialTheme.colorScheme.surface)) {

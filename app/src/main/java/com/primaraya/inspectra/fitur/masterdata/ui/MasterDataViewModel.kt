@@ -68,6 +68,26 @@ class MasterDataViewModel(
                 keywordFlow.value = intent.keyword
             }
 
+            // Karyawan
+            MasterDataContract.Intent.TambahKaryawan -> _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormKaryawan()) }
+            is MasterDataContract.Intent.EditKaryawan -> {
+                val data = intent.data
+                val form = KaryawanFormState(
+                    id = data.id,
+                    namaLengkap = data.namaLengkap,
+                    tipePekerja = data.tipePekerja,
+                    noReg = data.noReg ?: "",
+                    lineProcess = com.primaraya.inspectra.core.common.LineProcess.valueOf(data.lineProcess),
+                    aktif = data.aktif
+                )
+                _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormKaryawan(data), karyawanFormDraft = form) }
+            }
+            is MasterDataContract.Intent.UbahFormKaryawan -> {
+                _state.update { it.copy(karyawanFormDraft = intent.data) }
+            }
+            is MasterDataContract.Intent.SimpanKaryawan -> simpanKaryawan(intent.data)
+            is MasterDataContract.Intent.HapusKaryawan -> confirmHapus("Hapus Pekerja", "Data pekerja akan dinonaktifkan.") { hapusKaryawan(intent.data) }
+
             // Part
             MasterDataContract.Intent.TambahPart -> _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.FormPart()) }
             is MasterDataContract.Intent.EditPart -> {
@@ -171,6 +191,9 @@ class MasterDataViewModel(
             is MasterDataContract.Intent.TampilDetailDefect -> {
                 _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.DetailDefect(intent.data)) }
             }
+            is MasterDataContract.Intent.TampilDetailKaryawan -> {
+                _state.update { it.copy(dialogForm = MasterDataContract.DialogForm.DetailKaryawan(intent.data)) }
+            }
 
             // Relations
             is MasterDataContract.Intent.BukaPilihDefect -> bukaPilihDefectUntukPart(intent.uniqNo)
@@ -210,28 +233,21 @@ class MasterDataViewModel(
                         MasterDataContract.TabMasterData.MATERIAL -> s.copy(materials = AsyncData.Loading)
                         MasterDataContract.TabMasterData.SUPPLIER -> s.copy(suppliers = AsyncData.Loading)
                         MasterDataContract.TabMasterData.DEFECT -> s.copy(defects = AsyncData.Loading)
+                        MasterDataContract.TabMasterData.KARYAWAN -> s.copy(karyawan = AsyncData.Loading)
                     }
                 }
             }
             else _state.update { it.copy(loadingMore = true) }
 
+            // Priority: Load from local Room DB if offline or for speed, then sync from network
+            // (For MVP, we load from network but could fallback to Room)
+
             val cursorVal = if (reset) null else when (tab) {
-                MasterDataContract.TabMasterData.PART -> {
-                    val current = s.parts as? AsyncData.Success<List<MasterPartDto>>
-                    current?.data?.lastOrNull()?.uniq_no
-                }
-                MasterDataContract.TabMasterData.MATERIAL -> {
-                    val current = s.materials as? AsyncData.Success<List<MasterMaterialDto>>
-                    current?.data?.lastOrNull()?.id
-                }
-                MasterDataContract.TabMasterData.SUPPLIER -> {
-                    val current = s.suppliers as? AsyncData.Success<List<MasterSupplierDto>>
-                    current?.data?.lastOrNull()?.id
-                }
-                MasterDataContract.TabMasterData.DEFECT -> {
-                    val current = s.defects as? AsyncData.Success<List<MasterDefectDto>>
-                    current?.data?.lastOrNull()?.id_defect
-                }
+                MasterDataContract.TabMasterData.PART -> (s.parts as? AsyncData.Success<List<MasterPartDto>>)?.data?.lastOrNull()?.uniq_no
+                MasterDataContract.TabMasterData.MATERIAL -> (s.materials as? AsyncData.Success<List<MasterMaterialDto>>)?.data?.lastOrNull()?.id
+                MasterDataContract.TabMasterData.SUPPLIER -> (s.suppliers as? AsyncData.Success<List<MasterSupplierDto>>)?.data?.lastOrNull()?.id
+                MasterDataContract.TabMasterData.DEFECT -> (s.defects as? AsyncData.Success<List<MasterDefectDto>>)?.data?.lastOrNull()?.id_defect
+                MasterDataContract.TabMasterData.KARYAWAN -> (s.karyawan as? AsyncData.Success<List<com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto>>)?.data?.lastOrNull()?.id
             }
 
             val page = when (tab) {
@@ -239,6 +255,7 @@ class MasterDataViewModel(
                 MasterDataContract.TabMasterData.MATERIAL -> PageRequest(cursorColumn = "id", cursorValue = cursorVal, searchColumn = "nama_material", searchKeyword = search.ifBlank { null })
                 MasterDataContract.TabMasterData.SUPPLIER -> PageRequest(cursorColumn = "id", cursorValue = cursorVal, searchColumn = "nama_supplier", searchKeyword = search.ifBlank { null })
                 MasterDataContract.TabMasterData.DEFECT -> PageRequest(cursorColumn = "id_defect", cursorValue = cursorVal, searchColumn = "nama_defect", searchKeyword = search.ifBlank { null })
+                MasterDataContract.TabMasterData.KARYAWAN -> PageRequest(cursorColumn = "id", cursorValue = cursorVal, searchColumn = "nama_lengkap", searchKeyword = search.ifBlank { null })
             }
 
             val result = when (tab) {
@@ -246,6 +263,7 @@ class MasterDataViewModel(
                 MasterDataContract.TabMasterData.MATERIAL -> repository.getMaterialsPage(page)
                 MasterDataContract.TabMasterData.SUPPLIER -> repository.getSuppliersPage(page)
                 MasterDataContract.TabMasterData.DEFECT -> repository.getDefectsPage(page)
+                MasterDataContract.TabMasterData.KARYAWAN -> repository.getEmployeesPage(page)
             }
 
             _state.update { it.copy(loadingMore = false) }
@@ -265,6 +283,7 @@ class MasterDataViewModel(
                                     MasterDataContract.TabMasterData.MATERIAL -> s.copy(materials = empty)
                                     MasterDataContract.TabMasterData.SUPPLIER -> s.copy(suppliers = empty)
                                     MasterDataContract.TabMasterData.DEFECT -> s.copy(defects = empty)
+                                    MasterDataContract.TabMasterData.KARYAWAN -> s.copy(karyawan = empty)
                                 }
                             }
                         }
@@ -275,6 +294,7 @@ class MasterDataViewModel(
                                     MasterDataContract.TabMasterData.MATERIAL -> s.copy(materials = AsyncData.Success(newData.filterIsInstance<MasterMaterialDto>().toImmutableList()))
                                     MasterDataContract.TabMasterData.SUPPLIER -> s.copy(suppliers = AsyncData.Success(newData.filterIsInstance<MasterSupplierDto>().toImmutableList()))
                                     MasterDataContract.TabMasterData.DEFECT -> s.copy(defects = AsyncData.Success(newData.filterIsInstance<MasterDefectDto>().toImmutableList()))
+                                    MasterDataContract.TabMasterData.KARYAWAN -> s.copy(karyawan = AsyncData.Success(newData.filterIsInstance<com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto>().toImmutableList()))
                                 }
                             }
                         }
@@ -292,6 +312,7 @@ class MasterDataViewModel(
                                 MasterDataContract.TabMasterData.MATERIAL -> s.copy(materials = error)
                                 MasterDataContract.TabMasterData.SUPPLIER -> s.copy(suppliers = error)
                                 MasterDataContract.TabMasterData.DEFECT -> s.copy(defects = error)
+                                MasterDataContract.TabMasterData.KARYAWAN -> s.copy(karyawan = error)
                             }
                         }
                     }
@@ -324,6 +345,11 @@ class MasterDataViewModel(
                     val currentDefects = if (s.defects is AsyncData.Success) s.defects.data else emptyList()
                     val added = newData.filterIsInstance<MasterDefectDto>()
                     s.copy(defects = AsyncData.Success((currentDefects + added).toImmutableList()))
+                }
+                MasterDataContract.TabMasterData.KARYAWAN -> {
+                    val current = if (s.karyawan is AsyncData.Success) s.karyawan.data else emptyList()
+                    val added = newData.filterIsInstance<com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto>()
+                    s.copy(karyawan = AsyncData.Success((current + added).toImmutableList()))
                 }
             }
         }
@@ -578,7 +604,43 @@ class MasterDataViewModel(
         }
     }
 
-    private fun hapusPart(d: MasterPartDto) = viewModelScope.launch { if (repository.deletePartSoft(d.id!!) is NetworkResult.Success) { _effect.emit(MasterDataContract.Effect.TampilPesan("Part dinonaktifkan.")); _state.update { it.copy(dialogForm = null) }; muatDataTabAktif(reset = true) } }
+    private fun simpanKaryawan(f: KaryawanFormState) {
+        viewModelScope.launch {
+            _state.update { it.copy(menyimpan = true) }
+            val dto = com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto(
+                id = f.id,
+                namaLengkap = f.namaLengkap,
+                tipePekerja = f.tipePekerja,
+                noReg = f.noReg.takeIf { f.tipePekerja == com.primaraya.inspectra.core.common.TipePekerja.KARYAWAN },
+                lineProcess = f.lineProcess.name,
+                aktif = f.aktif
+            )
+            // Need to decide which repository handles Karyawan CRUD. 
+            // Standardizing on MasterDataRepository for consistency in Master Data tab.
+            // (Assuming implementation exists in SupabaseMasterDataRepository or similar)
+            // For now, redirecting to a helper or implementing it.
+            if (repository.upsertEmployee(dto) is NetworkResult.Success) {
+                _state.update { it.copy(menyimpan = false, dialogForm = null, feedback = MasterDataContract.FeedbackState("Pekerja berhasil disimpan", com.primaraya.inspectra.core.ui.component.FeedbackType.Success)) }
+                muatDataTabAktif(reset = true)
+            } else tampilkanError("Gagal simpan pekerja")
+        }
+    }
+
+    private fun hapusPart(d: MasterPartDto) = viewModelScope.launch {
+        if (repository.deletePartSoft(d.id!!) is NetworkResult.Success) {
+            _effect.emit(MasterDataContract.Effect.TampilPesan("Part dinonaktifkan."))
+            _state.update { it.copy(dialogForm = null) }
+            muatDataTabAktif(reset = true)
+        }
+    }
+
+    private fun hapusKaryawan(d: com.primaraya.inspectra.fitur.attendance.domain.EmployeeDto) = viewModelScope.launch {
+        if (repository.deleteEmployeeSoft(d.id!!) is NetworkResult.Success) {
+            _effect.emit(MasterDataContract.Effect.TampilPesan("Pekerja dinonaktifkan."))
+            _state.update { it.copy(dialogForm = null) }
+            muatDataTabAktif(reset = true)
+        }
+    }
     private fun hapusMaterial(d: MasterMaterialDto) = viewModelScope.launch { if (repository.deleteMaterialSoft(d.id!!) is NetworkResult.Success) { _effect.emit(MasterDataContract.Effect.TampilPesan("Material dinonaktifkan.")); _state.update { it.copy(dialogForm = null) }; muatDataTabAktif(reset = true) } }
     private fun hapusSupplier(d: MasterSupplierDto) = viewModelScope.launch { if (repository.deleteSupplierSoft(d.id!!) is NetworkResult.Success) { _effect.emit(MasterDataContract.Effect.TampilPesan("Supplier dinonaktifkan.")); _state.update { it.copy(dialogForm = null) }; muatDataTabAktif(reset = true) } }
     private fun hapusDefect(d: MasterDefectDto) = viewModelScope.launch { if (repository.deleteDefectSoft(d.id_defect) is NetworkResult.Success) { _effect.emit(MasterDataContract.Effect.TampilPesan("Defect dinonaktifkan.")); _state.update { it.copy(dialogForm = null) }; muatDataTabAktif(reset = true) } }
